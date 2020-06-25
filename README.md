@@ -140,7 +140,7 @@ Script parameters:
 Current implementation manages just runbooks and variables, but not other assets in automation account - for many assets it's not good idea to store them in source control.
 > If you have good use case for manageement of other assets, let me know
 
-Currently, only variables of type [string] are supported; support for other variable types may comee in next release.
+Currently, only variables of type [string] are supported; support for other variable types may come in next release.
 
 Variable encryption status cannot be changed when variable already exists. To change encryption status, you need to delete the variable manually in automation account and then run deployment again with updated Encryption in variable definition file.
 
