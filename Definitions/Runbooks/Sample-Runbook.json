@@ -1,0 +1,5 @@
+{
+    "Name": "Sample-Runbook",
+    "Implementation": "Sample-Runbook.ps1",
+    "Type": "PowerShell"
+}
