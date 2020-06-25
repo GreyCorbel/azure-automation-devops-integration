@@ -8,7 +8,7 @@ Main motivation for creation of this work were only basic capabilities of native
 * inability to manage variables and provide state-specific content for variables
 * inability to deliver different versions of runbooks to different stages/environments
 
-Sample runbook and variable included in this repo demonstrates how to effectively log runbook activity and telemetry data into AppInsights instance - just by providing instrumentation key in variable.
+Sample runbook and variable included in this repo demonstrates how to effectively log runbook activity and telemetry data into AppInsights instance - just by providing instrumentation key in variable - makes it really easy to standardize runbook activity logging and get more out of AppInsights.
 
 ## Capabilities
 Current implementation has the following features:
