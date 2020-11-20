@@ -1,27 +1,33 @@
 # azure-automation-devops-integration
 This repo contains Powershell script that demonstrates integration of Azure automation account into DevOps source control and release pipeline.  
 Main motivation for creation of this work were only basic capabilities of native integration of Azure Automation account with source control, namely:
-* lack of integration into DevOps pipeline; every repo update results in update of automation account
-* only runbooks are source-controlled, but not other assets - I particularly missed ability to control variables
-* only flat structure of repo (runbooks in subfolders are not managed)
-* dependency on PAT tokens
-* inability to manage variables and provide state-specific content for variables
-* inability to deliver different versions of runbooks to different stages/environments
+* Lack of integration into DevOps pipeline; every repo update results in update of automation account
+* Only runbooks are source-controlled, but not other assets - I particularly missed ability to control variables and Dsc configurations
+* Only flat structure of repo (runbooks in subfolders are not managed)
+* Dependency on PAT tokens
+* Inability to manage variables and provide state-specific content for variables
+* Inability to deliver different versions of runbooks to different stages/environments
 
 Sample runbook and variable included in this repo demonstrates how to effectively log runbook activity and telemetry data into AppInsights instance - just by providing instrumentation key in variable - makes it really easy to standardize runbook activity logging and get more out of AppInsights.
 
 ## Capabilities
 Current implementation has the following features:
-* Source control for runbooks and variables
+* Source control for runbooks, variables and Dsc configurations
 * Variable content can be different per stage/environment (this sample demonstrates this on AppInsights instrumentation key that is different for DEV/TEST/PROD environment)
 * Runbook version can be different for each stage/environment
-* Common runbooks and variables (the same version/value for all stages/environments)
+* Dsc configurations can be different for each stage/environment
+* Common runbooks, variables and Dsc configs (the same version/value for all stages/environments)
 * Runbooks can be automatically published (global and per-runbook setting; runbook setting overrides global setting)
-* Automation account can be fully managed (runbooks and variables not in source control are removed during deployment)
+* Dsc configurations can be automatically published and compiled
+* Automation account can be fully managed (runbooks, variables and Dsc configurations not in source control are removed during deployment)
 
 ## Folder structure
 ```
 Definitions
+    Dsc
+        <DscDefinitionName>.json
+        <OtherDscDefinitionName>.json
+        ...
     Runbooks
         <RunbookDefinitionName>.json
         <OtherRunbookDefinitionName>.json
@@ -32,6 +38,10 @@ Definitions
         ...
 Source
     Common
+        Dsc
+            <commonDscImplementationFile>
+            <commonDscImplementationFile2>
+            ...
         Runbooks
             <commonRunbookImplementationFile>
             <commonRunbookImplementationFile2>
@@ -41,25 +51,29 @@ Source
             <commonVariableContentFile2>
             ...
     <Stage>
-        Runbooks
+        Dsc
+            <stage-SpecificDscImplementationFile>
+            <stage-SpecificDscImplementationFile2>
+            ...
+         Runbooks
             <stage-SpecificRunbookImplementationFile>
             <stage-SpecificRunbookImplementationFile2>
             ...
-        Variables
+       Variables
             <stage-SpecificVariableContentFile>
             <stage-SpecificVariableContentFile2>
             ...
-    <Stage>
+    <Stage2>
         ...
 ```
 Sample in this repo contains:
 - Common runbook Utils.ps1
-- Stages DEV and TEST with stage-specific variable Sample-Variable and stage-specific runbook Sample-Runbook.ps1
+- Stages DEV and TEST with stage-specific variable Sample-Variable, stage-specific runbook Sample-Runbook.ps1 and stage-specific Dsc configuration TLS12.ps1
 
 ## Concept
-Concept relies on JSON files that describe which and how runbooks and variables are managed in automation account. Source control can contain more files - only runbokks and variables devined in JSON files are imported to automation account and managed there.  
+Concept relies on JSON files that describe which and how runbooks, variables and Dsc configurations are managed in automation account. Source control can contain more files - only runbooks and variables specified in JSON definition files are imported to automation account and managed there.  
 JSON definition files are stored in Definitions folder as shown in this sample.
-Integration script executed by DevOps agent reads JSON definitions and performs deployment - see below for details.
+Integration script executed by DevOps agent as a part of Release pipeline vi a [Azure Powershell](https://docs.microsoft.com/en-us/azure/devops/pipelines/tasks/deploy/azure-powershell?view=azure-devops) task reads JSON definitions and performs deployment - see below for details.
 
 ### Schema of definition files
 Runbook definition:
@@ -80,6 +94,15 @@ Variable definition:
     "Content": "<FileName in Sources that contains content of variable>"
 }
 ```
+Dsc configuration definition:
+```json
+{
+    "Implementation": "<FileName in Sources that contains the configuration definition>",
+    "AutoPublish": "true or false - if the configuration shall be automatically published",
+    "AutoPublish": "true or false - if the configuration shall be automatically compiled",
+    "Parameters": "object that specifies configuration parameters. Parameters are passed to configuration for compilation"
+}
+```
 ### Processing logic
 Script devops_integration.ps1 looks for definition of runbook in Definitions\Runbooks folder and:
 - looks for implementation file in Stage-specific folder
@@ -88,16 +111,16 @@ Script devops_integration.ps1 looks for definition of runbook in Definitions\Run
 - if found, it's used for import of runbook
 - if not found, warning is logged
 
-The same logic applies for variables - variable definition is loaded from definition JSON file, and content of variable is first searched for in Stage-specific folder and - if not found there - in Common folder.
+Similar logic applies to import of DSC configurations and automation variables - definition is loaded from definition JSON file, and content or implementation is first searched for in Stage-specific folder and - if not found there - in Common folder.
 
 ## Integration script
 Integration with DevOps is implemented by devops_integration.ps1 script. It's supposed to be run by standard Azure PowerShell task in DevOps - note that script uses **Az Powershell** module, so Azure Powershell task version should be at least 4.* (previous versions rely on AzureRm Powershell instead of Az Powershell).
 
 Typical usage and command line:
 ```
-$(System.DefaultWorkingDirectory)/devops_integration.ps1 -ProjectDir "$(System.DefaultWorkingDirectory)" -EnvironmentName $(EnvironmentName) -ResourceGroup $(ResourceGroup) -AutomationAccount $(AutomationAccount) -AutoPublish
+$(System.DefaultWorkingDirectory)/devops_integration.ps1 -ProjectDir "$(System.DefaultWorkingDirectory)" -Scope 'Runbooks','Variables' -EnvironmentName $(EnvironmentName) -ResourceGroup $(ResourceGroup) -AutomationAccount $(AutomationAccount) -AutoPublish
 ```
-Above sample loads environment name, resource group of automation account and automation account name from variables defined for DevOps release, imports runbooks and variables as dfined in JSON definition files in repo, and automatically publishes all runbooks (unless runbook definition file specifies that runbook shall not be published).
+Above sample loads environment name, resource group of automation account and automation account name from variables defined for DevOps release, imports runbooks and variables as defined in JSON definition files in repo, and automatically publishes all runbooks (unless definition file specifies that runbook shall not be published).
 Running task produces output simlar to the below upon successful finish:
 ```
 2020-06-25T10:39:33.0686398Z ##[section]Starting: Run devops_integration.ps1
@@ -128,6 +151,7 @@ Running task produces output simlar to the below upon successful finish:
 Script parameters:  
 | Parameter         |  Meaning |
 |-------------------|----------|
+|  **Scope**       |  List of entities to be processed. Valid entity names are _Dsc_, _Runbooks_' and _Variables_ |
 |  **ProjectDir**       |  Root folder of repository |
 |  **EnvironmentName**  |  Name of the stage/environment we're deploying |
 |  **ResourceGroup**    | Name of the resource group where automation account is located  |
@@ -137,14 +161,14 @@ Script parameters:
 
 
 ## Limitations
-Current implementation manages just runbooks and variables, but not other assets in automation account - for many assets it's not good idea to store them in source control.
+Current implementation manages just runbooks, variables and Dsc configurations, but not other assets in automation account - for many assets it's not good idea to store them in source control.
 > If you have good use case for manageement of other assets, let me know
 
 Currently, only variables of type [string] are supported; support for other variable types may come in next release.
 
-Variable encryption status cannot be changed when variable already exists. To change encryption status, you need to delete the variable manually in automation account and then run deployment again with updated Encryption in variable definition file.
+Variable encryption status cannot be changed when variable already exists. To change encryption status, you have to delete the variable manually in automation account and then run deployment again with updated Encryption in variable definition file.
 
-Integration is supposed to work with any runbook type, however it was heavily tested with powershell runbooks.
+Integration is supposed to work with any runbook type, however it was heavily tested with PowerShell runbooks.
 > Looking for testers with other runbook types.
 
 Enjoy!

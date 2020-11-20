@@ -1,0 +1,6 @@
+{
+    "Implementation": "TLS2.ps1",
+    "AutoPublish": true,
+    "AutoCompile": true,
+    "Parameters": null
+}
