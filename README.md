@@ -168,7 +168,7 @@ Currently, only variables of type [string] are supported; support for other vari
 
 Variable encryption status cannot be changed when variable already exists. To change encryption status, you have to delete the variable manually in automation account and then run deployment again with updated Encryption in variable definition file.
 
-Integration is supposed to work with any runbook type, however it was heavily tested with PowerShell runbooks.
+Integration is supposed to work with any runbook type, however it was heavily tested with PowerShell runbooks only.
 > Looking for testers with other runbook types.
 
 Enjoy!
