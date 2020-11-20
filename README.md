@@ -121,7 +121,7 @@ Typical usage and command line:
 $(System.DefaultWorkingDirectory)/devops_integration.ps1 -ProjectDir "$(System.DefaultWorkingDirectory)" -Scope 'Runbooks','Variables' -EnvironmentName $(EnvironmentName) -ResourceGroup $(ResourceGroup) -AutomationAccount $(AutomationAccount) -AutoPublish
 ```
 Above sample loads environment name, resource group of automation account and automation account name from variables defined for DevOps release, imports runbooks and variables as defined in JSON definition files in repo, and automatically publishes all runbooks (unless definition file specifies that runbook shall not be published).
-Running task produces output simlar to the below upon successful finish:
+Running task inside DevOps pipeline produces output simlar to the below upon successful finish:
 ```
 2020-06-25T10:39:33.0686398Z ##[section]Starting: Run devops_integration.ps1
 2020-06-25T10:39:33.1350708Z ==============================================================================
