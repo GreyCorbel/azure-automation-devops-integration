@@ -103,7 +103,7 @@ Dsc configuration definition:
 {
     "Implementation": "<FileName in Sources that contains the configuration definition>",
     "AutoPublish": "true or false - if the configuration shall be automatically published",
-    "AutoPublish": "true or false - if the configuration shall be automatically compiled",
+    "AutoCompile": "true or false - if the configuration shall be automatically compiled",
     "Parameters": "object that specifies configuration parameters. Parameters are passed to configuration for compilation"
 }
 ```
