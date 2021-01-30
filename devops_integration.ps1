@@ -3,7 +3,8 @@ Param
     [Parameter(Mandatory)]
     [ValidateSet('Runbooks','Variables','Dsc')]
     [string[]]
-        #Name of the stage/environment we're deploying
+        #What we're deploying
+        #We can deploy multiple object types at the same time
         $Scope,
     [Parameter(Mandatory)]
     [string]
@@ -15,7 +16,7 @@ Param
         $ProjectDir,
     [Parameter()]
     [string]
-        #name of the resource group where automation account is located
+        #name of the subscription where automation account is located
         $Subscription,
     [Parameter(Mandatory)]
     [string]
@@ -26,7 +27,7 @@ Param
         #name of automation account that we deploy to
         $AutomationAccount,
     [Switch]
-        #whether or not to remove any existing runbooks and variables from automation account that are not source-controlled 
+        #whether or not to remove any existing runbooks, variables and Dsc configs that are not source-controlled from automation account
         $FullSync,
     [Parameter()]
         [Switch]
@@ -148,24 +149,19 @@ if($Scope -contains 'Runbooks')
         }
     }
 
-    $incompleteJobs = $importJobs.Count
     do
     {
-        Start-Sleep -Seconds 30
-        
-        $dirty=$false
-        #Write-Verbose "Waiting for import jobs to complete: ($incompleteJobs)"
-        $incompleteJobs=0
-        foreach($job in $importJobs)
+        $incompleteJobs=$importJobs.Where{$_.State -notin 'Completed','Suspended','Failed'}
+        if($Verbose)
         {
-            if($job.State -notin 'Completed','Suspended','Failed') {
-                $dirty = $true
-                $incompleteJobs++
-                Write-Verbose "$($job.Name): $($job.State)"
-            }
+            $importJobs | select-object Name,JobStateInfo,Error
+            Write-Host "-----------------"
+        } else {
+            Write-Host "Waiting for import jobs to complete ($($incompleteJobs.Count))"
         }
-        Write-Verbose "-------------------"
-    } while($dirty)
+        if($incompleteJobs.Count -gt 0) {Start-Sleep -Seconds 15}
+    } while($incompleteJobs.Count -gt 0)
+
 
     if($FullSync) {
         $existingRunbooks = @(Get-AzAutomationRunbook -ResourceGroupName $ResourceGroup -AutomationAccountName $AutomationAccount)
@@ -323,17 +319,16 @@ if($Scope -contains 'Dsc')
     #wait for compilations to complete
     do
     {
-        Start-Sleep -Seconds 30
-        $dirty=$false
-        foreach($compilationJob in $compilationJobs)
+        $incompleteJobs=$compilationJobs.Where{$_.State -notin 'Completed','Suspended','Failed'}
+        if($Verbose)
         {
-            $job = Get-AzAutomationDscCompilationJob -Id $compilationJob.Id -ResourceGroupName $resourceGroup -AutomationAccountName $AutomationAccount
-            if($job.Status -notin 'Completed','Suspended') {
-                $dirty = $true
-                Write-Verbose "$($job.ConfigurationName): $($job.Status)"
-            }
+            $compilationJobs | select-object Name,JobStateInfo,Error
+            Write-Host "-----------------"
+        } else {
+            Write-Host "Waiting for compilation jobs to complete ($($incompleteJobs.Count))"
         }
-    } while($dirty)
+        if($incompleteJobs.Count -gt 0) {Start-Sleep -Seconds 15}
+    } while($incompleteJobs.Count -gt 0)
 
     if($FullSync) {
         $existingDscConfigurations = @(Get-AzAutomationDscConfiguration -ResourceGroupName $ResourceGroup -AutomationAccountName $AutomationAccount)

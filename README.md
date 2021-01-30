@@ -8,7 +8,7 @@ Main motivation for creation of this work were only basic capabilities of native
 * Inability to manage variables and provide state-specific content for variables
 * Inability to deliver different versions of runbooks to different stages/environments
 
-Sample runbook and variable included in this repo demonstrates how to effectively log runbook activity and telemetry data into AppInsights instance - just by providing instrumentation key in variable - makes it really easy to standardize runbook activity logging and get more out of AppInsights.
+Sample runbook, variable and Dsc included in this repo demonstrates how to effectively log runbook activity and telemetry data into AppInsights instance - just by providing instrumentation key in variable - makes it really easy to standardize runbook activity logging and get more out of AppInsights.
 
 ## Capabilities
 Current implementation has the following features:
@@ -20,8 +20,10 @@ Current implementation has the following features:
 * Runbooks can be automatically published (global and per-runbook setting; runbook setting overrides global setting)
 * Dsc configurations can be automatically published and compiled
 * Automation account can be fully managed (runbooks, variables and Dsc configurations not in source control are removed during deployment)
+* Everythimg can be easily published to Azure via Azure PowerShell task from Release pipeline and parametrize it from release variables, as shown on picture below:
+![AzurePowershell Task in TFS Release pipeline](.\images\TFS_AzurePowerShellTask.png)
 
-## Folder structure
+## Folder structure for the root
 ```
 Definitions
     Dsc

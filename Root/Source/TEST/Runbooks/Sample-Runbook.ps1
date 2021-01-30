@@ -12,6 +12,9 @@ Login-AzAccount -ServicePrincipal `
     -ApplicationId $servicePrincipalConnection.ApplicationId `
     -CertificateThumbprint $servicePrincipalConnection.CertificateThumbprint | out-null
 
+# Import Application Insight logging module
+# see https://github.com/GreyCorbel/AiLogging
+Import-Module AiLogging
 #import utility functions from common library runbook
 . .\Utils.ps1
 
