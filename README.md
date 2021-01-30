@@ -122,9 +122,10 @@ Integration with DevOps is implemented by devops_integration.ps1 script. It's su
 
 Typical usage and command line:
 ```
-$(System.DefaultWorkingDirectory)/devops_integration.ps1 -ProjectDir "$(System.DefaultWorkingDirectory)" -Scope 'Runbooks','Variables' -EnvironmentName $(EnvironmentName) -ResourceGroup $(ResourceGroup) -AutomationAccount $(AutomationAccount) -AutoPublish
+$(System.DefaultWorkingDirectory)/devops_integration.ps1 -ProjectDir "$(System.DefaultWorkingDirectory)\Root" -Scope 'Runbooks','Variables' -EnvironmentName $(EnvironmentName) -ResourceGroup $(ResourceGroup) -AutomationAccount $(AutomationAccount) -AutoPublish
 ```
-Above sample loads environment name, resource group of automation account and automation account name from variables defined for DevOps release, imports runbooks and variables as defined in JSON definition files in repo, and automatically publishes all runbooks (unless definition file specifies that runbook shall not be published).
+Above sample loads environment name, resource group of automation account and automation account name from variables defined for DevOps release, imports runbooks and variables as defined in JSON definition files in repo to automation account specified in parameters, and automatically publishes all runbooks (unless definition file specifies that runbook shall not be published).
+
 Running task inside DevOps pipeline produces output simlar to the below upon successful finish:
 ```
 2020-06-25T10:39:33.0686398Z ##[section]Starting: Run devops_integration.ps1
@@ -153,15 +154,15 @@ Running task inside DevOps pipeline produces output simlar to the below upon suc
 ```
 
 Script parameters:  
-| Parameter         |  Meaning |
-|-------------------|----------|
-|  **Scope**       |  List of entities to be processed. Valid entity names are _Dsc_, _Runbooks_' and _Variables_ |
+| Parameter             |  Meaning |
+|-----------------------|----------|
+|  **Scope**            |  List of entities to be processed. Valid entity names are _Dsc_, _Runbooks_' and _Variables_ |
 |  **ProjectDir**       |  Root folder of repository |
 |  **EnvironmentName**  |  Name of the stage/environment we're deploying |
-|  **ResourceGroup**    | Name of the resource group where automation account is located  |
-| **AutomationAccount** |  name of automation account that we deploy to |
-|  **FullSync**         |  whether or not to remove any existing runbooks and variables from automation account that are not source-controlled  |
-|  **AutoPublish**      | whether to automatically publish runbooks. This can be overriden in runbook definition file  |
+|  **ResourceGroup**    |  Name of the resource group where automation account is located  |
+| **AutomationAccount** |  Name of automation account that we deploy to |
+|  **FullSync**         |  Whether or not to remove any existing, source-uncontrolled runbooks, variables and Dsc configs from automation account  |
+|  **AutoPublish**      |  Whether to automatically publish runbooks and Dsc configs. This can be overriden in runbook / Dsc definition file  |
 
 
 ## Limitations
