@@ -1,4 +1,4 @@
-# azure-automation-devops-integration
+# Azure automation - Integration with source control
 This repo contains Powershell script that demonstrates integration of Azure automation account into DevOps source control and release pipeline.  
 Main motivation for creation of this work were only basic capabilities of native integration of Azure Automation account with source control, namely:
 * Lack of integration into DevOps pipeline; every repo update results in update of automation account
@@ -22,6 +22,8 @@ Current implementation has the following features:
 * Automation account can be fully managed (runbooks, variables and Dsc configurations not in source control are removed during deployment)
 * Everythimg can be easily published to Azure via Azure PowerShell task from Release pipeline and parametrize it from release variables, as shown on picture below:
 ![AzurePowershell Task in TFS Release pipeline](./images/TFS_AzurePowerShellTask.png)
+
+Code relies on Az.Resources and Az.Automation PowerShell modules
 
 ## Folder structure for the root
 ```
