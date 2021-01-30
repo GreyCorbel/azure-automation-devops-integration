@@ -21,7 +21,7 @@ Current implementation has the following features:
 * Dsc configurations can be automatically published and compiled
 * Automation account can be fully managed (runbooks, variables and Dsc configurations not in source control are removed during deployment)
 * Everythimg can be easily published to Azure via Azure PowerShell task from Release pipeline and parametrize it from release variables, as shown on picture below:
-![AzurePowershell Task in TFS Release pipeline](.\images\TFS_AzurePowerShellTask.png)
+![AzurePowershell Task in TFS Release pipeline](./images/TFS_AzurePowerShellTask.png)
 
 ## Folder structure for the root
 ```
