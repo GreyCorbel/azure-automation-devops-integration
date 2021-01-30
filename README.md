@@ -77,7 +77,7 @@ Sample in this repo contains:
 ## Concept
 Concept relies on JSON files that describe which and how runbooks, variables and Dsc configurations are managed in automation account. Source control can contain more files - only runbooks and variables specified in JSON definition files are imported to automation account and managed there.  
 JSON definition files are stored in Definitions folder as shown in this sample.
-Integration script executed by DevOps agent as a part of Release pipeline vi a [Azure Powershell](https://docs.microsoft.com/en-us/azure/devops/pipelines/tasks/deploy/azure-powershell?view=azure-devops) task reads JSON definitions and performs deployment - see below for details.
+Integration script executed by DevOps agent as a part of Release pipeline via [Azure Powershell](https://docs.microsoft.com/en-us/azure/devops/pipelines/tasks/deploy/azure-powershell?view=azure-devops) task reads JSON definitions and performs deployment - see below for details.
 
 ### Schema of definition files
 Runbook definition:
