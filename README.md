@@ -1,4 +1,5 @@
 # Azure - Integration with source control
+
 This repo contains Powershell scripts that demonstrates integration of Azure automation account and Azure Template Specs into DevOps source control and release pipeline.  
 Main motivation for creation of this work were only basic capabilities of native integration of Azure Automation account with source control, namely:
 * Lack of integration into DevOps pipeline; every repo update results in update of automation account
@@ -8,8 +9,8 @@ Main motivation for creation of this work were only basic capabilities of native
 * Inability to manage variables and provide state-specific content for variables
 * Inability to deliver different versions of runbooks to different stages/environments
 
-Work then evpolved with interest of various development teams to manage more Azure areas from TFS
-Sample runbook, variable and Dsc config included in this repo demonstrates how to effectively log runbook activity and telemetry data into AppInsights instance - just by providing instrumentation key in variable - makes it really easy to standardize runbook activity logging and get more out of AppInsights.
+Work then evolved with interest of various development teams to manage more Azure areas from TFS
+Sample runbook, variable and Dsc config included in this repo demonstrates how to effectively log runbook activity and telemetry data into AppInsights instance - just by providing instrumentation key in variable - makes it really easy to standardize runbook activity logging and get more out of AppInsights.  
 
 ## Capabilities
 Current implementation has the following features:
@@ -22,6 +23,8 @@ Current implementation has the following features:
 * All managed artefacts can be fully managed (auto-deleted from Azure when not found in source control)
 
 Everything can be easily published to Azure via Azure PowerShell task from Release pipeline and parametrized from release variables, as shown on picture below:
+
+
 ![AzurePowershell Task in TFS Release pipeline](./images/TFS_AzurePowerShellTask.png)
 
 Code relies on `Az.Resources` and `Az.Automation` PowerShell modules
