@@ -21,7 +21,7 @@ Current implementation has the following features:
 * Dsc Configurations can be automatically compiled and can be automatically published (global and per-runbook setting; configuration-level setting overrides global setting)
 * All managed artefacts can be fully managed (auto-deleted from Azure when not found in source control)
 
-Everythimg can be easily published to Azure via Azure PowerShell task from Release pipeline and parametrized from release variables, as shown on picture below:
+Everything can be easily published to Azure via Azure PowerShell task from Release pipeline and parametrized from release variables, as shown on picture below:
 ![AzurePowershell Task in TFS Release pipeline](./images/TFS_AzurePowerShellTask.png)
 
 Code relies on `Az.Resources` and `Az.Automation` PowerShell modules
