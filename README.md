@@ -1,4 +1,4 @@
-# Azure automation - Integration with source control
+# Azure - Integration with source control
 This repo contains Powershell scripts that demonstrates integration of Azure automation account and Azure Template Specs into DevOps source control and release pipeline.  
 Main motivation for creation of this work were only basic capabilities of native integration of Azure Automation account with source control, namely:
 * Lack of integration into DevOps pipeline; every repo update results in update of automation account
