@@ -3,8 +3,7 @@ Param
     [Parameter(Mandatory)]
     [ValidateSet('Runbooks','Variables','Dsc')]
     [string[]]
-        #What we're deploying
-        #We can deploy multiple object types at the same time
+        #What we are deploying
         $Scope,
     [Parameter(Mandatory)]
     [string]
@@ -14,7 +13,7 @@ Param
     [string]
         #root folder of repository
         $ProjectDir,
-    [Parameter()]
+    [Parameter(Mandatory)]
     [string]
         #name of the subscription where automation account is located
         $Subscription,
@@ -27,71 +26,38 @@ Param
         #name of automation account that we deploy to
         $AutomationAccount,
     [Switch]
-        #whether or not to remove any existing runbooks, variables and Dsc configs that are not source-controlled from automation account
+        #whether or not to remove any existing runbooks and variables from automation account that are not source-controlled 
         $FullSync,
-    [Parameter()]
-        [Switch]
+    [Switch]
         #whether to automatically publish runbooks and Dsc configurations. This can be overriden in runbook/Dsc definition file
         $AutoPublish,
-    [Parameter()]
-        [Switch]
+    [Switch]
         #whether to report missing implementation file
         #Note: it may be perfectly OK not to have implementation file, if artefact is meant to be used just in subset of environments
         $ReportMissingImplementation
 )
 
-#region Helpers
-Function Get-FileToProcess
-{
-    Param
-    (
-        [Parameter(Mandatory)]
-        [ValidateSet('Runbooks','Variables','Dsc','Policies','Initiatives','AssignmentTargets')]
-        [string]$FileType,
-        [Parameter(Mandatory)]
-        [string]$FileName
-    )
-
-    Process
-    {
-        if(Test-Path "$ContentRoot\$FileType\$FileName" -PathType Leaf) {
-            return "$ContentRoot\$FileType\$FileName"
-        }
-        if(Test-Path "$CommonContentRoot\$FileType\$FileName" -PathType Leaf) {
-            return "$CommonContentRoot\$FileType\$FileName"
-        }
-        return $null
-    }
-}
-#endregion
-
-#declare required modules
 Import-Module Az.Automation
 Import-Module Az.Resources
 
-#setup variables
-[string]$ContentRoot = "$ProjectDir\Source\$EnvironmentName"
-[string]$CommonContentRoot = "$ProjectDir\Source\Common"
-$definitionsRoot = "$ProjectDir\Definitions"
-
+. "$projectDir\Init.ps1" -ProjectDir $ProjectDir -Environment $EnvironmentName
 
 #region Connect subscription
-$ctx = Get-AzContext
-if(-not [string]::IsNullOrWhiteSpace($subscription) ) {
-    if($ctx.Subscription.Name -ne $Subscription) {
-        Select-AzSubscription -Subscription $Subscription | Out-Null
-    }
-}
 
-#show where we're connected to
+"Setting active subscription to $Subscription"
+Set-AzContext -SubscriptionName $Subscription
+
+#show where we're connected to - when in verbose
+$ctx = Get-AzContext
 Write-Verbose ($ctx | Out-String)
 #endregion
 
 #region Runbooks
-if($Scope -contains 'Runbooks')
+if(Check-Scope -Scope $scope -RequiredScope 'Runbooks')
 {
     "Processing Runbooks"
     #create a scriptblock for importing runbook as a job
+    #this is to increase the performance as the inport takes terribly long
     $runbookImportJob = {
         param
         (
@@ -101,7 +67,8 @@ if($Scope -contains 'Runbooks')
             [string]$AAName,
             [string]$Path,
             [string]$Type,
-            [bool]$Published
+            [bool]$Published,
+            $ctx
         )
         Import-AzAutomationRunbook `
             -Name $Name `
@@ -111,15 +78,12 @@ if($Scope -contains 'Runbooks')
             -Path $Path `
             -Type $Type `
             -Force `
-            -Published:$Published
+            -Published:$Published `
+            -AzContext $ctx
     }
 
-    $definitions = @()
-
-    foreach($definition in Get-ChildItem -Path "$definitionsRoot\Runbooks" -filter *.json) {
-        $definitions+= get-content $definition.FullName | ConvertFrom-Json
-    }
     $importJobs=@()
+    $definitions = @(Get-DefinitionFiles -FileType Runbooks)
     foreach($def in $definitions) {
         $Publish=$def.AutoPublish
         if($null -eq $Publish) {
@@ -139,11 +103,13 @@ if($Scope -contains 'Runbooks')
                     $AutomationAccount,`
                     $implementationFile,`
                     $def.Type,`
-                    $Publish `
+                    $Publish, `
+                    $ctx `
                 -Name $def.Name
         }
         else {
-            if($ReportMissingImplementation) {
+            if($ReportMissingImplementation)
+            {
                 Write-Warning "Runbook $($def.name)`: Implementation file not defined for this environment, skipping"
             }
         }
@@ -152,9 +118,9 @@ if($Scope -contains 'Runbooks')
     do
     {
         $incompleteJobs=$importJobs.Where{$_.State -notin 'Completed','Suspended','Failed'}
-        if($Verbose)
+        if($VerbosePreference -ne 'SilentlyContinue')
         {
-            $importJobs | select-object Name,JobStateInfo,Error
+            $importJobs | select-object Name, JobStateInfo, Error
             Write-Host "-----------------"
         } else {
             Write-Host "Waiting for import jobs to complete ($($incompleteJobs.Count))"
@@ -162,6 +128,10 @@ if($Scope -contains 'Runbooks')
         if($incompleteJobs.Count -gt 0) {Start-Sleep -Seconds 15}
     } while($incompleteJobs.Count -gt 0)
 
+    $importJobs | foreach-object{
+        $_ | Select-Object Name,JobStateInfo,Error
+        $_.ChildJobs | Select-Object Name,JobStateInfo,Error
+    }
 
     if($FullSync) {
         $existingRunbooks = @(Get-AzAutomationRunbook -ResourceGroupName $ResourceGroup -AutomationAccountName $AutomationAccount)
@@ -176,13 +146,10 @@ if($Scope -contains 'Runbooks')
 #endregion Runbooks
 
 #region Variables
-if($Scope -contains 'Variables')
+if(Check-Scope -Scope $scope -RequiredScope 'Variables')
 {
     "Processing Automation variables"
-    $definitions = @()
-    foreach($definition in Get-ChildItem -Path "$definitionsRoot\Variables" -filter *.json) {
-        $definitions+= get-content $definition.FullName | ConvertFrom-Json
-    }
+    $definitions = @(Get-DefinitionFiles -FileType Variables)
 
     $CurrentVariables = Get-AzAutomationVariable -AutomationAccountName $AutomationAccount -ResourceGroupName $ResourceGroup
     "Updating existing variables"
@@ -265,17 +232,13 @@ if($Scope -contains 'Variables')
 #endregion Variables
 
 #region Dsc
-if($Scope -contains 'Dsc')
+if(Check-Scope -Scope $scope -RequiredScope 'Dsc')
 {
-    $definitions = @()
     $ManagedConfigurations = @()
     $CompilationJobs = @()
 
-    #load definitions
-    foreach($definition in Get-ChildItem -Path "$definitionsRoot\Dsc" -filter *.json) {
-        $definitions+= get-content $definition.FullName | ConvertFrom-Json
-    }
-    #import configurations
+    $definitions = @(Get-DefinitionFiles -FileType Dsc)
+
     foreach($def in $definitions) {
         $Publish= $def.AutoPublish
         if($null -eq $Publish) {
@@ -303,7 +266,8 @@ if($Scope -contains 'Dsc')
                     -ResourceGroupName $ResourceGroup `
                     -AutomationAccountName $AutomationAccount `
                     -ConfigurationName $DscConfig.Name `
-                    -Parameters $Params
+                    -Parameters $Params `
+                    -AzContext $ctx
                 $CompilationJobs+=$CompilationJob
             }
             $ManagedConfigurations+=$DscConfig
@@ -311,7 +275,7 @@ if($Scope -contains 'Dsc')
         else {
             if($ReportMissingImplementation)
             {
-                Write-Warning "Dsc $($def.Implementation)`: Implementation file not defined for this environment, skipping"
+                Write-Warning "Dsc $($def.Name)`: Implementation file not defined for this environment, skipping"
             }
         }
     }
@@ -319,14 +283,22 @@ if($Scope -contains 'Dsc')
     #wait for compilations to complete
     do
     {
-        $incompleteJobs=$compilationJobs.Where{$_.State -notin 'Completed','Suspended','Failed'}
-        if($Verbose)
+        $incompleteJobs=@($compilationJobs `
+            | Foreach-object{Get-AzAutomationDscCompilationJob `
+                -Id $_.Id `
+                -ResourceGroupName $ResourceGroup `
+                -AutomationAccountName $AutomationAccount `
+            } `
+            | Where-Object{$_.Status -notin 'Completed','Suspended','Failed'})
+        
+        if($VerbosePreference -ne 'SilentlyContinue')
         {
-            $compilationJobs | select-object Name,JobStateInfo,Error
+            $incompleteJobs
             Write-Host "-----------------"
         } else {
             Write-Host "Waiting for compilation jobs to complete ($($incompleteJobs.Count))"
         }
+
         if($incompleteJobs.Count -gt 0) {Start-Sleep -Seconds 15}
     } while($incompleteJobs.Count -gt 0)
 
