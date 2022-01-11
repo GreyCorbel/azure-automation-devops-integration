@@ -47,9 +47,6 @@ Import-Module Az.Resources
 "Setting active subscription to $Subscription"
 Set-AzContext -SubscriptionName $Subscription
 
-#show where we're connected to - when in verbose
-$ctx = Get-AzContext
-Write-Verbose ($ctx | Out-String)
 #endregion
 
 #region Runbooks
@@ -67,8 +64,7 @@ if(Check-Scope -Scope $scope -RequiredScope 'Runbooks')
             [string]$AAName,
             [string]$Path,
             [string]$Type,
-            [bool]$Published,
-            $ctx
+            [bool]$Published
         )
         Import-AzAutomationRunbook `
             -Name $Name `
@@ -78,8 +74,7 @@ if(Check-Scope -Scope $scope -RequiredScope 'Runbooks')
             -Path $Path `
             -Type $Type `
             -Force `
-            -Published:$Published `
-            -AzContext $ctx
+            -Published:$Published
     }
 
     $importJobs=@()
@@ -103,8 +98,7 @@ if(Check-Scope -Scope $scope -RequiredScope 'Runbooks')
                     $AutomationAccount,`
                     $implementationFile,`
                     $def.Type,`
-                    $Publish, `
-                    $ctx `
+                    $Publish `
                 -Name $def.Name
         }
         else {
@@ -130,7 +124,7 @@ if(Check-Scope -Scope $scope -RequiredScope 'Runbooks')
 
     $importJobs | foreach-object{
         $_ | Select-Object Name,JobStateInfo,Error
-        $_.ChildJobs | Select-Object Name,JobStateInfo,Error
+        $_.ChildJobs | Select-Object Name,JobStateInfo -ExpandProperty Error
     }
 
     if($FullSync) {
@@ -266,8 +260,7 @@ if(Check-Scope -Scope $scope -RequiredScope 'Dsc')
                     -ResourceGroupName $ResourceGroup `
                     -AutomationAccountName $AutomationAccount `
                     -ConfigurationName $DscConfig.Name `
-                    -Parameters $Params `
-                    -AzContext $ctx
+                    -Parameters $Params
                 $CompilationJobs+=$CompilationJob
             }
             $ManagedConfigurations+=$DscConfig
