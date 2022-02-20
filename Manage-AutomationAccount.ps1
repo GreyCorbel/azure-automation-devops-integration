@@ -37,7 +37,6 @@ Param
         $ReportMissingImplementation
 )
 
-Import-Module Az.Accounts
 Import-Module Az.Automation
 Import-Module Az.Resources
 
@@ -46,7 +45,8 @@ Import-Module Az.Resources
 #region Connect subscription
 
 "Setting active subscription to $Subscription"
-Set-AzContext -SubscriptionName $Subscription
+Select-AzSubscription -Subscription $Subscription
+
 #endregion
 
 #region Runbooks
@@ -98,7 +98,7 @@ if(Check-Scope -Scope $scope -RequiredScope 'Runbooks')
                     $AutomationAccount,`
                     $implementationFile,`
                     $def.Type,`
-                    $Publish
+                    $Publish `
                 -Name $def.Name
         }
         else {

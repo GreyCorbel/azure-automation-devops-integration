@@ -20,7 +20,7 @@ Function Validate-FileType
     )
     begin
     {
-        $AllowedFileTypes = 'Runbooks','Variables','Dsc','ArmTemplates'
+        $AllowedFileTypes = 'Runbooks','Variables','Dsc'
     }
     process
     {
