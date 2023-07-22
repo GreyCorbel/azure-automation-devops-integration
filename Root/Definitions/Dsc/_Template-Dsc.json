@@ -1,0 +1,7 @@
+{
+    //sample DSC configuration
+    "Implementation": "_Template-Dsc.ps1",
+    "AutoPublish": true,
+    "AutoCompile": true,
+    "Parameters": null
+}

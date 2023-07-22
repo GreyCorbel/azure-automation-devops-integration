@@ -1,0 +1,10 @@
+{
+    "Name": "Hourly-45",
+    "StartTime": "",
+    "SetMinute": 45,
+    "Description": "Hourly schedule starting at 45 minutes",
+    "TimeZone": "",
+    "Frequency": "Hourly",
+    "Interval": 1,
+    "IsEnabled": true
+}

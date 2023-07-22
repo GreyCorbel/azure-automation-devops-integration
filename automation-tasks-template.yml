@@ -1,0 +1,84 @@
+###########################################################
+###################### PARAMETERS #########################
+###########################################################
+parameters:
+    #environemnt
+  - name: environment
+    type: string
+
+    #subscription
+  - name: subscription
+    type: string
+
+    #resource group
+  - name: resourceGroup
+    type: string
+
+    #resource group
+  - name: automationAccount
+    type: string
+  
+    #vm image
+  - name: poolName
+    type: string
+  
+  - name: serviceConnection
+    type: string
+
+###########################################################
+######################### STEPS ###########################
+###########################################################
+jobs:
+- deployment: '${{ parameters.environment }}'
+  displayName: 'Deploy to ${{ parameters.environment }}'
+  environment: ${{ parameters.environment }}
+  pool: 
+    name: ${{ parameters.poolName }}
+    demands:  
+    - Agent.NetworkZone -equals Azure
+    - Agent.OS -equals Windows_NT
+
+  strategy:
+    runOnce:
+      deploy:
+        steps:
+          - checkout: self
+
+            # Automation
+          - task: AzurePowerShell@5
+            displayName: 'Automation'
+            continueOnError: false
+            enabled: true
+            condition: or(not(startsWith(variables['Build.SourceVersionMessage'],'PipelineFilter:')),and(startsWith(variables['Build.SourceVersionMessage'],'PipelineFilter:'),contains(variables['Build.SourceVersionMessage'],'Automation')))
+            inputs:
+              azureSubscription: '${{ parameters.serviceConnection }}'
+              ScriptType: 'FilePath'
+              ScriptPath: '$(System.DefaultWorkingDirectory)/Manage-AutomationAccount.ps1'
+              ScriptArguments: '-ProjectDir "$(System.DefaultWorkingDirectory)/Root" -Scope "Runbooks","Variables","Modules","Schedules" -EnvironmentName ${{ parameters.environment }} -Subscription ${{ parameters.subscription }} -ResourceGroup ${{ parameters.resourceGroup }} -AutomationAccount ${{ parameters.automationAccount }} -AutoPublish -ReportMissingImplementation'
+              azurePowerShellVersion: 'LatestVersion'
+
+            # Dsc
+          - task: AzurePowerShell@5
+            displayName: 'Dsc'
+            continueOnError: false
+            enabled: true
+            condition: or(not(startsWith(variables['Build.SourceVersionMessage'],'PipelineFilter:')),and(startsWith(variables['Build.SourceVersionMessage'],'PipelineFilter:'),contains(variables['Build.SourceVersionMessage'],'Dsc')))
+            inputs:
+              azureSubscription: '${{ parameters.serviceConnection }}'
+              ScriptType: 'FilePath'
+              ScriptPath: '$(System.DefaultWorkingDirectory)/Manage-AutomationAccount.ps1'
+              ScriptArguments: '-ProjectDir "$(System.DefaultWorkingDirectory)/Root" -Scope "Dsc" -EnvironmentName ${{ parameters.environment }} -Subscription ${{ parameters.subscription }} -ResourceGroup ${{ parameters.resourceGroup }} -AutomationAccount ${{ parameters.automationAccount }} -AutoPublish -Verbose'
+              azurePowerShellVersion: 'LatestVersion'
+
+            # ARM Template Specs
+          - task: AzurePowerShell@5
+            displayName: 'ARM Template Specs'
+            continueOnError: false
+            enabled: true
+            condition: or(not(startsWith(variables['Build.SourceVersionMessage'],'PipelineFilter:')),and(startsWith(variables['Build.SourceVersionMessage'],'PipelineFilter:'),contains(variables['Build.SourceVersionMessage'],'ArmTemplateSpecs')))
+            inputs:
+              azureSubscription: '${{ parameters.serviceConnection }}'
+              ScriptType: 'FilePath'
+              ScriptPath: '$(System.DefaultWorkingDirectory)/Manage-ArmTemplateSpecs.ps1'
+              ScriptArguments: '-ProjectDir "$(System.DefaultWorkingDirectory)/Root" -EnvironmentName ${{ parameters.environment }} -FullSync'
+              azurePowerShellVersion: 'LatestVersion'

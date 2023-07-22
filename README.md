@@ -1,20 +1,20 @@
-# Azure - Integration with source control
+# Azure automation - Integration with source control
 
 This repo contains Powershell scripts that demonstrates integration of Azure automation account and Azure Template Specs into DevOps source control and release pipeline.  
 Main motivation for creation of this work were only basic capabilities of native integration of Azure Automation account with source control, namely:
 * Lack of integration into DevOps pipeline; every repo update results in update of automation account
-* Only runbooks are source-controlled, but not other assets - I particularly missed ability to control variables and Dsc configurations
+* Only runbooks are source-controlled, but not other assets - I particularly missed ability to control variables, modules installed in automation account, schedules and Dsc configurations
 * Only flat structure of repo (runbooks in subfolders are not managed)
 * Dependency on PAT tokens
 * Inability to manage variables and provide state-specific content for variables
 * Inability to deliver different versions of runbooks to different stages/environments
 
 Work then evolved with interest of various development teams to manage more Azure areas from TFS
-Sample runbook, variable and Dsc config included in this repo demonstrates how to effectively log runbook activity and telemetry data into AppInsights instance - just by providing instrumentation key in variable - makes it really easy to standardize runbook activity logging and get more out of AppInsights.  
+Sample runbook and variable included in this repo demonstrates how to effectively log runbook activity and telemetry data into AppInsights instance - just by providing instrumentation key in variable - makes it really easy to standardize runbook activity logging and get more out of AppInsights.  
 
 ## Capabilities
 Current implementation has the following features:
-* Source control for runbooks, variables, Dsc configurations and Azure Template Specs
+* Source control for runbooks, variables, schedules, modules installed in automation account, Dsc configurations and Azure Template Specs
 * All managed artefacts can be the same for all environments/stages, or can be specific for each environment/stage (this sample demonstrates this on AppInsights instrumentation key that is different for DEV/TEST/PROD environment)
   * Place implementation to Common folder, or stage-specific folder, depending on your needs
   * Stage-specific folders have priority when scripts look for implementation file
@@ -22,10 +22,7 @@ Current implementation has the following features:
 * Dsc Configurations can be automatically compiled and can be automatically published (global and per-runbook setting; configuration-level setting overrides global setting)
 * All managed artefacts can be fully managed (auto-deleted from Azure when not found in source control)
 
-Everything can be easily published to Azure via Azure PowerShell task from Release pipeline and parametrized from release variables, as shown on picture below:
-
-
-![AzurePowershell Task in TFS Release pipeline](./images/TFS_AzurePowerShellTask.png)
+Everything can be easily published to Azure via Azure PowerShell task from DevOps pipeline as demonstrated by [deployment pipeline](./Automation%20deployment.yml) and [associated pipeline template](./automation-tasks-template.yml).
 
 Code relies on `Az.Resources` and `Az.Automation` PowerShell modules
 
@@ -40,9 +37,17 @@ Definitions
         <DscDefinitionName>.json
         <OtherDscDefinitionName>.json
         ...
+    Modules
+        <ModulesDefinitionName-1>.json
+        <ModulesDefinitionName-2>.json
+        ...
     Runbooks
         <RunbookDefinitionName>.json
         <OtherRunbookDefinitionName>.json
+        ...
+    Schedules
+        <ScheduleDefinitionName>.json
+        <OtherScheduleDefinitionName>.json
         ...
     Variables
         <VariableDefinitionName>.json
@@ -56,6 +61,10 @@ Source
         Dsc
             <commonDscImplementationFile>
             <commonDscImplementationFile2>
+            ...
+        Modules
+            <ModulesInstallationFile-1>.json
+            <ModulesInstallationFile-2>.json
             ...
         Runbooks
             <commonRunbookImplementationFile>
@@ -73,6 +82,10 @@ Source
             <stage-SpecificDscImplementationFile>
             <stage-SpecificDscImplementationFile2>
             ...
+        Modules
+            <ModulesInstallationFile-1>.json
+            <ModulesInstallationFile-2>.json
+            ...
          Runbooks
             <stage-SpecificRunbookImplementationFile>
             <stage-SpecificRunbookImplementationFile2>
@@ -85,54 +98,20 @@ Source
         ...
 ```
 Sample in this repo contains:
-- Common runbook `Init.ps1` with shared code
+- Common runbook `Runtime.ps1` with shared code
+- Stage Common with sample definitions and files
 - Stages DEV and TEST with stage-specific variable Sample-Variable, stage-specific runbook Sample-Runbook.ps1, stage-specific Dsc configuration TLS12.ps1, and common Arm Template Spec StorageAccount
 
+Repo itself can deploy to multiple automation accounts - sample here contains just single project forder Root that maps to single automation accoutns. There can be more automation accounts managed from repo - just add multiple dirs side by side with Root, initialize folder structure inside and create deployment pipeline referencing new project dir.
+
 ## Concept
-Concept relies on JSON files that describe which and how runbooks, variables and Dsc configurations are managed in automation account. Source control can contain more files - only runbooks and variables specified in JSON definition files are imported to automation account and managed there.  
+Concept relies on JSON files that describe which and how runbooks, variables, schedules, modules and Dsc configurations are managed in automation account. Source control can contain more files - only runbooks and variables specified in JSON definition files are imported to automation account and managed there.  
 JSON definition files are stored in Definitions folder as shown in this sample.
 Integration script executed by DevOps agent as a part of Release pipeline via [Azure Powershell](https://docs.microsoft.com/en-us/azure/devops/pipelines/tasks/deploy/azure-powershell?view=azure-devops) task reads JSON definitions and performs deployment - see below for details.
 
 ### Schema of definition files
-Runbook definition:
-```json
-{
-    "Name": "<Name of the runbook as appears in automation account>",
-    "Implementation": "<FileName in Sources that contains implementation of runbook>",
-    "Type": "<type of runbook, e.g. PowerShell>",
-    "AutoPublish": "true or false - if the runbook shall be automatically published"
-}
-```
-Variable definition:
-```json
-{
-    "Name": "<Name of the variable as appears in automation account>",
-    "Description": "<description of variable>",
-    "Encrypted": "true or false - if the variable shall be encrypted>",
-    "Content": "<FileName in Sources that contains content of variable>"
-}
-```
-Dsc configuration definition:
-```json
-{
-    "Implementation": "<FileName in Sources that contains the configuration definition>",
-    "AutoPublish": "true or false - if the configuration shall be automatically published",
-    "AutoCompile": "true or false - if the configuration shall be automatically compiled",
-    "Parameters": "object that specifies configuration parameters. Parameters are passed to configuration for compilation"
-}
-```
-Arm Template Spec definition:
-```json
-{
-    "Name": "<name of Arm Template Spec to show in Azure Portal>",
-    "Description": "<description of Arm Template Spec to show in Azure Portal>" ,
-    "TemplateImplementation": "<FileName in Sources that contains content of Arm template>",
-    "ResourceGroupName":"Name of resource group where tempplate shall be published",
-    "SubscriptionName":"Name of subscription where resource group is located",
-    "ShareTargetGroupName":"Name of AAD group that is allowed to use the template spec",
-    "Version":"Version of the template spec to show in Azure Portal"
-}
-```
+Schema of definition files of runbooks, variables, schedules, modules and Dsc configs is described in [initialization file](./InitializeRepository.ps1)
+
 ### Processing logic
 Scripts looks for definition of runbook/variable/Dsc/ArmTemplate in respective subfolders under Definitions folder and:
 - looks for implementation file in Stage-specific folder
@@ -148,10 +127,10 @@ Integration with DevOps is implemented by Manage-\*.ps1 script. It's supposed to
 
 Typical usage and command line that uses pipeline variables:
 ```
-$(System.DefaultWorkingDirectory)/Manage-AutomationAccount.ps1 -ProjectDir "$(System.DefaultWorkingDirectory)\Root" -Scope 'Runbooks','Variables','Dsc' -EnvironmentName $(EnvironmentName) -ResourceGroup $(ResourceGroup) -AutomationAccount $(AutomationAccount) -AutoPublish
+$(System.DefaultWorkingDirectory)/Manage-AutomationAccount.ps1 -ProjectDir "$(System.DefaultWorkingDirectory)/Root" -Scope 'Runbooks','Variables','Dsc','Schedules','Modules' -EnvironmentName $(EnvironmentName) -ResourceGroup $(ResourceGroup) -AutomationAccount $(AutomationAccount) -AutoPublish
 ```
 ```
-$(System.DefaultWorkingDirectory)/Automation/Manage-ArmTemplateSpecs.ps1 -ProjectDir "$(System.DefaultWorkingDirectory)/Root" -EnvironmentName $(Environment) -FullSync
+$(System.DefaultWorkingDirectory)/Manage-ArmTemplateSpecs.ps1 -ProjectDir "$(System.DefaultWorkingDirectory)/Root" -EnvironmentName $(Environment) -FullSync
 ```
 Above samples load environment name and other parameters from variables defined for DevOps release, and import runbooks, variables, Dsc Configurations and Arm Template Specs as defined in JSON definition files in repo to Azure. Runbooks and Dsc Configurations are automatically published (if definition file does not specify otherwise)
 
@@ -185,18 +164,26 @@ Running task inside DevOps pipeline produces output simlar to the below upon suc
 Script parameters:  
 | Parameter             |  Meaning |
 |-----------------------|----------|
-|  **Scope**            |  List of entities to be processed. Valid entity names are _Dsc_, _Runbooks_' and _Variables_ |
-|  **ProjectDir**       |  Root folder of repository |
+|  **Scope**            |  List of entities to be processed. Valid entity names are _Dsc_, _Runbooks_, _Variables_ , _Schedules_, _Modules_|
+|  **ProjectDir**       |  Root folder of ¨for automation account. .\Root here |
 |  **EnvironmentName**  |  Name of the stage/environment we're deploying |
 |  **ResourceGroup**    |  Name of the resource group where automation account is located  |
 | **AutomationAccount** |  Name of automation account that we deploy to |
-|  **FullSync**         |  Whether or not to remove any existing, source-uncontrolled runbooks, variables and Dsc configs from automation account  |
+|  **FullSync**         |  Whether or not to remove any existing, source-uncontrolled runbooks, variables, schedules and Dsc configs from automation account  |
 |  **AutoPublish**      |  Whether to automatically publish runbooks and Dsc configs. This can be overriden in runbook / Dsc definition file  |
 
+There is also integration pipeline script tor [webhook management](./Manage-Webhook.ps1) that does the following:
+- based on runbook definition file, it detects if runbook is supposedf to be triggered by webhook
+- if so, creates webhook, stores it to keyvault, and reaches to given instance of Azure Event Grid to create/update event subscription for defined event types to trigger the webhook
+- renews any webhooks approaching expiration, and removes expired webhooks
 
 ## Limitations
-Current implementation as shown in Manage-AutomationAccount script manages just runbooks, variables and Dsc Configurations, but not other assets in automation account - for many assets it's not good idea to store them in source control.
-> If you have good use case for manageement of other assets, let me know
+Current implementation as shown in Manage-AutomationAccount script manages just runbooks, variables, schedules, mudules installed and Dsc Configurations, but not other assets in automation account - for many assets it's not good idea to store them in source control.
+> If you have good use case for management of other assets, let me know
+
+Modules are installed to automation account, but not on any hybrid workers - you have to install them on hybrid worker yourself.
+
+Webhooks are integrated with Event Grid only - if you desire to integrate with other services that trigger webhook, let us know.
 
 Variable encryption status cannot be changed when variable already exists. To change encryption status, you have to delete the variable manually in automation account and then run deployment again with updated Encryption in variable definition file.
 

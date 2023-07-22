@@ -1,0 +1,51 @@
+# Pipeline supports skipping tasks. Tasks executed are specified by PipelineFilter list in commit message.
+# When commit message does NOT start with 'PipelineFilter:' prefix, all tasks in pipeline are performed
+# When commit message does start with 'PipelineFilter:' prefix, only tasks specified after the prefix are executed
+# Supported task identifiers are:
+#   Automation
+#   Dsc
+#   ArmTemplateSpecs
+# Multiple steps can be specified by PipelineFilter: prefix1,prefix2
+
+# Example: 
+# PipelineFilter:ArmTemplateSpecs,Automation
+#   Only ArmTemplateSpecs and Automation deployment tasks are performed
+
+trigger:
+  branches:
+    include:
+    - master
+
+###########################################################
+###################### VARIABLES ##########################
+###########################################################
+variables:
+  poolName: 'agent-pool-name'
+
+  #DEV
+  environmentDEV: 'DEV'
+  resourceGroupDEV: 'azure-resource-group-name-dev'
+  automationAccountDEV: 'automation-account-name-dev'
+  serviceConnectionDEV: 'devops-service-connection-name-dev'
+  subscriptionDEV: 'azure-subscription-name-dev'
+
+  #add other environmetns as neede
+
+###########################################################
+####################### STAGES ###########################
+###########################################################
+stages:
+# DEV stage
+- stage: DEV
+  displayName: 'Deploy to DEV'
+  jobs: 
+  - template: automation-tasks-template.yml
+    parameters:
+      poolName: ${{ variables.poolName }}
+      serviceConnection: ${{ variables.serviceConnectionDEV }}
+      environment: ${{ variables.environmentDEV }}
+      resourceGroup: ${{ variables.resourceGroupDEV }}
+      automationAccount: ${{ variables.automationAccountDEV }}
+      subscription: ${{ variables.subscriptionDEV }}
+
+# deploy to other stages and needed

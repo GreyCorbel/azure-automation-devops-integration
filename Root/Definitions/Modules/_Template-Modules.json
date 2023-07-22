@@ -1,0 +1,4 @@
+{
+    //list of modules to be imported to automation account
+    "ModulesList": "_Template_modules.json"
+}

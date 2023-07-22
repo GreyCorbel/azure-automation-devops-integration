@@ -20,7 +20,7 @@ Param
 
 Import-Module Az.Resources
 
-. "$projectDir\Init.ps1" -ProjectDir $ProjectDir -Environment $EnvironmentName
+. "$projectDir\..\Runtime.ps1" -ProjectDir $ProjectDir -Environment $EnvironmentName
 
 Get-AzContext
 #region ArmTemplateSpecs
