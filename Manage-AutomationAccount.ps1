@@ -41,10 +41,11 @@ Param
         $ReportMissingImplementation
 )
 
+Import-Module Az.Accounts
 Import-Module Az.Automation
 Import-Module Az.Resources
 
-. "$projectDir\..\Runtime.ps1" -ProjectDir $ProjectDir -Environment $EnvironmentName
+. "$projectDir\Runtime.ps1" -ProjectDir $ProjectDir -Environment $EnvironmentName
 
 #region Connect subscription
 
@@ -426,6 +427,7 @@ if(Check-Scope -Scope $scope -RequiredScope 'Runbooks')
     "Processing Runbooks"
     #create a scriptblock for importing runbook as a job
     #this is to increase the performance as the inport takes terribly long
+    $supportedRunbookTypes = @("PowerShell", "PowerShell7")
     $runbookImportJob = {
         param
         (
@@ -438,18 +440,89 @@ if(Check-Scope -Scope $scope -RequiredScope 'Runbooks')
             [bool]$Published,
             [string[]] $Schedules2Link,
             [string[]] $CurrentSchedulesNames,
-            [string]$HWGroup
+            [string]$HWGroup,
+            [string]$RuntimeVersion,
+            [string]$Subscription
         )
-        Import-AzAutomationRunbook `
-            -Name $Name `
-            -Description $Description `
-            -ResourceGroupName $RGName `
-            -AutomationAccountName $AAName `
-            -Path $Path `
-            -Type $Type `
-            -Force `
-            -Published:$Published
 
+        $location = (Get-AzResourceGroup -Name $RGName).Location
+        # Using preview API to support PowerShell runtime 7.2
+        $versionEnum = @{
+            '7.2' =  @{runbookType = 'PowerShell' ; ApiVersion = '2022-06-30-preview'; runtime = 'PowerShell-7.2' }
+            '7.1' =  @{runbookType = 'PowerShell7'; ApiVersion = '2019-06-01' }
+            '5.1' =  @{runbookType = 'PowerShell' ; ApiVersion = '2019-06-01' }
+        }
+        $uriBase = "https://management.azure.com"
+        $resourceProviderName = "Microsoft.Automation"
+        $resourceType = "automationAccounts" 
+        $apiVersion = $versionEnum[$RuntimeVersion].ApiVersion
+
+        $azToken = Get-AzAccessToken
+        # Create or Update runbook
+        $method = "PUT"
+        $uriCall = "/subscriptions/$Subscription/resourceGroups/$RGName/providers/$resourceProviderName/$resourceType/$AAName/runbooks/$($Name)?api-version=$apiVersion"
+        $contentType = "application/json"
+        $Header = @{
+            "Authorization" = "$($azToken.Type) $($azToken.Token)"
+            "Content-type" = $contentType
+        }
+        $newRunbookPayload = @{
+            location   = $location
+            properties = @{
+              runbookType = $versionEnum[$RuntimeVersion].runbookType
+              # runtime     = $versionEnum[$runtimeVersion].runtime
+              logProgress = $false
+              logVerbose  = $false
+              draft       = @{}
+            }
+        }
+        # For the runtime 7.2 the .properties.runtime parametr in payload is needed
+        if ($versionEnum[$RuntimeVersion].runtime) { $newRunbookPayload.properties.runtime = $versionEnum[$RuntimeVersion].runtime }
+        
+        try {
+            Invoke-RestMethod -Method $method -Uri ($uriBase+$uriCall) -Headers $Header -Body ($newRunbookPayload | ConvertTo-Json)
+        }
+        catch {
+            Write-Error "Error while creating/updating the runbook $Name : $($_.Exception.Response)"
+            Write-Error "Uri: $uriCall"
+            Write-Error "body: $newRunbookPayload"
+        }
+        
+        # Update runbook content (script)
+        $method = "PUT"
+        $uriCall = "/subscriptions/$Subscription/resourceGroups/$RGName/providers/$resourceProviderName/$resourceType/$AAName/runbooks/$Name/draft/content?api-version=$apiVersion"
+        $contentType = "text/powershell"
+        $Header = @{
+            "Authorization" = "$($azToken.Type) $($azToken.Token)"
+            "Content-type" = $contentType
+        }
+        $scriptContent = Get-Content -Raw -Path $Path
+                
+        try {
+            Invoke-RestMethod -Method $method -Uri ($uriBase+$uriCall) -Headers $Header -Body $scriptContent
+        }
+        catch {
+            Write-Error "Error while uploading the script content to runbook $Name : $($_.Exception.Response)"
+            Write-Error "Uri: $uriCall"
+        }
+        # Publish runbook
+        if ($Published)
+        {
+            $method = "POST"
+            $uriCall = "/subscriptions/$Subscription/resourceGroups/$RGName/providers/$resourceProviderName/$resourceType/$AAName/runbooks/$Name/publish?api-version=$apiVersion"
+            $Header = @{
+                "Authorization" = "$($azToken.Type) $($azToken.Token)"
+            }
+            
+            try {
+                Invoke-RestMethod -Method $method -Uri ($uriBase+$uriCall) -Headers $Header
+            }
+            catch {
+                Write-Error "Error while publishing the runbook $Name : $($_.Exception.Response)"
+                Write-Error "Uri: $uriCall"
+            }    
+        }
+        
         if (-not $null -eq $Schedules2Link) {
             if ($Published) {
                 foreach ($scheduleName in $Schedules2Link) {
@@ -494,52 +567,62 @@ if(Check-Scope -Scope $scope -RequiredScope 'Runbooks')
     $definitions = @(Get-DefinitionFiles -FileType Runbooks)
     $CurrentSchedules = Get-AzAutomationSchedule -AutomationAccountName $AutomationAccount -ResourceGroupName $ResourceGroup
     foreach($def in $definitions) {
-        $Publish=$def.AutoPublish
-        if($null -eq $Publish) {
-            $Publish = $AutoPublish.ToBool()
-        }
+        if($def.Type -in $supportedRunbookTypes)
+        {
+            $Publish=$def.AutoPublish
+            if($null -eq $Publish) {
+                $Publish = $AutoPublish.ToBool()
+            }
 
-        $ScheduleCheckResult = $true
-        if ($null -ne $def.Schedules) {
-            foreach ($schedule in $def.Schedules) {
-                <# $schedule is the current item #>
-                if ($schedule -notin $CurrentSchedules.Name) {
-                    Write-Warning "Schedule $schedule requested by runbook definition for $($def.Name) was not defined and does not exist, skipping."
-                    $ScheduleCheckResult = $false
+            $ScheduleCheckResult = $true
+            if ($null -ne $def.Schedules) {
+                foreach ($schedule in $def.Schedules) {
+                    <# $schedule is the current item #>
+                    if ($schedule -notin $CurrentSchedules.Name) {
+                        Write-Warning "Schedule $schedule requested by runbook definition for $($def.Name) was not defined and does not exist, skipping."
+                        $ScheduleCheckResult = $false
+                    }
                 }
             }
-        }
 
-        $implementationFileCheckResult = $true
-        $implementationFile = Get-FileToProcess -FileType Runbooks -FileName $def.Implementation
-        if ($null -eq $implementationFile) {
-            if($ReportMissingImplementation)
-            {
-                Write-Warning "Runbook $($def.name)`: Implementation file not defined for this environment, skipping."
+            $implementationFileCheckResult = $true
+            $implementationFile = Get-FileToProcess -FileType Runbooks -FileName $def.Implementation
+            if ($null -eq $implementationFile) {
+                if($ReportMissingImplementation)
+                {
+                    Write-Warning "Runbook $($def.name)`: Implementation file not defined for this environment, skipping."
+                }
+                $implementationFileCheckResult = $false
             }
-            $implementationFileCheckResult = $false
+
+            #import logic of runbook
+            if($implementationFileCheckResult -and $ScheduleCheckResult) {
+                "Starting runbook import: $($def.name); Source: $implementationFile; Publish: $Publish"
+                $HWG = if($def.RunsOn -eq 'HybridWorker'){$HybridWorkerGroup}else{$null}
+                #$RunOn = if($def.RunsOn){$HWGroupCheckResult.HWGroupDefined}else{$null}
+
+                $importJobs+= Start-Job `
+                    -ScriptBlock $runbookImportJob `
+                    -ArgumentList `
+                        $def.Name, `
+                        $def.Description, `
+                        $ResourceGroup, `
+                        $AutomationAccount, `
+                        $implementationFile, `
+                        $def.Type, `
+                        $Publish, `
+                        $def.Schedules, `
+                        $CurrentSchedules.Name, `
+                        $HWG, `
+                        $def.RuntimeVersion, `
+                        $Subscription, `
+                        $location `
+                    -Name $def.Name
+            }
         }
-
-        #import logic of runbook
-        if($implementationFileCheckResult -and $ScheduleCheckResult) {
-            "Starting runbook import: $($def.name); Source: $implementationFile; Publish: $Publish"
-            $HWG = if($def.RunsOn -eq 'HybridWorker'){$HybridWorkerGroup}else{$null}
-            #$RunOn = if($def.RunsOn){$HWGroupCheckResult.HWGroupDefined}else{$null}
-
-            $importJobs+= Start-Job `
-                -ScriptBlock $runbookImportJob `
-                -ArgumentList `
-                    $def.Name, `
-                    $def.Description, `
-                    $ResourceGroup, `
-                    $AutomationAccount, `
-                    $implementationFile, `
-                    $def.Type, `
-                    $Publish, `
-                    $def.Schedules, `
-                    $CurrentSchedules.Name, `
-                    $HWG `
-                -Name $def.Name
+        else 
+        {
+            Write-Host "Runbook type of $($def.Type) not yet supported. Only the type PowerShell is supported."
         }
     }
 
