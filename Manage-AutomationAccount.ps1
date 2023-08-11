@@ -41,10 +41,11 @@ Param
         $ReportMissingImplementation
 )
 
+Import-Module Az.Accounts
 Import-Module Az.Automation
 Import-Module Az.Resources
 
-. "$projectDir\..\Runtime.ps1" -ProjectDir $ProjectDir -Environment $EnvironmentName
+. "$projectDir\Runtime.ps1" -ProjectDir $ProjectDir -Environment $EnvironmentName
 
 #region Connect subscription
 
@@ -429,63 +430,140 @@ if(Check-Scope -Scope $scope -RequiredScope 'Runbooks')
     $runbookImportJob = {
         param
         (
-            [string]$Name,
-            [string]$Description,
+            [PSCustomObject]$RunbookDefinition,
             [string]$RGName,
             [string]$AAName,
             [string]$Path,
-            [string]$Type,
             [bool]$Published,
-            [string[]] $Schedules2Link,
             [string[]] $CurrentSchedulesNames,
-            [string]$HWGroup
+            [string]$HWGroup,
+            [string]$Subscription
         )
-        Import-AzAutomationRunbook `
-            -Name $Name `
-            -Description $Description `
-            -ResourceGroupName $RGName `
-            -AutomationAccountName $AAName `
-            -Path $Path `
-            -Type $Type `
-            -Force `
-            -Published:$Published
 
-        if (-not $null -eq $Schedules2Link) {
+        $location = (Get-AzResourceGroup -Name $RGName).Location
+        $defaultApiVersion = '2019-06-01'
+        # Using preview API to support PowerShell runtime 7.2
+        $versionEnum = @{
+            '7.2' =  @{runbookType = 'PowerShell' ; ApiVersion = '2022-06-30-preview'; runtime = 'PowerShell-7.2' }
+            '7.1' =  @{runbookType = 'PowerShell7'; ApiVersion = $defaultApiVersion }
+            '5.1' =  @{runbookType = 'PowerShell' ; ApiVersion = $defaultApiVersion }
+        }
+        $runtime = $null
+        
+        switch ($RunbookDefinition.Type) {
+            "PowerShell" { 
+                $runbookType = $versionEnum[$RunbookDefinition.RuntimeVersion].runbookType; 
+                # For the runtime 7.2 the .properties.runtime parametr in payload is needed
+                if ($versionEnum[$RunbookDefinition.RuntimeVersion].runtime) { $runtime = $versionEnum[$RunbookDefinition.RuntimeVersion].runtime };
+                $apiVersion = $versionEnum[$RunbookDefinition.RuntimeVersion].ApiVersion 
+            }
+            { $_ -in ("GraphicalPowerShell", "PowerShellWorkflow", "GraphicalPowerShellWorkflow", "Graph", "Python2") } { 
+                $runbookType = $RunbookDefinition.Type; 
+                $apiVersion = $defaultApiVersion 
+            }
+            Default { $runbookType = $null; Write-Warning "Unsupported runbook type of $_ specified for runbook $($RunbookDefinition.Name)."}
+        }
+        
+        $uriBase = "https://management.azure.com"
+        $resourceProviderName = "Microsoft.Automation"
+        $resourceType = "automationAccounts" 
+
+        $azToken = Get-AzAccessToken
+        # Create or Update runbook
+        $method = "PUT"
+        $uriCall = "/subscriptions/$Subscription/resourceGroups/$RGName/providers/$resourceProviderName/$resourceType/$AAName/runbooks/$($RunbookDefinition.Name)?api-version=$apiVersion"
+        $contentType = "application/json"
+        $Header = @{
+            "Authorization" = "$($azToken.Type) $($azToken.Token)"
+            "Content-type" = $contentType
+        }
+        $newRunbookPayload = @{
+            location   = $location
+            properties = @{
+              runbookType = $runbookType
+              runtime     = $runtime
+              logProgress = $false
+              logVerbose  = $false
+              draft       = @{}
+            }
+        }
+        
+        try {
+            Invoke-RestMethod -Method $method -Uri ($uriBase+$uriCall) -Headers $Header -Body ($newRunbookPayload | ConvertTo-Json)
+        }
+        catch {
+            Write-Error "Error while creating/updating the runbook $($RunbookDefinition.Name) : $($_.Exception.Response)"
+        }
+        
+        # Update runbook content (script)
+        $method = "PUT"
+        $uriCall = "/subscriptions/$Subscription/resourceGroups/$RGName/providers/$resourceProviderName/$resourceType/$AAName/runbooks/$($RunbookDefinition.Name)/draft/content?api-version=$apiVersion"
+        $contentType = "text/powershell"
+        $Header = @{
+            "Authorization" = "$($azToken.Type) $($azToken.Token)"
+            "Content-type" = $contentType
+        }
+        $scriptContent = Get-Content -Raw -Path $Path
+                
+        try {
+            Invoke-RestMethod -Method $method -Uri ($uriBase+$uriCall) -Headers $Header -Body $scriptContent
+        }
+        catch {
+            Write-Error "Error while uploading the script content to runbook $($RunbookDefinition.Name) : $($_.Exception.Response)"
+        }
+        # Publish runbook
+        if ($Published)
+        {
+            $method = "POST"
+            $uriCall = "/subscriptions/$Subscription/resourceGroups/$RGName/providers/$resourceProviderName/$resourceType/$AAName/runbooks/$($RunbookDefinition.Name)/publish?api-version=$apiVersion"
+            $Header = @{
+                "Authorization" = "$($azToken.Type) $($azToken.Token)"
+            }
+            
+            try {
+                Invoke-RestMethod -Method $method -Uri ($uriBase+$uriCall) -Headers $Header
+            }
+            catch {
+                Write-Error "Error while publishing the runbook $($RunbookDefinition.Name) : $($_.Exception.Response)"
+            }    
+        }
+        
+        if (-not $null -eq $RunbookDefinition.Schedules) {
             if ($Published) {
-                foreach ($scheduleName in $Schedules2Link) {
+                foreach ($scheduleName in $RunbookDefinition.Schedules) {
                     if ($scheduleName -in $CurrentSchedulesNames) {
                         Register-AzAutomationScheduledRunbook `
-                            -RunbookName $Name `
+                            -RunbookName $RunbookDefinition.Name `
                             -ScheduleName $scheduleName `
                             -ResourceGroupName $RGName `
                             -AutomationAccountName $AAName `
                             -RunOn $HWGroup
                     }
                     else {
-                        Write-Warning "Schedule $scheduleName requested for runbook $Name is not defined in automation account $AAName."
+                        Write-Warning "Schedule $scheduleName requested for runbook $($RunbookDefinition.Name) is not defined in automation account $AAName."
                     }
                 }
                 #unregister schedules no longer there
                 $schedules = Get-AzAutomationScheduledRunbook `
-                    -RunbookName $Name `
+                    -RunbookName $RunbookDefinition.Name `
                     -ResourceGroupName $RGName `
                     -AutomationAccountName $AAName
                 foreach($schedule in $schedules)
                 {
-                    if($schedule.ScheduleName -notin $Schedules2Link)
+                    if($schedule.ScheduleName -notin $RunbookDefinition.Schedules)
                     {
                         Unregister-AzAutomationScheduledRunbook `
-                            -RunbookName $Name `
+                            -RunbookName $RunbookDefinition.Name `
                             -ScheduleName $schedule.ScheduleName `
                             -ResourceGroupName $RGName `
                             -AutomationAccountName $AAName `
                             -Force
-                        write-host "Unregistered schedule $($schedule.ScheduleName) from runbook $Name"
+                        Write-Host "Unregistered schedule $($schedule.ScheduleName) from runbook $($RunbookDefinition.Name)"
                     }
                 }
             }
             else {
-                Write-Warning "Schedules were not linked to runbook $Name as requested, because the parameter AutoPublish is false."
+                Write-Warning "Schedules were not linked to runbook $($RunbookDefinition.Name) as requested, because the parameter AutoPublish is false."
             }
         }
     }
@@ -529,16 +607,14 @@ if(Check-Scope -Scope $scope -RequiredScope 'Runbooks')
             $importJobs+= Start-Job `
                 -ScriptBlock $runbookImportJob `
                 -ArgumentList `
-                    $def.Name, `
-                    $def.Description, `
+                    $def, `
                     $ResourceGroup, `
                     $AutomationAccount, `
                     $implementationFile, `
-                    $def.Type, `
                     $Publish, `
-                    $def.Schedules, `
                     $CurrentSchedules.Name, `
-                    $HWG `
+                    $HWG, `
+                    $Subscription `
                 -Name $def.Name
         }
     }
