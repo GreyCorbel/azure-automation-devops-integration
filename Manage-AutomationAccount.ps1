@@ -1,71 +1,71 @@
 Param
 (
     [Parameter(Mandatory)]
-    [ValidateSet('Runbooks','Variables','Dsc', 'Schedules', 'Modules')]
+    [ValidateSet('Runbooks', 'Variables', 'Dsc', 'Schedules', 'Modules')]
     [string[]]
-        #What we are deploying
-        $Scope,
+    #What we are deploying
+    $Scope,
     [Parameter(Mandatory)]
     [string]
-        #Name of the stage/environment we're deploying
-        $EnvironmentName,
+    #Name of the stage/environment we're deploying
+    $EnvironmentName,
     [Parameter(Mandatory)]
     [string]
-        #root folder of repository
-        $ProjectDir,
+    #root folder of automation account content
+    $ProjectDir,
     [Parameter(Mandatory)]
     [string]
-        #name of the subscription where automation account is located
-        $Subscription,
+    #name of the subscription where automation account is located
+    $Subscription,
     [Parameter(Mandatory)]
     [string]
-        #name of the resource group where automation account is located
-        $ResourceGroup,
+    #name of the resource group where automation account is located
+    $ResourceGroup,
     [Parameter(Mandatory)]
     [string]
-        #name of automation account that we deploy to
-        $AutomationAccount,
+    #name of automation account that we deploy to
+    $AutomationAccount,
     [Parameter()]
     [string]
-        #name of hybrid worker group to use when scheduling runbook or creating webhook and job execution needs to be on hybrid worker
-        $HybridWorkerGroup,
+    #name of hybrid worker group to use when scheduling runbook or creating webhook and job execution needs to be on hybrid worker
+    $HybridWorkerGroup,
     [Switch]
-        #whether or not to remove any existing runbooks and variables from automation account that are not source-controlled 
-        $FullSync,
+    #whether or not to remove any existing runbooks and variables from automation account that are not source-controlled 
+    $FullSync,
     [Switch]
-        #whether to automatically publish runbooks and Dsc configurations. This can be overriden in runbook/Dsc definition file
-        $AutoPublish,
+    #whether to automatically publish runbooks and Dsc configurations. This can be overriden in runbook/Dsc definition file
+    $AutoPublish,
     [Switch]
-        #whether to report missing implementation file
-        #Note: it may be perfectly OK not to have implementation file, if artefact is meant to be used just in subset of environments
-        $ReportMissingImplementation
+    #whether to report missing implementation file
+    #Note: it may be perfectly OK not to have implementation file, if artefact is meant to be used just in subset of environments
+    $ReportMissingImplementation
 )
 
 Import-Module Az.Accounts
 Import-Module Az.Automation
 Import-Module Az.Resources
 
-. "$projectDir\Runtime.ps1" -ProjectDir $ProjectDir -Environment $EnvironmentName
+#import common routines - library file is expected in the same folder as we are
+. "$PSScriptRoot\Runtime.ps1" -ProjectDir $ProjectDir -Environment $EnvironmentName
 
 #region Connect subscription
 
 "Setting active subscription to $Subscription"
-Select-AzSubscription -Subscription $Subscription
+$subscritionObject = Select-AzSubscription -Subscription $Subscription
 
 #endregion
 
 #region Variables
-if(Check-Scope -Scope $scope -RequiredScope 'Variables')
-{
+if (Check-Scope -Scope $scope -RequiredScope 'Variables') {
     "Processing Automation variables"
     $definitions = @(Get-DefinitionFiles -FileType Variables)
 
     $CurrentVariables = Get-AzAutomationVariable -AutomationAccountName $AutomationAccount -ResourceGroupName $ResourceGroup
     "Updating existing variables"
-    foreach($variable in $currentVariables) {
+    foreach ($variable in $currentVariables) {
         try {
-            if($variable.name -notin $definitions.Name) {
-                if($FullSync) {
+            if ($variable.name -notin $definitions.Name) {
+                if ($FullSync) {
                     "$($variable.name) not managed and we're doing full sync -> removing variable"
                     Remove-AzAutomationVariable -Name $variable.Name -AutomationAccountName $AutomationAccount -ResourceGroupName $ResourceGroup
                 }
@@ -74,7 +74,7 @@ if(Check-Scope -Scope $scope -RequiredScope 'Variables')
                 }
             }
             else {
-                $managedVariable = $definitions.Where{$_.Name -eq $variable.name}
+                $managedVariable = $definitions.Where{ $_.Name -eq $variable.name }
                 $contentFile = Get-FileToProcess -FileType Variables -FileName $managedVariable.Content
                 if ($null -ne $contentFile) {
                     "$($variable.name) managed -> updating variable from $contentFile"
@@ -88,14 +88,13 @@ if(Check-Scope -Scope $scope -RequiredScope 'Variables')
                         -Value $variableValue | Out-Null                
                 }
                 else {
-                    if($ReportMissingImplementation)
-                    {
+                    if ($ReportMissingImplementation) {
                         Write-Warning "$($variable.name)`: Missing content file, skipping variable content update"
                     }
                 }
             
                 #set description - it's different parameter set
-                if(-not [string]::IsnullOrEmpty($managedVariable.Description)) {
+                if (-not [string]::IsnullOrEmpty($managedVariable.Description)) {
                     Set-AzAutomationVariable -Name $variable.Name `
                         -AutomationAccountName $AutomationAccount `
                         -ResourceGroupName $ResourceGroup `
@@ -110,9 +109,9 @@ if(Check-Scope -Scope $scope -RequiredScope 'Variables')
 
     #add new variables
     "Adding new variables"
-    foreach($managedVariable in $definitions) {
+    foreach ($managedVariable in $definitions) {
         try {
-            if($managedVariable.Name -notin $currentVariables.Name) {
+            if ($managedVariable.Name -notin $currentVariables.Name) {
                 $contentFile = Get-FileToProcess -FileType Variables -FileName $managedVariable.Content
                 if ($null -ne $contentFile) {
                     "$($managedVariable.name) not present -> adding variable from $contentFile"
@@ -126,8 +125,7 @@ if(Check-Scope -Scope $scope -RequiredScope 'Variables')
                         -Description $managedVariable.Description | Out-Null
                 }
                 else {
-                    if($ReportMissingImplementation)
-                    {
+                    if ($ReportMissingImplementation) {
                         Write-Warning "$($variable.name)`: Missing content file, skipping variable creation"
                     }
                 }
@@ -141,39 +139,32 @@ if(Check-Scope -Scope $scope -RequiredScope 'Variables')
 #endregion Variables
 
 #region Modules
-if(Check-Scope -Scope $scope -RequiredScope 'Modules')
-{
+if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
     "Processing Modules"
     #Get requested (non-default) modules from runbook definitions
     $definitions = @(Get-DefinitionFiles -FileType Modules)
 
-    foreach($def in $definitions)
-    {
+    foreach ($def in $definitions) {
         $contentFile = Get-FileToProcess -FileType Modules -FileName $def.ModulesList
         if ($null -eq $contentFile) {
-            if($ReportMissingImplementation)
-            {
+            if ($ReportMissingImplementation) {
                 Write-Warning "$($def.ModulesList)`: Missing modules list file, skipping"
             }
             continue
         }
         $modulesList = Get-Content $contentFile -Raw | ConvertFrom-Json
         $ModulesToBeInstalled = @()
-        foreach($module in $modulesList.RequiredModules)
-        {
+        foreach ($module in $modulesList.RequiredModules) {
             $CurrentModule = Get-AzAutomationModule -Name $module.Name -ResourceGroupName $ResourceGroup -AutomationAccountName $AutomationAccount -ErrorAction SilentlyContinue
-            if($null -eq $currentModule)
-            {
+            if ($null -eq $currentModule) {
                 "$($module.name) not present -> importing"
                 $ModulesToBeInstalled += $module
             }
-            else
-            {
+            else {
                 #we do not use System.Version as it does not support some versioning schemes
                 $currentVersion = $currentModule.Version.ToLowerInvariant()
                 $requiredVersion = $module.Version.ToLowerInvariant()
-                if($currentVersion -lt $requiredVersion)
-                {
+                if ($currentVersion -lt $requiredVersion) {
                     "$($module.name) version lower than required ($currentVersion : $requiredVersion) -> importing"
                     $ModulesToBeInstalled += $module
                 }
@@ -183,33 +174,29 @@ if(Check-Scope -Scope $scope -RequiredScope 'Modules')
             }
         }
         #start async import
-        foreach($module in $ModulesToBeInstalled)
-        {
+        foreach ($module in $ModulesToBeInstalled) {
             $modulesBatch += New-AzAutomationModule -Name $module.Name -ResourceGroupName $ResourceGroup -AutomationAccountName $AutomationAccount -ContentLinkUri "$($module.VersionIndependentLink)/$($module.Version)" -ErrorAction Stop `
             | Out-Null
         }
         #wait till import completes
-        do
-        {
+        do {
             $dirty = $false
             $modulesBatch = @()
-            foreach($module in $ModulesToBeInstalled)
-            {
+            foreach ($module in $ModulesToBeInstalled) {
                 $module = Get-AzAutomationModule -Name $module.Name -ResourceGroupName $ResourceGroup -AutomationAccountName $AutomationAccount -ErrorAction Stop
-                if($module.ProvisioningState -eq 'Creating') {
+                if ($module.ProvisioningState -eq 'Creating') {
                     $dirty = $true
                     $modulesBatch += $module
                 }
-                if($module.ProvisioningState -eq 'Failed') {
+                if ($module.ProvisioningState -eq 'Failed') {
                     throw "Could not import module $($module.name)"
                 }
             }
-            if($modulesBatch.Count -gt 0)
-            {
-                $modulesBatch | Select-object Name,ProvisioningState | Format-Table
+            if ($modulesBatch.Count -gt 0) {
+                $modulesBatch | Select-object Name, ProvisioningState | Format-Table
                 Start-Sleep -Seconds 30
             }
-        }while($dirty)
+        }while ($dirty)
     }
 }
 #endregion Modules
@@ -233,7 +220,7 @@ function Build-StartTime {
     # The start time of the schedule must be at least 5 minutes after the time you create the schedule. - error message
     $NecessaryDelayInMinutes = 15
     $DayInTicks = (New-TimeSpan -Days 1).Ticks
-    $RoundToDay = [System.DateTime]([Int64][math]::Floor($Time.Ticks/$DayInTicks) * $DayInTicks)
+    $RoundToDay = [System.DateTime]([Int64][math]::Floor($Time.Ticks / $DayInTicks) * $DayInTicks)
     $StartTime = $RoundToDay.AddHours($StartHour).AddMinutes($StartMinute)
     
     while ($StartTime -lt $Time.AddMinutes($NecessaryDelayInMinutes)) {
@@ -242,17 +229,16 @@ function Build-StartTime {
     return $StartTime
 }
 
-if(Check-Scope -Scope $scope -RequiredScope 'Schedules')
-{
+if (Check-Scope -Scope $scope -RequiredScope 'Schedules') {
     "Processing Schedules"
     $definitions = @(Get-DefinitionFiles -FileType Schedules)
 
     $currentSchedules = Get-AzAutomationSchedule -AutomationAccountName $AutomationAccount -ResourceGroupName $ResourceGroup
     "Updating existing schedules"
-    foreach($schedule in $currentSchedules) {
+    foreach ($schedule in $currentSchedules) {
         try {
-            if($schedule.name -notin $definitions.Name) {
-                if($FullSync) {
+            if ($schedule.name -notin $definitions.Name) {
+                if ($FullSync) {
                     "$($schedule.name) not managed and we're doing full sync -> removing schedule"
                     # Schedule will be removed even if it is enabled and linked to runbooks
                     Remove-AzAutomationSchedule -Name $schedule.Name -AutomationAccountName $AutomationAccount -ResourceGroupName $ResourceGroup -Force
@@ -262,7 +248,7 @@ if(Check-Scope -Scope $scope -RequiredScope 'Schedules')
                 }
             }
             else {
-                $managedSchedule = $definitions | Where-Object{$_.Name -eq $schedule.name}
+                $managedSchedule = $definitions | Where-Object { $_.Name -eq $schedule.name }
                 "$($schedule.name) managed -> updating schedule"
                 #set value
                 #updates only Description, IsEnabled parameters
@@ -279,40 +265,36 @@ if(Check-Scope -Scope $scope -RequiredScope 'Schedules')
     }
     #add new schedules
     "Adding new schedules"
-    foreach($managedSchedule in $definitions) {
+    foreach ($managedSchedule in $definitions) {
         try {
-            if($managedSchedule.Name -notin $currentSchedules.Name) {
+            if ($managedSchedule.Name -notin $currentSchedules.Name) {
                 "$($managedSchedule.name) not present -> adding schedule"
                 switch ($managedSchedule.Frequency) {
                     "OneTime" { $Interval = $null }
                     "Hourly" { $Interval = $managedSchedule.Interval }
-                    { $_ -in "Daily", "Weekly", "Monthly"} { $Interval = 24 }
-                    Default { Write-Host "Invalid frequency defined!"}
+                    { $_ -in "Daily", "Weekly", "Monthly" } { $Interval = 24 }
+                    Default { Write-Host "Invalid frequency defined!" }
                 }
             
                 $StartTimeValidationSucceeded = $false
                 [TimeOnly] $tempStartTimeOnly = New-Object System.TimeOnly
                 [DateTimeOffset] $StartTime = New-Object System.DateTimeOffset
                 # Starttime validation and calculation
-                switch ($managedSchedule.StartTime) 
-                {
-                    { [string]::IsnullOrEmpty($_)}
-                    {
+                switch ($managedSchedule.StartTime) {
+                    { [string]::IsnullOrEmpty($_) } {
                         # Prepare the nearest possible time
                         # Write-Host "Parameter StartTime is empty. The nearest possible start time will be set."
                         $StartTime = [System.DateTimeOffset](Get-Date).AddMinutes(15)
                         $StartTimeValidationSucceeded = $true
                         break
                     }
-                    { [TimeOnly]::TryParseExact($_, "HH:mm", [ref] $tempStartTimeOnly) }
-                    {
+                    { [TimeOnly]::TryParseExact($_, "HH:mm", [ref] $tempStartTimeOnly) } {
                         # Write-Host "The user requests the schedule to start at specific hour and minute. The nearest possible start time will be calculated."
                         $StartTime = Build-StartTime -Time (Get-Date) -StartMinute $tempStartTimeOnly.Minute -StartHour $tempStartTimeOnly.Hour -Interval $Interval
                         $StartTimeValidationSucceeded = $true
                         break
                     }
-                    { [DateTimeOffset]::TryParse($_, [ref] $StartTime) }
-                    {
+                    { [DateTimeOffset]::TryParse($_, [ref] $StartTime) } {
                         if ($StartTime -ge (Get-Date).AddMinutes(15)) {
                             Write-Host "The user requests fixed time to start the schedule and the provided date and time are valid."
                             $StartTimeValidationSucceeded = $true
@@ -323,14 +305,13 @@ if(Check-Scope -Scope $scope -RequiredScope 'Schedules')
                             break
                         }
                     }
-                    Default 
-                    {
+                    Default {
                         Write-Warning "Invalid StartTime defined. Skipping."
                         $StartTimeValidationSucceeded = $false
                     }
                 }
             
-                if([string]::IsnullOrEmpty($managedSchedule.TimeZone)) {
+                if ([string]::IsnullOrEmpty($managedSchedule.TimeZone)) {
                     $TimeZone = $null
                 } 
                 else {
@@ -412,8 +393,7 @@ if(Check-Scope -Scope $scope -RequiredScope 'Schedules')
                 }
             }
         }
-        catch 
-        {
+        catch {
             Write-Warning $_.Exception
         }
     }
@@ -422,8 +402,7 @@ if(Check-Scope -Scope $scope -RequiredScope 'Schedules')
 #endregion Schedules
 
 #region Runbooks
-if(Check-Scope -Scope $scope -RequiredScope 'Runbooks')
-{
+if (Check-Scope -Scope $scope -RequiredScope 'Runbooks') {
     "Processing Runbooks"
     #create a scriptblock for importing runbook as a job
     #this is to increase the performance as the inport takes terribly long
@@ -437,9 +416,10 @@ if(Check-Scope -Scope $scope -RequiredScope 'Runbooks')
             [bool]$Published,
             [string[]] $CurrentSchedulesNames,
             [string]$HWGroup,
-            [string]$Subscription
+            [string]$SubscriptionId,
+            $azToken
         )
-
+        
         $location = (Get-AzResourceGroup -Name $RGName).Location
         $defaultApiVersion = '2019-06-01'
         # Using preview API to support PowerShell runtime 7.2
@@ -449,13 +429,14 @@ if(Check-Scope -Scope $scope -RequiredScope 'Runbooks')
             '5.1' =  @{runbookType = 'PowerShell' ; ApiVersion = $defaultApiVersion }
         }
         $runtime = $null
-        
+
         switch ($RunbookDefinition.Type) {
             "PowerShell" { 
-                $runbookType = $versionEnum[$RunbookDefinition.RuntimeVersion].runbookType; 
+                if([string]::IsnullOrEmpty($RunbookDefinition.RuntimeVersion)) {$requestedRuntime = '5.1'} else {$requestedRuntime = $RunbookDefinition.RuntimeVersion}
+                $runbookType = $versionEnum[$requestedRuntime].runbookType; 
                 # For the runtime 7.2 the .properties.runtime parametr in payload is needed
-                if ($versionEnum[$RunbookDefinition.RuntimeVersion].runtime) { $runtime = $versionEnum[$RunbookDefinition.RuntimeVersion].runtime };
-                $apiVersion = $versionEnum[$RunbookDefinition.RuntimeVersion].ApiVersion 
+                if ($versionEnum[$requestedRuntime].runtime) { $runtime = $versionEnum[$requestedRuntime].runtime };
+                $apiVersion = $versionEnum[$requestedRuntime].ApiVersion 
             }
             { $_ -in ("GraphicalPowerShell", "PowerShellWorkflow", "GraphicalPowerShellWorkflow", "Graph", "Python2") } { 
                 $runbookType = $RunbookDefinition.Type; 
@@ -468,10 +449,9 @@ if(Check-Scope -Scope $scope -RequiredScope 'Runbooks')
         $resourceProviderName = "Microsoft.Automation"
         $resourceType = "automationAccounts" 
 
-        $azToken = Get-AzAccessToken
         # Create or Update runbook
         $method = "PUT"
-        $uriCall = "/subscriptions/$Subscription/resourceGroups/$RGName/providers/$resourceProviderName/$resourceType/$AAName/runbooks/$($RunbookDefinition.Name)?api-version=$apiVersion"
+        $uriCall = "/subscriptions/$SubscriptionId/resourceGroups/$RGName/providers/$resourceProviderName/$resourceType/$AAName/runbooks/$($RunbookDefinition.Name)?api-version=$apiVersion"
         $contentType = "application/json"
         $Header = @{
             "Authorization" = "$($azToken.Type) $($azToken.Token)"
@@ -490,14 +470,16 @@ if(Check-Scope -Scope $scope -RequiredScope 'Runbooks')
         
         try {
             Invoke-RestMethod -Method $method -Uri ($uriBase+$uriCall) -Headers $Header -Body ($newRunbookPayload | ConvertTo-Json)
+            Write-Information "Created/Updated runbook $($RunbookDefinition.Name)"
         }
         catch {
             Write-Error "Error while creating/updating the runbook $($RunbookDefinition.Name) : $($_.Exception.Response)"
+            
         }
         
         # Update runbook content (script)
         $method = "PUT"
-        $uriCall = "/subscriptions/$Subscription/resourceGroups/$RGName/providers/$resourceProviderName/$resourceType/$AAName/runbooks/$($RunbookDefinition.Name)/draft/content?api-version=$apiVersion"
+        $uriCall = "/subscriptions/$SubscriptionId/resourceGroups/$RGName/providers/$resourceProviderName/$resourceType/$AAName/runbooks/$($RunbookDefinition.Name)/draft/content?api-version=$apiVersion"
         $contentType = "text/powershell"
         $Header = @{
             "Authorization" = "$($azToken.Type) $($azToken.Token)"
@@ -507,6 +489,8 @@ if(Check-Scope -Scope $scope -RequiredScope 'Runbooks')
                 
         try {
             Invoke-RestMethod -Method $method -Uri ($uriBase+$uriCall) -Headers $Header -Body $scriptContent
+            Write-Information "Uploaded runbook content: $($RunbookDefinition.Name)"
+
         }
         catch {
             Write-Error "Error while uploading the script content to runbook $($RunbookDefinition.Name) : $($_.Exception.Response)"
@@ -515,13 +499,14 @@ if(Check-Scope -Scope $scope -RequiredScope 'Runbooks')
         if ($Published)
         {
             $method = "POST"
-            $uriCall = "/subscriptions/$Subscription/resourceGroups/$RGName/providers/$resourceProviderName/$resourceType/$AAName/runbooks/$($RunbookDefinition.Name)/publish?api-version=$apiVersion"
+            $uriCall = "/subscriptions/$SubscriptionId/resourceGroups/$RGName/providers/$resourceProviderName/$resourceType/$AAName/runbooks/$($RunbookDefinition.Name)/publish?api-version=$apiVersion"
             $Header = @{
                 "Authorization" = "$($azToken.Type) $($azToken.Token)"
             }
             
             try {
                 Invoke-RestMethod -Method $method -Uri ($uriBase+$uriCall) -Headers $Header
+                Write-Information "Published runbook $($RunbookDefinition.Name)"
             }
             catch {
                 Write-Error "Error while publishing the runbook $($RunbookDefinition.Name) : $($_.Exception.Response)"
@@ -568,12 +553,14 @@ if(Check-Scope -Scope $scope -RequiredScope 'Runbooks')
         }
     }
 
-    $importJobs=@()
+    $token = Get-AzAccessToken
+
+    $importJobs = @()
     $definitions = @(Get-DefinitionFiles -FileType Runbooks)
     $CurrentSchedules = Get-AzAutomationSchedule -AutomationAccountName $AutomationAccount -ResourceGroupName $ResourceGroup
-    foreach($def in $definitions) {
-        $Publish=$def.AutoPublish
-        if($null -eq $Publish) {
+    foreach ($def in $definitions) {
+        $Publish = $def.AutoPublish
+        if ($null -eq $Publish) {
             $Publish = $AutoPublish.ToBool()
         }
 
@@ -591,20 +578,19 @@ if(Check-Scope -Scope $scope -RequiredScope 'Runbooks')
         $implementationFileCheckResult = $true
         $implementationFile = Get-FileToProcess -FileType Runbooks -FileName $def.Implementation
         if ($null -eq $implementationFile) {
-            if($ReportMissingImplementation)
-            {
+            if ($ReportMissingImplementation) {
                 Write-Warning "Runbook $($def.name)`: Implementation file not defined for this environment, skipping."
             }
             $implementationFileCheckResult = $false
         }
 
         #import logic of runbook
-        if($implementationFileCheckResult -and $ScheduleCheckResult) {
+        if ($implementationFileCheckResult -and $ScheduleCheckResult) {
             "Starting runbook import: $($def.name); Source: $implementationFile; Publish: $Publish"
-            $HWG = if($def.RunsOn -eq 'HybridWorker'){$HybridWorkerGroup}else{$null}
+            $HWG = if ($def.RunsOn -eq 'HybridWorker') { $HybridWorkerGroup }else { $null }
             #$RunOn = if($def.RunsOn){$HWGroupCheckResult.HWGroupDefined}else{$null}
 
-            $importJobs+= Start-Job `
+            $importJobs += Start-Job `
                 -ScriptBlock $runbookImportJob `
                 -ArgumentList `
                     $def, `
@@ -614,35 +600,34 @@ if(Check-Scope -Scope $scope -RequiredScope 'Runbooks')
                     $Publish, `
                     $CurrentSchedules.Name, `
                     $HWG, `
-                    $Subscription `
+                    $subscritionObject.Subscription.id, `
+                    $token `
                 -Name $def.Name
         }
     }
 
-    do
-    {
-        $incompleteJobs=$importJobs.Where{$_.State -notin 'Completed','Suspended','Failed'}
-        if($VerbosePreference -ne 'SilentlyContinue')
-        {
+    do {
+        $incompleteJobs = $importJobs.Where{ $_.State -notin 'Completed', 'Suspended', 'Failed' }
+        if ($VerbosePreference -ne 'SilentlyContinue') {
             $importJobs | select-object Name, JobStateInfo, Error
             Write-Host "-----------------"
-        } else {
+        }
+        else {
             Write-Host "Waiting for import jobs to complete ($($incompleteJobs.Count))"
         }
-        if($incompleteJobs.Count -gt 0) {Start-Sleep -Seconds 15}
-    } while($incompleteJobs.Count -gt 0)
+        if ($incompleteJobs.Count -gt 0) { Start-Sleep -Seconds 15 }
+    } while ($incompleteJobs.Count -gt 0)
 
-    foreach($job in $importJobs)
-    {
-        $job | Select-Object Name,JobStateInfo,Error | format-table
+    foreach ($job in $importJobs) {
+        $job | Select-Object Name, JobStateInfo, Error | format-table
         $job.ChildJobs | Select-Object -ExpandProperty Error
         $job.ChildJobs | Select-Object -ExpandProperty Warning
     }
 
-    if($FullSync) {
+    if ($FullSync) {
         $existingRunbooks = @(Get-AzAutomationRunbook -ResourceGroupName $ResourceGroup -AutomationAccountName $AutomationAccount)
-        foreach($runbook in $existingRunbooks) {
-            if($runbook.Name -notin $definitions.name) {
+        foreach ($runbook in $existingRunbooks) {
+            if ($runbook.Name -notin $definitions.name) {
                 "$($Runbook.name) not managed and we're doing full sync -> removing runbook"
                 Remove-AzAutomationRunbook -ResourceGroupName $ResourceGroup -AutomationAccountName $AutomationAccount -Name $runbook.Name -Force
             }
@@ -652,21 +637,20 @@ if(Check-Scope -Scope $scope -RequiredScope 'Runbooks')
 #endregion Runbooks
 
 #region Dsc
-if(Check-Scope -Scope $scope -RequiredScope 'Dsc')
-{
+if (Check-Scope -Scope $scope -RequiredScope 'Dsc') {
     $ManagedConfigurations = @()
     $CompilationJobs = @()
 
     $definitions = @(Get-DefinitionFiles -FileType Dsc)
 
-    foreach($def in $definitions) {
-        $Publish= $def.AutoPublish
-        if($null -eq $Publish) {
+    foreach ($def in $definitions) {
+        $Publish = $def.AutoPublish
+        if ($null -eq $Publish) {
             $Publish = $AutoPublish.ToBool()
         }
         $implementationFile = Get-FileToProcess -FileType Dsc -FileName $def.Implementation
         #import logic of DSC config
-        if($null -ne $implementationFile) {
+        if ($null -ne $implementationFile) {
             "Importing Dsc: Source: $implementationFile; Publish: $Publish; Compile: $($def.AutoCompile)"
             $DscConfig = Import-AzAutomationDscConfiguration `
                 -SourcePath $implementationFile `
@@ -675,56 +659,53 @@ if(Check-Scope -Scope $scope -RequiredScope 'Dsc')
                 -Force `
                 -Published:$def.AutoPublish
             
-            if($def.AutoCompile)
-            {
+            if ($def.AutoCompile) {
                 #prepare params dictionary if definition specifies
-                $Params=@{}
-                if($null -ne $def.Parameters) {
-                    $def.Parameters.psobject.properties | Foreach-Object{ $Params[$_.Name] = $_.Value }
+                $Params = @{}
+                if ($null -ne $def.Parameters) {
+                    $def.Parameters.psobject.properties | Foreach-Object { $Params[$_.Name] = $_.Value }
                 }
                 $compilationJob = Start-AzAutomationDscCompilationJob `
                     -ResourceGroupName $ResourceGroup `
                     -AutomationAccountName $AutomationAccount `
                     -ConfigurationName $DscConfig.Name `
                     -Parameters $Params
-                $CompilationJobs+=$CompilationJob
+                $CompilationJobs += $CompilationJob
             }
-            $ManagedConfigurations+=$DscConfig
+            $ManagedConfigurations += $DscConfig
         }
         else {
-            if($ReportMissingImplementation)
-            {
+            if ($ReportMissingImplementation) {
                 Write-Warning "Dsc $($def.Name)`: Implementation file not defined for this environment, skipping"
             }
         }
     }
 
     #wait for compilations to complete
-    do
-    {
-        $incompleteJobs=@($compilationJobs `
-            | Foreach-object{Get-AzAutomationDscCompilationJob `
-                -Id $_.Id `
-                -ResourceGroupName $ResourceGroup `
-                -AutomationAccountName $AutomationAccount `
+    do {
+        $incompleteJobs = @($compilationJobs `
+            | Foreach-object { Get-AzAutomationDscCompilationJob `
+                    -Id $_.Id `
+                    -ResourceGroupName $ResourceGroup `
+                    -AutomationAccountName $AutomationAccount `
             } `
-            | Where-Object{$_.Status -notin 'Completed','Suspended','Failed'})
+            | Where-Object { $_.Status -notin 'Completed', 'Suspended', 'Failed' })
         
-        if($VerbosePreference -ne 'SilentlyContinue')
-        {
+        if ($VerbosePreference -ne 'SilentlyContinue') {
             $incompleteJobs
             Write-Host "-----------------"
-        } else {
+        }
+        else {
             Write-Host "Waiting for compilation jobs to complete ($($incompleteJobs.Count))"
         }
 
-        if($incompleteJobs.Count -gt 0) {Start-Sleep -Seconds 15}
-    } while($incompleteJobs.Count -gt 0)
+        if ($incompleteJobs.Count -gt 0) { Start-Sleep -Seconds 15 }
+    } while ($incompleteJobs.Count -gt 0)
 
-    if($FullSync) {
+    if ($FullSync) {
         $existingDscConfigurations = @(Get-AzAutomationDscConfiguration -ResourceGroupName $ResourceGroup -AutomationAccountName $AutomationAccount)
-        foreach($DscConfig in $existingDscConfigurations) {
-            if($DscConfig.Name -notin $ManagedConfigurations.name) {
+        foreach ($DscConfig in $existingDscConfigurations) {
+            if ($DscConfig.Name -notin $ManagedConfigurations.name) {
                 "$($DscConfig.name) not managed and we're doing full sync -> removing Dsc configuration"
                 Remove-AzAutomationDscConfiguration -ResourceGroupName $ResourceGroup -AutomationAccountName $AutomationAccount -Name $DscConfig.Name -Force
             }
