@@ -141,6 +141,12 @@ if (Check-Scope -Scope $scope -RequiredScope 'Variables') {
 #region Modules
 if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
     "Processing Modules"
+    
+    $uriBase = "https://management.azure.com"
+    $resourceProviderName = "Microsoft.Automation"
+    $resourceType = "automationAccounts"
+    $apiVersion = "2019-06-01"
+
     #Get requested (non-default) modules from runbook definitions
     $definitions = @(Get-DefinitionFiles -FileType Modules)
 
@@ -154,51 +160,178 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
         }
         $modulesList = Get-Content $contentFile -Raw | ConvertFrom-Json
         $ModulesToBeInstalled = @()
-        foreach ($module in $modulesList.RequiredModules) {
-            $CurrentModule = Get-AzAutomationModule -Name $module.Name -ResourceGroupName $ResourceGroup -AutomationAccountName $AutomationAccount -ErrorAction SilentlyContinue
-            if ($null -eq $currentModule) {
-                "$($module.name) not present -> importing"
-                $ModulesToBeInstalled += $module
+        $azToken = $null
+        $versionEnum = @{
+            '5.1' = @{ resource = 'Modules';            runtimeParameter = $null }
+            '7.1' = @{ resource = 'powershell7Modules'; runtimeParameter = $null }
+            '7.2' = @{ resource = 'powershell7Modules'; runtimeParameter = '&runtimeVersion=7.2' }
+        }
+        
+        function Search-CurrentModule {
+            param (
+                [Parameter(Mandatory)]
+                [string[]]
+                    $ModuleName,
+                [Parameter(Mandatory)]
+                [ValidateSet('5.1', '7.1', '7.2')]
+                [string]
+                    $Runtime
+            )
+            
+            $resource =         $versionEnum[$Runtime].resource
+            $runtimeParameter = $versionEnum[$Runtime].runtimeParameter
+            $returnValue = @{ 
+                moduleName = $ModuleName
+                runtime = $Runtime
+                messageImportPhase = $null
+                messageCheckPhase = $null
+                importAction = $false
+                checkAction = $false
+                provisioningStatus = $null
             }
-            else {
+            
+            $method = "GET"
+            if (($null -eq $azToken) -or ($azToken.ExpiresOn -lt (Get-Date).AddMinutes(-10)))
+            {
+                $azToken = Get-AzAccessToken
+            }
+            $header = @{
+                "Authorization" = "$($azToken.Type) $($azToken.Token)"
+            }
+        
+            # Check if module is already present in the automation account for the runtime version
+            $uriCall = "/subscriptions/$Subscription/resourceGroups/$RGName/providers/$resourceProviderName/$resourceType/$AAName/$resource/$($moduleName)?api-version=$apiVersion$runtimeParameter"
+            
+            try { 
+                $currentModule = Invoke-RestMethod -Method $method -Uri ($uriBase+$uriCall) -Headers $header
                 #we do not use System.Version as it does not support some versioning schemes
-                $currentVersion = $currentModule.Version.ToLowerInvariant()
-                $requiredVersion = $module.Version.ToLowerInvariant()
-                if ($currentVersion -lt $requiredVersion) {
-                    "$($module.name) version lower than required ($currentVersion : $requiredVersion) -> importing"
-                    $ModulesToBeInstalled += $module
+                if ($currentModule.properties.provisioningState -ne 'Succeeded') {
+                    $returnValue.messageImportPhase = "$moduleName with runtime $runtime present with wrong status -> reimporting"
+                    $returnValue.importAction = $true
+                    $returnValue.provisioningStatus = $currentModule.properties.provisioningState
+                    $returnValue.checkAction = $true        
                 }
                 else {
-                    "$($module.name) version up to date or newer -> nothing to do"
+                    $currentVersion = $currentModule.properties.version.ToLowerInvariant()
+                    $requiredVersion = $module.Version.ToLowerInvariant()
+                    if ($currentVersion -lt $requiredVersion) {
+                        $returnValue.messageImportPhase = "$moduleName with runtime $runtime version lower than required ($currentVersion : $requiredVersion) -> importing"
+                        $returnValue.importAction = $true
+                        $returnValue.provisioningStatus = $currentModule.properties.provisioningState
+                    }
+                    else {
+                        $returnValue.messageImportPhase = "$moduleName with runtime $runtime version up to date or newer -> nothing to do"
+                        $returnValue.importAction = $false
+                        $returnValue.provisioningStatus = $currentModule.properties.provisioningState
+                    }
+                }
+                return $returnValue
+            } 
+            catch { 
+                if ($_.Exception.Response.StatusCode -eq 'NotFound') {
+                    $returnValue.messageImportPhase = "$moduleName not present for runtime $runtime -> importing"
+                    $returnValue.messageCheckPhase = "The module $moduleName for runtime $runtime was not found (possibly deleted during import) -> will not check further."
+                    $returnValue.importAction = $true
+                    $returnValue.provisioningStatus = $null
+                    $returnValue.checkAction = $false
+                }
+                else {
+                    $returnValue.messageImportPhase = "Error while fetching information about the module $moduleName for runtime $runtime -> skipping"
+                    $returnValue.messageCheckPhase = "Error while checking the provisioning status of the module $moduleName for runtime $runtime -> will try again."
+                    $returnValue.importAction = $false
+                    $returnValue.provisioningStatus = $null
+                    $returnValue.checkAction = $true
+                }
+                return $returnValue
+            }
+        }
+        
+        foreach($module in $modulesList.RequiredModules) {
+            if ($null -ne $module.Runtimes) {
+                foreach ($runtime in $module.Runtimes) {
+                    $currentModuleInfo = Search-CurrentModule -ModuleName $module.Name -Runtime $runtime
+                    Write-Host $currentModuleInfo.messageImportPhase
+                    if ($currentModuleInfo.importAction) {
+                        $moduleTemp = @{}
+                        $moduleTemp = $module.psobject.Copy()
+                        $moduleTemp | Add-Member -NotePropertyName 'Runtime' -NotePropertyValue $runtime
+                        $modulesToBeInstalled += $moduleTemp
+                    }
+                }
+            }
+            else {
+                $currentModuleInfo = Search-CurrentModule -ModuleName $module.Name -Runtime '5.1'
+                Write-Host $currentModuleInfo.messageImportPhase
+                if ($currentModuleInfo.importAction) {
+                    $moduleTemp = @{}
+                    $moduleTemp = $module.psobject.Copy()
+                    $moduleTemp | Add-Member -NotePropertyName 'Runtime' -NotePropertyValue '5.1'
+                    $modulesToBeInstalled += $moduleTemp
                 }
             }
         }
+        
         #start async import
-        foreach ($module in $ModulesToBeInstalled) {
-            $modulesBatch += New-AzAutomationModule -Name $module.Name -ResourceGroupName $ResourceGroup -AutomationAccountName $AutomationAccount -ContentLinkUri "$($module.VersionIndependentLink)/$($module.Version)" -ErrorAction Stop `
-            | Out-Null
+        $method = "PUT"
+        $contentType = "application/json"
+        if (($null -eq $azToken) -or ($azToken.ExpiresOn -lt (Get-Date).AddMinutes(-10))) {
+            $azToken = Get-AzAccessToken
+        }
+        $header = @{
+            "Authorization" = "$($azToken.Type) $($azToken.Token)"
+            "Content-type" = $contentType
+        }
+        foreach($module in $modulesToBeInstalled) {
+            $resource =         $versionEnum[$module.Runtime].resource
+            $runtimeParameter = $versionEnum[$module.Runtime].runtimeParameter
+            $uriCall = "/subscriptions/$Subscription/resourceGroups/$RGName/providers/$resourceProviderName/$resourceType/$AAName/$resource/$($module.Name)?api-version=$apiVersion$runtimeParameter"
+            $requestBody = @{
+                properties = @{
+                    contentLink = @{
+                        uri = "$($module.VersionIndependentLink)/$($module.Version)"
+                        version = "$($module.Version)"
+                    }
+                }
+            }
+            try {
+                $modulesBatch += Invoke-RestMethod -Method $method -Uri ($uriBase+$uriCall) -Headers $header -Body ($requestBody | ConvertTo-Json)
+            }
+            catch {
+                Write-Host "Error while initiating module $($module.Name) import for runtime $($module.Runtime) -> try again later"
+                continue
+            }
         }
         #wait till import completes
         do {
             $dirty = $false
             $modulesBatch = @()
-            foreach ($module in $ModulesToBeInstalled) {
-                $module = Get-AzAutomationModule -Name $module.Name -ResourceGroupName $ResourceGroup -AutomationAccountName $AutomationAccount -ErrorAction Stop
-                if ($module.ProvisioningState -eq 'Creating') {
-                    $dirty = $true
-                    $modulesBatch += $module
+            foreach($module in $modulesToBeInstalled) {
+                $moduleInfo = Search-CurrentModule -ModuleName $module.Name -Runtime $module.Runtime
+                if ($moduleInfo.provisioningStatus) {
+                    if ($moduleInfo.provisioningStatus -eq 'Creating') {
+                        $dirty = $true
+                        $modulesBatch += $moduleInfo
+                    }
+                    if ($moduleInfo.provisioningStatus -eq 'Failed') {
+                        Write-Host "Could not import module $($moduleInfo.moduleName) for runtime $($moduleInfo.runtime). The import finished with status 'Failed'."
+                        continue
+                    }
                 }
-                if ($module.ProvisioningState -eq 'Failed') {
-                    throw "Could not import module $($module.name)"
+                else {
+                    Write-Host $moduleInfo.messageCheckPhase
+                    if ($moduleInfo.checkAction) {
+                        $modulesBatch += $moduleInfo
+                    }
                 }
             }
             if ($modulesBatch.Count -gt 0) {
-                $modulesBatch | Select-object Name, ProvisioningState | Format-Table
+                $modulesBatch | Select-Object moduleName, runtime, provisioningStatus | Format-Table
                 Start-Sleep -Seconds 30
             }
-        }while ($dirty)
+        } while ($dirty)
     }
 }
+        
 #endregion Modules
 
 #region Schedules
