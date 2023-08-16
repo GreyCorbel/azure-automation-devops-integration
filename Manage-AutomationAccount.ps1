@@ -51,7 +51,7 @@ Import-Module Az.Resources
 #region Connect subscription
 
 "Setting active subscription to $Subscription"
-$subscritionObject = Select-AzSubscription -Subscription $Subscription
+$subscriptionObject = Select-AzSubscription -Subscription $Subscription
 
 #endregion
 
@@ -142,10 +142,18 @@ if (Check-Scope -Scope $scope -RequiredScope 'Variables') {
 if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
     "Processing Modules"
     
+    #Using Azure REST API
     $uriBase = "https://management.azure.com"
     $resourceProviderName = "Microsoft.Automation"
     $resourceType = "automationAccounts"
     $apiVersion = "2019-06-01"
+
+    $azToken = $null
+    $versionEnum = @{
+        '5.1' = @{ resource = 'Modules';            runtimeParameter = $null }
+        '7.1' = @{ resource = 'powershell7Modules'; runtimeParameter = $null }
+        '7.2' = @{ resource = 'powershell7Modules'; runtimeParameter = '&runtimeVersion=7.2' }
+    }
 
     #Get requested (non-default) modules from runbook definitions
     $definitions = @(Get-DefinitionFiles -FileType Modules)
@@ -160,14 +168,10 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
         }
         $modulesList = Get-Content $contentFile -Raw | ConvertFrom-Json
         $ModulesToBeInstalled = @()
-        $azToken = $null
-        $versionEnum = @{
-            '5.1' = @{ resource = 'Modules';            runtimeParameter = $null }
-            '7.1' = @{ resource = 'powershell7Modules'; runtimeParameter = $null }
-            '7.2' = @{ resource = 'powershell7Modules'; runtimeParameter = '&runtimeVersion=7.2' }
-        }
         
         function Search-CurrentModule {
+            # Check module presence in the automation account for specific runtime version 
+            # and provide information for import and completion check phases
             param (
                 [Parameter(Mandatory)]
                 [string[]]
@@ -178,8 +182,6 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
                     $Runtime
             )
             
-            $resource =         $versionEnum[$Runtime].resource
-            $runtimeParameter = $versionEnum[$Runtime].runtimeParameter
             $returnValue = @{ 
                 moduleName = $ModuleName
                 runtime = $Runtime
@@ -187,7 +189,7 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
                 messageCheckPhase = $null
                 importAction = $false
                 checkAction = $false
-                provisioningStatus = $null
+                provisioningState = $null
             }
             
             $method = "GET"
@@ -199,8 +201,9 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
                 "Authorization" = "$($azToken.Type) $($azToken.Token)"
             }
         
-            # Check if module is already present in the automation account for the runtime version
-            $uriCall = "/subscriptions/$Subscription/resourceGroups/$RGName/providers/$resourceProviderName/$resourceType/$AAName/$resource/$($moduleName)?api-version=$apiVersion$runtimeParameter"
+            $resource = $versionEnum[$Runtime].resource
+            $runtimeParameter = $versionEnum[$Runtime].runtimeParameter
+            $uriCall = "/subscriptions/$($subscriptionObject.Subscription.id)/resourceGroups/$RGName/providers/$resourceProviderName/$resourceType/$AAName/$resource/$($moduleName)?api-version=$apiVersion$runtimeParameter"
             
             try { 
                 $currentModule = Invoke-RestMethod -Method $method -Uri ($uriBase+$uriCall) -Headers $header
@@ -208,7 +211,7 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
                 if ($currentModule.properties.provisioningState -ne 'Succeeded') {
                     $returnValue.messageImportPhase = "$moduleName with runtime $runtime present with wrong status -> reimporting"
                     $returnValue.importAction = $true
-                    $returnValue.provisioningStatus = $currentModule.properties.provisioningState
+                    $returnValue.provisioningState = $currentModule.properties.provisioningState
                     $returnValue.checkAction = $true        
                 }
                 else {
@@ -217,12 +220,12 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
                     if ($currentVersion -lt $requiredVersion) {
                         $returnValue.messageImportPhase = "$moduleName with runtime $runtime version lower than required ($currentVersion : $requiredVersion) -> importing"
                         $returnValue.importAction = $true
-                        $returnValue.provisioningStatus = $currentModule.properties.provisioningState
+                        $returnValue.provisioningState = $currentModule.properties.provisioningState
                     }
                     else {
                         $returnValue.messageImportPhase = "$moduleName with runtime $runtime version up to date or newer -> nothing to do"
                         $returnValue.importAction = $false
-                        $returnValue.provisioningStatus = $currentModule.properties.provisioningState
+                        $returnValue.provisioningState = $currentModule.properties.provisioningState
                     }
                 }
                 return $returnValue
@@ -232,14 +235,14 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
                     $returnValue.messageImportPhase = "$moduleName not present for runtime $runtime -> importing"
                     $returnValue.messageCheckPhase = "The module $moduleName for runtime $runtime was not found (possibly deleted during import) -> will not check further."
                     $returnValue.importAction = $true
-                    $returnValue.provisioningStatus = $null
+                    $returnValue.provisioningState = $null
                     $returnValue.checkAction = $false
                 }
                 else {
                     $returnValue.messageImportPhase = "Error while fetching information about the module $moduleName for runtime $runtime -> skipping"
                     $returnValue.messageCheckPhase = "Error while checking the provisioning status of the module $moduleName for runtime $runtime -> will try again."
                     $returnValue.importAction = $false
-                    $returnValue.provisioningStatus = $null
+                    $returnValue.provisioningState = $null
                     $returnValue.checkAction = $true
                 }
                 return $returnValue
@@ -254,7 +257,7 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
                     if ($currentModuleInfo.importAction) {
                         $moduleTemp = @{}
                         $moduleTemp = $module.psobject.Copy()
-                        $moduleTemp | Add-Member -NotePropertyName 'Runtime' -NotePropertyValue $runtime
+                        $moduleTemp | Add-Member -NotePropertyName 'runtime' -NotePropertyValue $runtime
                         $modulesToBeInstalled += $moduleTemp
                     }
                 }
@@ -265,7 +268,7 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
                 if ($currentModuleInfo.importAction) {
                     $moduleTemp = @{}
                     $moduleTemp = $module.psobject.Copy()
-                    $moduleTemp | Add-Member -NotePropertyName 'Runtime' -NotePropertyValue '5.1'
+                    $moduleTemp | Add-Member -NotePropertyName 'runtime' -NotePropertyValue '5.1'
                     $modulesToBeInstalled += $moduleTemp
                 }
             }
@@ -282,9 +285,9 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
             "Content-type" = $contentType
         }
         foreach($module in $modulesToBeInstalled) {
-            $resource =         $versionEnum[$module.Runtime].resource
+            $resource = $versionEnum[$module.Runtime].resource
             $runtimeParameter = $versionEnum[$module.Runtime].runtimeParameter
-            $uriCall = "/subscriptions/$Subscription/resourceGroups/$RGName/providers/$resourceProviderName/$resourceType/$AAName/$resource/$($module.Name)?api-version=$apiVersion$runtimeParameter"
+            $uriCall = "/subscriptions/$($subscriptionObject.Subscription.Id)/resourceGroups/$RGName/providers/$resourceProviderName/$resourceType/$AAName/$resource/$($module.Name)?api-version=$apiVersion$runtimeParameter"
             $requestBody = @{
                 properties = @{
                     contentLink = @{
@@ -307,12 +310,12 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
             $modulesBatch = @()
             foreach($module in $modulesToBeInstalled) {
                 $moduleInfo = Search-CurrentModule -ModuleName $module.Name -Runtime $module.Runtime
-                if ($moduleInfo.provisioningStatus) {
-                    if ($moduleInfo.provisioningStatus -eq 'Creating') {
+                if ($moduleInfo.provisioningState) {
+                    if ($moduleInfo.provisioningState -eq 'Creating') {
                         $dirty = $true
                         $modulesBatch += $moduleInfo
                     }
-                    if ($moduleInfo.provisioningStatus -eq 'Failed') {
+                    if ($moduleInfo.provisioningState -eq 'Failed') {
                         Write-Host "Could not import module $($moduleInfo.moduleName) for runtime $($moduleInfo.runtime). The import finished with status 'Failed'."
                         continue
                     }
@@ -325,13 +328,12 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
                 }
             }
             if ($modulesBatch.Count -gt 0) {
-                $modulesBatch | Select-Object moduleName, runtime, provisioningStatus | Format-Table
+                $modulesBatch | Select-Object moduleName, runtime, provisioningState | Format-Table
                 Start-Sleep -Seconds 30
             }
         } while ($dirty)
     }
 }
-        
 #endregion Modules
 
 #region Schedules
@@ -733,7 +735,7 @@ if (Check-Scope -Scope $scope -RequiredScope 'Runbooks') {
                     $Publish, `
                     $CurrentSchedules.Name, `
                     $HWG, `
-                    $subscritionObject.Subscription.id, `
+                    $subscriptionObject.Subscription.id, `
                     $token `
                 -Name $def.Name
         }
