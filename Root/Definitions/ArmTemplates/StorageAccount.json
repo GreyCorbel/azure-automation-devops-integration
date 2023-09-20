@@ -1,9 +1,0 @@
-{
-    "Name": "StorageAccount",
-    "Description": "Basic Storage account template" ,
-    "TemplateImplementation": "StorageAccount.json",
-    "ResourceGroupName":"TODO: ADD-RG-NAME",
-    "SubscriptionName":"TODO: ADD-SUB-NAME",
-    "ShareTargetGroupName":"TODO: ADD-TARGET-GROUP",
-    "Version":"V1.0"
-}

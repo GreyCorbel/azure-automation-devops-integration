@@ -1,6 +1,0 @@
-{
-    "Name": "Sample-Variable",
-    "Description": "This is sample variable created and managed by automation account devops integration",
-    "Encrypted": false,
-    "Content": "SampleVariable.json"
-}

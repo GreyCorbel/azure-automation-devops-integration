@@ -54,7 +54,7 @@ jobs:
               azureSubscription: '${{ parameters.serviceConnection }}'
               ScriptType: 'FilePath'
               ScriptPath: '$(System.DefaultWorkingDirectory)/Manage-AutomationAccount.ps1'
-              ScriptArguments: '-ProjectDir "$(System.DefaultWorkingDirectory)/Root" -Scope "Runbooks","Variables","Modules","Schedules" -EnvironmentName ${{ parameters.environment }} -Subscription ${{ parameters.subscription }} -ResourceGroup ${{ parameters.resourceGroup }} -AutomationAccount ${{ parameters.automationAccount }} -AutoPublish -ReportMissingImplementation'
+              ScriptArguments: '-ProjectDir "$(System.DefaultWorkingDirectory)/Root" -Scope "Runbooks","Variables","Modules","Schedules","JobSchedules","Webhooks" -EnvironmentName ${{ parameters.environment }} -Subscription ${{ parameters.subscription }} -ResourceGroup ${{ parameters.resourceGroup }} -AutomationAccount ${{ parameters.automationAccount }} -AutoPublish -ReportMissingImplementation'
               azurePowerShellVersion: 'LatestVersion'
 
             # Dsc
@@ -67,7 +67,7 @@ jobs:
               azureSubscription: '${{ parameters.serviceConnection }}'
               ScriptType: 'FilePath'
               ScriptPath: '$(System.DefaultWorkingDirectory)/Manage-AutomationAccount.ps1'
-              ScriptArguments: '-ProjectDir "$(System.DefaultWorkingDirectory)/Root" -Scope "Dsc" -EnvironmentName ${{ parameters.environment }} -Subscription ${{ parameters.subscription }} -ResourceGroup ${{ parameters.resourceGroup }} -AutomationAccount ${{ parameters.automationAccount }} -AutoPublish -Verbose'
+              ScriptArguments: '-ProjectDir "$(System.DefaultWorkingDirectory)/Root" -Scope "Configurations" -EnvironmentName ${{ parameters.environment }} -Subscription ${{ parameters.subscription }} -ResourceGroup ${{ parameters.resourceGroup }} -AutomationAccount ${{ parameters.automationAccount }} -AutoPublish -Verbose'
               azurePowerShellVersion: 'LatestVersion'
 
             # ARM Template Specs
