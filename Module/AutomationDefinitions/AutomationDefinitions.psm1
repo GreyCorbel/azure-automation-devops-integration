@@ -19,19 +19,15 @@ function New-RunbookDefinition
         [string[]]
             #reserved for future use
         $SupportedRequestTypes,
-        [bool]
-            #whether to create webhook
-        $TriggeredByWebhook,
-        [ValidateSet('Azure','HybridWorker')]
         [string]
             #where runbook runs
+            #for running on Azure, enter 'Azure' or empty string.
+            #for running on hybrid worker, specify name of hybrid worker group
         $RunsOn,
         [string[]]
             #names of module that are needed by runbook
+            #just for documentation of runbook requirements
         $RequiredModules,
-        [string[]]
-            #names of schedules that should trigger the runbook
-        $Schedules,
         [switch]
             #returns formatted JSON rather than object
         $AsJson
@@ -45,10 +41,8 @@ function New-RunbookDefinition
             Type = $Type
             RuntimeVersion = $RuntimeVersion
             SupportedRequestTypes = $SupportedRequestTypes
-            TriggeredByWebhook = $TriggeredByWebhook
             RunsOn = $RunsOn
             RequiredModules = $RequiredModules
-            Schedules = $Schedules
         }
         if($AsJson)
         {
@@ -265,7 +259,7 @@ function New-ScheduleDefinition
             #works together with Frequeny parameter
             #Example: 2 --> every 2 hour, weeh, month
         $Interval,
-        [ValidateSet('Day','Hour','Month','Week')]
+        [ValidateSet('Minute','Hour', 'Day','Week','Month')]
         [string]
             #Frequency of recurrence
             #Note: We do not support one-time schedules here
