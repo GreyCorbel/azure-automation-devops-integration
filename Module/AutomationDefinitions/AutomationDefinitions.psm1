@@ -19,11 +19,11 @@ function New-RunbookDefinition
         [string[]]
             #reserved for future use
         $SupportedRequestTypes,
-        [string]
+        [switch]
             #where runbook runs
             #for running on Azure, enter 'Azure' or empty string.
             #for running on hybrid worker, specify name of hybrid worker group
-        $RunsOn,
+        $DoNotPublish,
         [string[]]
             #names of module that are needed by runbook
             #just for documentation of runbook requirements
@@ -41,7 +41,7 @@ function New-RunbookDefinition
             Type = $Type
             RuntimeVersion = $RuntimeVersion
             SupportedRequestTypes = $SupportedRequestTypes
-            RunsOn = $RunsOn
+            AutoPublish = (-not $DoNotPublish.IsPresent)
             RequiredModules = $RequiredModules
         }
         if($AsJson)

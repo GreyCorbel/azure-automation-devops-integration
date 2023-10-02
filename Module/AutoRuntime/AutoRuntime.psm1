@@ -62,6 +62,35 @@ Function Get-FileToProcess
     }
 }
 
+Function Get-ModuleToProcess
+{
+    Param
+    (
+        [Parameter()]
+        [string]$ModuleName
+    )
+
+    Process
+    {
+        if([string]::IsNullOrWhiteSpace($ModuleName)) {
+            return $null
+        }
+
+        #try environment-specific path adn use it if found
+        [string]$path = [System.IO.Path]::Combine($script:ContentRoot,'Modules',$ModuleName)
+        if(Test-Path $path -PathType Container) {
+            return $path
+        }
+        #if environment specific not found, use common
+        $path = [System.IO.Path]::Combine($script:CommonContentRoot,'Modules',$ModuleName)
+        if(Test-Path $path -PathType Container) {
+            return $path
+        }
+        #not found
+        return $null
+    }
+}
+
 Function Get-DefinitionFiles
 {
     param

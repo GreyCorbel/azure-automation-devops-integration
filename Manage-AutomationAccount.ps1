@@ -26,6 +26,20 @@ Param
     #name of automation account that we deploy to
     $AutomationAccount,
     [Parameter()]
+    [string]
+    #name of storage account used for uploading of private modules to automation account
+    #caller must have permission to:
+    #  - upload blobs
+    #  - create SAS tokens for uplaoded blobs
+    #Not needed if private modules not used
+    $storageAccount,
+    [Parameter()]
+    [string]
+    #name of blob container where to upload private modules to
+    #SAS token valid for 2 hours is then created a used to generate content link for module
+    #so as automation account can use it to upload module to itself
+    $storageAccountContainer,
+    [Parameter()]
     [Switch]
     #whether or not to remove any existing runbooks and variables from automation account that are not source-controlled 
     $FullSync,
@@ -96,6 +110,39 @@ if (Check-Scope -Scope $scope -RequiredScope 'Variables') {
 #endregion Variables
 
 #region Modules
+
+Function GetModuleContentLink
+{
+    param
+    (
+        $moduleDefinition,
+        $storageAccount,
+        $storageAccountContainer
+    )
+
+    process
+    {
+        if(-not [string]::IsNullOrEmpty($moduleDefinition.VersionIndependentLink))
+        {
+            return "$($moduleDefinition.VersionIndependentLink)/$($moduleDefinition.Version)"
+        }
+        else
+        {
+            $moduleFolder = Get-ModuleToProcess -ModuleName $moduleDefinition.Name
+            if([string]::IsnullOrEmpty($moduleFolder))
+            {
+                write-Warning "Module $($moduleDefinition.Name) does not have content link and implementation not found"
+                return
+            }
+            if([string]::IsnullOrEmpty($storageAccount) -or [string]::IsnullOrEmpty($storageAccountContainer) )
+            {
+                write-Warning "Storage account and/or storage container not specified, but needed --> cannot process module $($moduleDefinition.Name)"
+                return
+            }
+            return Get-AutoModuleUrl -modulePath $moduleFolder -storageAccount $storageAccount -storageAccountFolder $storageAccountContainer
+        }
+    }
+}
 if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
     "Processing Modules"
     
@@ -123,10 +170,15 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
                     if($existingModule.Count -eq 0 -or $existingModule[0].properties.Version -ne $module.version)
                     {
                         "Module version does not match --> importing"
-                        $importingDesktopModules+=Add-AutoModule `
-                            -Name $module.Name `
-                            -ContentLink "$($module.VersionIndependentLink)/$($module.Version)" `
-                            -Version $module.Version
+                        $contentLink = GetModuleContentLink -moduleDefinition $module -storageAccount $storageAccount -storageAccountContainer $storageAccountContainer
+                        "ContentLink: $contentLink"
+                        if(-not [string]::IsnullOrEmpty($contentLink))
+                        {
+                            $importingDesktopModules+=Add-AutoModule `
+                                -Name $module.Name `
+                                -ContentLink $contentLink `
+                                -Version $module.Version
+                        }
                     }
                     else
                     {
@@ -140,10 +192,15 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
                     if($existingModule.Count -eq 0 -or $existingModule[0].properties.Version -ne $module.version)
                     {
                         "Module version does not match --> importing"
-                        $importingCoreModules+=Add-AutoPowershell7Module `
-                        -Name $module.Name `
-                        -ContentLink "$($module.VersionIndependentLink)/$($module.Version)" `
-                        -Version $module.Version
+                        $contentLink = GetModuleContentLink -moduleDefinition $module -storageAccount $storageAccount -storageAccountContainer $storageAccountContainer
+                        "ContentLink: $contentLink"
+                        if(-not [string]::IsnullOrEmpty($contentLink))
+                        {
+                            $importingCoreModules+=Add-AutoPowershell7Module `
+                                -Name $module.Name `
+                                -ContentLink  $contentLink `
+                                -Version $module.Version
+                        }
                     }
                     else
                     {
@@ -193,6 +250,7 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
             Remove-AutoObject -Name $module.Name -objectType Modules | Out-Null
         }
         $runtime = '7.2'
+        "Removing unmanaged modules for runtime $runtime"
         $managedModules = $definitions | Where-Object{$_.RuntimeVersion -eq $runtime}
         foreach ($module in $coreModules) {
             if($module.Name -in $managedModules.Name)
@@ -322,9 +380,9 @@ if (Check-Scope -Scope $scope -RequiredScope 'JobSchedules') {
     $managedSchedules = @()
     foreach($def in $definitions)
     {
-        "Updating schedule $($def.schedule) on $($def.runbook)"
-        $jobSchedule = Add-AutoJobSchedule -RunbookName $def.runbook `
-            -ScheduleName $def.schedule `
+        "Updating schedule $($def.scheduleName) on $($def.runbookName)"
+        $jobSchedule = Add-AutoJobSchedule -RunbookName $def.runbookName `
+            -ScheduleName $def.scheduleName `
             -RunOn $(if($def.runOn -eq 'Azure' -or [string]::IsnullOrEmpty($def.runOn)) {''} else {$def.runOn}) `
             -Parameters $def.Parameters
         

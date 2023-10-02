@@ -18,6 +18,10 @@ Current implementation has the following features:
   * Place implementation to Common folder, or stage-specific folder, depending on your needs
   * Stage-specific folders have priority when deployment looks for implementation file
 * Runbooks can be automatically published
+* Imports also private modules not present in Powershell Gallery.
+  * Such modules are maintained under Source/<envirnoment>/Modules and do not contain VersionIndependentLink in module definition file
+  * Automation account management logic uploads them do storage account specified in parameters, creates SAS token for reading them from storage account and uses it as content link when the importing module
+    * SAS token uses service connection identity - it has to have permission to generate User delegation SAS token and upload content to specified storage account blob container
 * Dsc Configurations can be automatically published
 * All managed artifacts can be fully managed (auto-deleted from automation account when not found in source control)
 * Runbooks and Powershell modules support 5.1 (Powershell Desktop) and 7.2 (Powershell Core) runtimes
@@ -34,7 +38,7 @@ Management scripts to use for deployment are:
 
 Management scripts are designed to be executed by `AzurePowerShell@5` pipeline task that automatically logs in to Azure. For use outside of pipeline, you need to:
 * have `Az.Accounts` PowerShell module installed
-> call `Connect-AzAccount` command prior running management scripts
+* call `Connect-AzAccount` command prior running management scripts
 
 Apart from `Az.Accounts`, no other Az modules are requiired  - all work is performed via Azure Automation REST API.
 ## Folder structure for the root

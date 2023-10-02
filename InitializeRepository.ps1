@@ -41,7 +41,7 @@ foreach($entity in $supportedEntities)
 {
     switch($entity)
     {
-        {$_ -in @('Modules','Schedules','JobSchedules','Webhooks')}  {
+        {$_ -in @('Schedules','JobSchedules','Webhooks')}  {
             $createSourceFolder = $false
             break;
         }

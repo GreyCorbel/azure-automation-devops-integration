@@ -503,54 +503,60 @@ Function Add-AutoRunbook
     }
     process
     {
-        write-verbose "Modifying runbook on $runbookUri"
-        $payload = @{
-            name = $Name
-            location = $location
-            properties = @{
-                runbookType = $Type
-                description = $Description
+        try {
+            write-verbose "Modifying runbook on $runbookUri"
+            $payload = @{
+                name = $Name
+                location = $location
+                properties = @{
+                    runbookType = $Type
+                    description = $Description
+                }
+            } |  ConvertTo-Json
+            write-verbose $payload
+    
+            $rslt = Invoke-RestMethod -Method Put `
+                -Uri $runbookUri `
+                -Body $payload `
+                -ContentType 'application/json' `
+                -Headers $headers `
+                -ErrorAction Stop
+            if($rslt.properties.provisioningState -ne 'Succeeded')
+            {
+                return $rslt
             }
-        } |  ConvertTo-Json
-        write-verbose $payload
-
-        $rslt = Invoke-RestMethod -Method Put `
-            -Uri $runbookUri `
-            -Body $payload `
-            -ContentType 'application/json' `
-            -Headers $headers `
-            -ErrorAction Stop
-        if($rslt.properties.provisioningState -ne 'Succeeded')
-        {
-            return $rslt
+    
+            write-verbose "Uploading runbook content to $runbookContentUri"
+            Invoke-RestMethod -Method Put `
+                -Uri $runbookContentUri `
+                -Body $Content `
+                -ContentType 'text/powershell' `
+                -Headers $headers `
+                -ErrorAction Stop | Out-Null
+            if(-not $AutoPublish)
+            {
+                return $rslt
+            }
+                
+            write-verbose "Publishing runbook on $runbookPublishUri"
+            Invoke-RestMethod -Method Post `
+                -Uri $runbookPublishUri `
+                -Body '{}' `
+                -ContentType 'application/json' `
+                -Headers $headers `
+                -ErrorAction Stop | Out-Null
+    
+            if($WaitForCompletion)
+            {
+                write-Verbose 'Waiting for publishing of the runbook'
+                Wait-AutoObjectProcessing -Name $name -objectType Runbooks
+            }
+            $rslt
         }
-
-        write-verbose "Uploading runbook content to $runbookContentUri"
-        Invoke-RestMethod -Method Put `
-            -Uri $runbookContentUri `
-            -Body $Content `
-            -ContentType 'text/powershell' `
-            -Headers $headers `
-            -ErrorAction Stop | Out-Null
-        if(-not $AutoPublish)
-        {
-            return $rslt
+        catch {
+            write-error $_
+            throw;
         }
-            
-        write-verbose "Publishing runbook on $runbookPublishUri"
-        Invoke-RestMethod -Method Post `
-            -Uri $runbookPublishUri `
-            -Body '{}' `
-            -ContentType 'application/json' `
-            -Headers $headers `
-            -ErrorAction Stop | Out-Null
-
-        if($WaitForCompletion)
-        {
-            write-Verbose 'Waiting for publishing of the runbook'
-            Wait-AutoObjectProcessing -Name $name -objectType Runbooks
-        }
-        $rslt
     }
 }
 
@@ -641,6 +647,50 @@ Function Add-AutoPowershell7Runbook
     }
 }
 
+function Get-AutoModuleUrl
+{
+    param
+    (
+        [string]$modulePath,
+        [string]$storageAccount,
+        [string]$storageAccountFolder
+    )
+
+    begin
+    {
+        $moduleName = [System.IO.Path]::GetFileNameWithoutExtension($modulePath)
+        $tempFile = [system.io.path]::Combine([system.io.path]::GetTempPath(),"$moduleName`.zip")
+    }
+    process
+    {
+        #compress to zip
+        Write-Verbose "Compressing $modulePath to archive $tempFile"
+        Compress-Archive -Path $modulePath -DestinationPath $tempFile -Update
+        #get compressinon results
+        #upload to storage account
+        $h = Get-AutoAccessToken -ResourceUri 'https://storage.azure.com' -AsHashTable
+        #block id statically set to '1' and we assume only uploading single block
+        $blobUri = "https://$storageAccount.blob.core.windows.net/$storageAccountFolder/$moduleName`.zip"
+        Write-Verbose "Uploading compressed module to $blobUri"
+        $h['x-ms-version'] = '2019-12-12'
+        $h['x-ms-date'] = [DateTime]::UtcNow.ToString("R")
+        $h['x-ms-blob-content-disposition'] = "attachment; fileName = $moduleName`.zip"
+        $h['x-ms-blob-type'] = 'BlockBlob'
+
+        Invoke-RestMethod -Method Put -Uri $blobUri -InFile $tempFile -headers $h -ErrorAction Stop | Out-Null
+
+        #file uploaded, create SAS-ed URL
+        Write-Verbose "Getting SAS token for uploaded module"
+        GetBlobSasUrl -ExpiresIn '02:00' -Permissions 'r' -storageAccount $storageAccount -blobPath "$storageAccountFolder/$moduleName`.zip"
+    }
+    end
+    {
+        if(Test-Path $tempFile)
+        {
+            Remove-Item $tempFile -Force
+        }
+    }
+}
 Function Add-AutoConfiguration
 {
     param
@@ -761,28 +811,35 @@ Function Add-AutoJobSchedule
     }
     process
     {
-        write-verbose "Modifying job schedule on $Uri"
-        $payload = @{
-            name = $jobScheduleName
-            properties = @{
-                runbook = @{
-                    name = $RunbookName
+        try
+        {
+            write-verbose "Modifying job schedule on $Uri"
+            $payload = @{
+                name = $jobScheduleName
+                properties = @{
+                    runbook = @{
+                        name = $RunbookName
+                    }
+                    schedule = @{
+                        name = $ScheduleName
+                    }
+                    parameters = $Parameters
+                    runOn = $RunOn
                 }
-                schedule = @{
-                    name = $ScheduleName
-                }
-                parameters = $Parameters
-                runOn = $RunOn
-            }
-        } |  ConvertTo-Json
-        write-verbose $payload
+            } |  ConvertTo-Json
+            write-verbose $payload
 
-        Invoke-RestMethod -Method Put `
-            -Uri $Uri `
-            -Body $payload `
-            -ContentType 'application/json' `
-            -Headers $headers `
-            -ErrorAction Stop
+            Invoke-RestMethod -Method Put `
+                -Uri $Uri `
+                -Body $payload `
+                -ContentType 'application/json' `
+                -Headers $headers `
+                -ErrorAction Stop
+        }
+        catch {
+            write-error $_
+            throw;
+        }
     }
 }
 
@@ -909,6 +966,115 @@ function Wait-AutoObjectProcessing
                     break;
                 }
             }
+        }
+    }
+}
+
+Function GetBlobSasUrl
+{
+    param
+    (
+        [Timespan]$ExpiresIn = '02:00',
+        [string]$Permissions,
+        [string]$storageAccount,
+        [string]$blobPath
+    )
+
+    process
+    {
+        $startDate = [DateTime]::UtcNow
+
+        $keyInfo = Get-DelegationToken -StartDate $startDate -ExpiresIn $ExpiresIn -storageAccountName $storageAccount
+
+        $signedPermissions = $Permissions
+        $signedStart = $keyInfo.signedStart
+        $signedExpiry = $keyInfo.signedExpiry
+        $canonicalizedResource = "/blob/$storageAccount/$blobPath"
+        $signedKeyObjectId = $keyInfo.SignedOid
+        $signedKeyTenantId =$keyInfo.SignedTid
+        $signedKeyStart = $keyInfo.signedStart
+        $signedKeyExpiry = $keyInfo.signedExpiry
+        $signedKeyService = $keyInfo.SignedService
+        $signedKeyVersion = $keyInfo.SignedVersion
+        $signedAuthorizedUserObjectId = ''
+        $signedUnauthorizedUserObjectId =''
+        $signedCorrelationId =''
+        $signedIP =''
+        $signedProtocol = 'https'
+        $signedVersion = '2022-11-02'
+        $signedResource = 'b'
+        $signedSnapshotTime =''
+        $signedEncryptionScope = ''
+        $rscc = ''
+        $rscd=''
+        $rsce=''
+        $rscl=''
+        $rsct=''
+
+        $stringToSign= "$signedPermissions" + [char]10 + "$signedStart" + [char]10 + "$signedExpiry" + [char]10 + "$canonicalizedResource" + [char]10 + `
+            "$signedKeyObjectid" + [char]10 + $signedKeyTenantId + [char]10 +  $signedKeyStart + [char]10 + $signedKeyExpiry + [char]10 + `
+            $signedKeyService + [char]10 + $signedKeyVersion + [char]10  + $signedAuthorizedUserObjectId + [char]10 + $signedUnauthorizedUserObjectId + [char]10 + `
+            $signedCorrelationId + [char]10 + $signedIP + [char]10 + $signedProtocol + [char]10 + $signedVersion + [char]10 +$signedResource + [char]10 + `
+            $signedSnapshotTime + [char]10 + $signedEncryptionScope + [char]10 + $rscc + [char]10 + $rscd + [char]10 + $rsce + [char]10 + $rscl + [char]10 + $rsct
+        $signature = GetSasSignature -text $stringToSign -key $keyInfo.Value
+        $signature = [Uri]::EscapeDataString($signature)
+        $uriParams = "`?sp=$signedPermissions`&st=$signedStart`&se=$signedExpiry`&skoid=$signedKeyObjectId`&sktid=$signedKeyTenantId`&skt=$signedKeyStart`&ske=$signedKeyExpiry`&sks=$signedKeyService`&skv=$signedKeyVersion`&spr=$signedProtocol`&sv=$signedVersion`&sr=$signedResource`&sig=$signature"
+        
+        "https://$storageAccount.blob.core.windows.net/$blobPath$uriParams"
+    }
+}
+
+Function Get-DelegationToken
+{
+    param
+    (
+        [DateTime]$StartDate,
+        [Timespan]$ExpiresIn,
+        [string]$storageAccountName
+    )
+
+    begin
+    {
+        $payloadTemplate = "<?xml version=`"1.0`" encoding=`"utf-8`"?><KeyInfo><Start>{0}</Start><Expiry>{1}</Expiry></KeyInfo>"
+    }
+
+    process
+    {
+        $payload = [string]::Format($payloadTemplate, $startDate.ToString('yyyy-MM-ddTHH:mm:ssZ'), ($startDate+$ExpiresIn).ToString('yyyy-MM-ddTHH:mm:ssZ'))
+        $h = Get-AutoAccessToken -ResourceUri 'https://storage.azure.com' -AsHashTable
+        $h['x-ms-version'] = '2022-11-02'
+
+        $rsp = Invoke-RestMethod -Method Post -Uri "https://$storageAccountName.blob.core.windows.net/`?restype=service`&comp=userdelegationkey" -Headers $h -body $payload -ContentType 'text/xml'
+        $data=$rsp.Substring(3)
+        $keyInfo=([xml]$data).UserDelegationKey
+        $keyInfo
+    }
+}
+
+
+function GetSasSignature
+{
+    param
+    (
+        [Parameter(Mandatory,ValueFromPipeline)]
+        [string]$text,
+        [Parameter(Mandatory)]
+        [string]$key
+    )
+
+    begin
+    {
+        [System.Security.Cryptography.HashAlgorithm]$hmacsha256 = (new-object System.Security.Cryptography.HMACSHA256(,[Convert]::FromBase64String($key))) -as [System.Security.Cryptography.HashAlgorithm]
+    }
+    process
+    {
+        [Convert]::ToBase64String($hmacsha256.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($text)))
+    }
+    end
+    {
+        if($null -ne $hmacsha256)
+        {
+            $hmacsha256.Dispose()
         }
     }
 }
