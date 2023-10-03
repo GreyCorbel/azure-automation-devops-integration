@@ -32,13 +32,14 @@ Param
     #  - upload blobs
     #  - create SAS tokens for uplaoded blobs
     #Not needed if private modules not used
-    $storageAccount,
+    $StorageAccount,
     [Parameter()]
     [string]
     #name of blob container where to upload private modules to
     #SAS token valid for 2 hours is then created a used to generate content link for module
     #so as automation account can use it to upload module to itself
-    $storageAccountContainer,
+    #Needed when StorageAccount specified
+    $StorageAccountContainer,
     [Parameter()]
     [Switch]
     #whether or not to remove any existing runbooks and variables from automation account that are not source-controlled 
@@ -124,7 +125,12 @@ Function GetModuleContentLink
     {
         if(-not [string]::IsNullOrEmpty($moduleDefinition.VersionIndependentLink))
         {
-            return "$($moduleDefinition.VersionIndependentLink)/$($moduleDefinition.Version)"
+            $uri = $moduleDefinition.VersionIndependentLink
+            if(-not [string]::IsNullOrEmpty($moduleDefinition.Version))
+            {
+                $uri =  "$uri/$($moduleDefinition.Version)"
+            }
+            return $uri
         }
         else
         {
@@ -143,6 +149,7 @@ Function GetModuleContentLink
         }
     }
 }
+
 if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
     "Processing Modules"
     

@@ -266,24 +266,31 @@ Function Add-AutoVariable
     }
     process
     {
-        write-verbose "Sending content to $Uri"
-        $payload = @{
-            name = $Name
-            properties = @{
-                description = $Description
-                isEncrypted = [bool]$Encrypted
-                value = ($Content | ConvertTo-Json)
-            }
-        } |  ConvertTo-Json
-        write-verbose $payload
-
-        Invoke-RestMethod -Method Put `
-            -Uri $Uri `
-            -Body $payload `
-            -ContentType 'application/json' `
-            -Headers $headers `
-            -ErrorAction Stop
-    }
+        try {
+            write-verbose "Sending content to $Uri"
+            $payload = @{
+                name = $Name
+                properties = @{
+                    description = $Description
+                    isEncrypted = [bool]$Encrypted
+                    value = ($Content | ConvertTo-Json)
+                }
+            } |  ConvertTo-Json
+            write-verbose $payload
+    
+            Invoke-RestMethod -Method Put `
+                -Uri $Uri `
+                -Body $payload `
+                -ContentType 'application/json' `
+                -Headers $headers `
+                -ErrorAction Stop
+    
+        }
+        catch {
+            write-error $_
+            throw;
+        } 
+   }
 }
 
 
@@ -319,53 +326,59 @@ Function Add-AutoSchedule
     }
     process
     {
-        write-verbose "Sending content to $Uri"
-        $start = [DateTime]::UtcNow.Date + $startTime
-        
-        if($start -lt [DateTime]::UtcNow.AddMinutes(6)) {$start = $start.AddDays(1)}
-        $payload = @{
-            name = $Name
-            properties = @{
-                frequency = $Frequency
-                interval = $Interval
-                startTime = $start
-                description = $Description
-                advancedSchedule = @{
-                    monthDays = $MonthDays
-                    weekdays = $WeekDays
+        try {
+            write-verbose "Sending content to $Uri"
+            $start = [DateTime]::UtcNow.Date + $startTime
+            
+            if($start -lt [DateTime]::UtcNow.AddMinutes(6)) {$start = $start.AddDays(1)}
+            $payload = @{
+                name = $Name
+                properties = @{
+                    frequency = $Frequency
+                    interval = $Interval
+                    startTime = $start
+                    description = $Description
+                    advancedSchedule = @{
+                        monthDays = $MonthDays
+                        weekdays = $WeekDays
+                    }
+                    timezone = 'UTC'
                 }
-                timezone = 'UTC'
             }
-        }
-        $payload = $payload |  ConvertTo-Json -Depth 9
-        write-verbose $payload
-
-        $rslt = Invoke-RestMethod -Method Put `
-        -Uri $Uri `
-        -Body $payload `
-        -ContentType 'application/json' `
-        -Headers $headers `
-        -ErrorAction Stop
-
-
-        write-verbose "Setting schedule Enabled status to $(-not $Disabled)"
-        $payload = @{
-            name = $Name
-            properties = @{
-                isEnabled = (-not $Disabled)
+            $payload = $payload |  ConvertTo-Json -Depth 9
+            write-verbose $payload
+    
+            $rslt = Invoke-RestMethod -Method Put `
+            -Uri $Uri `
+            -Body $payload `
+            -ContentType 'application/json' `
+            -Headers $headers `
+            -ErrorAction Stop
+    
+    
+            write-verbose "Setting schedule Enabled status to $(-not $Disabled)"
+            $payload = @{
+                name = $Name
+                properties = @{
+                    isEnabled = (-not $Disabled)
+                }
             }
+            $payload = $payload |  ConvertTo-Json -Depth 9
+    
+            write-verbose "Sending content to $Uri"
+            $rslt = Invoke-RestMethod -Method Patch `
+            -Uri $Uri `
+            -Body $payload `
+            -ContentType 'application/json' `
+            -Headers $headers `
+            -ErrorAction Stop
+            
+            $rslt
         }
-        $payload = $payload |  ConvertTo-Json -Depth 9
-
-        write-verbose "Sending content to $Uri"
-        $rslt = Invoke-RestMethod -Method Patch `
-        -Uri $Uri `
-        -Body $payload `
-        -ContentType 'application/json' `
-        -Headers $headers `
-        -ErrorAction Stop
-        
-        $rslt
+        catch {
+            write-error $_
+            throw;
+        }
     }
 }
 
@@ -392,29 +405,35 @@ Function Add-AutoModule
     }
     process
     {
-        write-verbose "Sending content to $Uri"
-        $payload = @{
-            properties = @{
-                contentLink = @{
-                    uri = $ContentLink
+       try {
+            write-verbose "Sending content to $Uri"
+            $payload = @{
+                properties = @{
+                    contentLink = @{
+                        uri = $ContentLink
+                    }
+                    version = $Version
                 }
-                version = $Version
-            }
-        } |  ConvertTo-Json
-        write-verbose $payload
+            } |  ConvertTo-Json
+            write-verbose $payload
 
-        $rslt = Invoke-RestMethod -Method Put `
-        -Uri $Uri `
-        -Body $payload `
-        -ContentType 'application/json' `
-        -Headers $headers `
-        -ErrorAction Stop
-        if($WaitForCompletion)
-        {
-            write-Verbose 'Waiting for importing of the module'
-            Wait-AutoObjectProcessing -Name $name -objectType Modules
-        }
-        $rslt
+            $rslt = Invoke-RestMethod -Method Put `
+            -Uri $Uri `
+            -Body $payload `
+            -ContentType 'application/json' `
+            -Headers $headers `
+            -ErrorAction Stop
+            if($WaitForCompletion)
+            {
+                write-Verbose 'Waiting for importing of the module'
+                Wait-AutoObjectProcessing -Name $name -objectType Modules
+            }
+            $rslt
+       }
+       catch {
+            write-error $_
+            throw;
+       }
     }
 }
 
@@ -441,33 +460,39 @@ Function Add-AutoPowershell7Module
     }
     process
     {
-        write-verbose "Sending content to $Uri"
-        $payload = @{
-            properties = @{
-                contentLink = @{
-                    uri = $ContentLink
+        try {
+            write-verbose "Sending content to $Uri"
+            $payload = @{
+                properties = @{
+                    contentLink = @{
+                        uri = $ContentLink
+                    }
+                    version = $Version
                 }
-                version = $Version
-            }
-        } |  ConvertTo-Json
-        write-verbose $payload
+            } |  ConvertTo-Json
+            write-verbose $payload
 
-        $rslt = Invoke-RestMethod -Method Put `
-        -Uri $Uri `
-        -Body $payload `
-        -ContentType 'application/json' `
-        -Headers $headers `
-        -ErrorAction Stop
-        if($WaitForCompletion)
-        {
-            do
+            $rslt = Invoke-RestMethod -Method Put `
+            -Uri $Uri `
+            -Body $payload `
+            -ContentType 'application/json' `
+            -Headers $headers `
+            -ErrorAction Stop
+            if($WaitForCompletion)
             {
-                write-Verbose 'Waiting for importing of the module'
-                Start-Sleep -Seconds 5
-                $rslt = Get-AutoPowershell7Module -Name $Name
-            }while($rslt.properties.provisioningState -in @('Creating','RunningImportModuleRunbook'))
+                do
+                {
+                    write-Verbose 'Waiting for importing of the module'
+                    Start-Sleep -Seconds 5
+                    $rslt = Get-AutoPowershell7Module -Name $Name
+                }while($rslt.properties.provisioningState -in @('Creating','RunningImportModuleRunbook'))
+            }
+            $rslt
         }
-        $rslt
+        catch {
+            write-error $_
+            throw;
+        }
     }
 }
 
@@ -589,61 +614,67 @@ Function Add-AutoPowershell7Runbook
     }
     process
     {
-        write-verbose "Modifying runbook on $runbookUri"
-        $payload = @{
-            name = $Name
-            location = $location
-            properties = @{
-                runbookType = 'PowerShell'
-                runtime = 'PowerShell-7.2'
-                description = $Description
-            }
-        } |  ConvertTo-Json
-        write-verbose $payload
-
-        $rslt = Invoke-RestMethod -Method Put `
-            -Uri $runbookUri `
-            -Body $payload `
-            -ContentType 'application/json' `
-            -Headers $headers `
-            -ErrorAction Stop
-        if($rslt.properties.provisioningState -ne 'Succeeded')
-        {
-            return $rslt
-        }
-
-        write-verbose "Uploading runbook content to $runbookContentUri"
-        Invoke-RestMethod -Method Put `
-            -Uri $runbookContentUri `
-            -Body $Content `
-            -ContentType 'text/powershell' `
-            -Headers $headers `
-            -ErrorAction Stop | Out-Null
-        if(-not $AutoPublish)
-        {
-            return $rslt
-        }
-
-        write-verbose "Publishing runbook on $runbookPublishUri"
-        #returns $null response
-        Invoke-RestMethod -Method Post `
-            -Uri $runbookPublishUri `
-            -Body '{}' `
-            -ContentType 'application/json' `
-            -Headers $headers `
-            -ErrorAction Stop | Out-Null
-
-        if($WaitForCompletion)
-        {
-            do
+        try {
+            write-verbose "Modifying runbook on $runbookUri"
+            $payload = @{
+                name = $Name
+                location = $location
+                properties = @{
+                    runbookType = 'PowerShell'
+                    runtime = 'PowerShell-7.2'
+                    description = $Description
+                }
+            } |  ConvertTo-Json
+            write-verbose $payload
+    
+            $rslt = Invoke-RestMethod -Method Put `
+                -Uri $runbookUri `
+                -Body $payload `
+                -ContentType 'application/json' `
+                -Headers $headers `
+                -ErrorAction Stop
+            if($rslt.properties.provisioningState -ne 'Succeeded')
             {
-                write-Verbose 'Waiting for publishing of the runbook'
-                Start-Sleep -Seconds 5
-                $rslt = Get-AutoObject -objectType Runbooks -Name $Name
-
-            }while($rslt.properties.provisioningState -in @('Creating'))
+                return $rslt
+            }
+    
+            write-verbose "Uploading runbook content to $runbookContentUri"
+            Invoke-RestMethod -Method Put `
+                -Uri $runbookContentUri `
+                -Body $Content `
+                -ContentType 'text/powershell' `
+                -Headers $headers `
+                -ErrorAction Stop | Out-Null
+            if(-not $AutoPublish)
+            {
+                return $rslt
+            }
+    
+            write-verbose "Publishing runbook on $runbookPublishUri"
+            #returns $null response
+            Invoke-RestMethod -Method Post `
+                -Uri $runbookPublishUri `
+                -Body '{}' `
+                -ContentType 'application/json' `
+                -Headers $headers `
+                -ErrorAction Stop | Out-Null
+    
+            if($WaitForCompletion)
+            {
+                do
+                {
+                    write-Verbose 'Waiting for publishing of the runbook'
+                    Start-Sleep -Seconds 5
+                    $rslt = Get-AutoObject -objectType Runbooks -Name $Name
+    
+                }while($rslt.properties.provisioningState -in @('Creating'))
+            }
+            $rslt
         }
-        $rslt
+        catch {
+            write-error $_
+            throw;
+        }
     }
 }
 
@@ -724,66 +755,72 @@ Function Add-AutoConfiguration
     }
     process
     {
-        write-verbose "Modifying config on $configUri"
-        $payload = @{
-            name = $Name
-            location = $location
-            properties = @{
-                description = $Description
-                source = @{
-                    type = 'embeddedContent'
-                    value = $Content
+        try {
+            write-verbose "Modifying config on $configUri"
+            $payload = @{
+                name = $Name
+                location = $location
+                properties = @{
+                    description = $Description
+                    source = @{
+                        type = 'embeddedContent'
+                        value = $Content
+                    }
+                    parameters = $Parameters
                 }
-                parameters = $Parameters
-            }
-        } |  ConvertTo-Json
-        write-verbose $payload
-
-        $rslt = Invoke-RestMethod -Method Put `
-            -Uri $configUri `
-            -Body $payload `
-            -ContentType 'application/json; charset=utf-8' `
-            -Headers $headers `
-            -ErrorAction Stop
-        if(-not $AutoCompile)
-        {
-            return $rslt
-        }
-
-        #place compilation job
-        write-verbose "Creating compilation job on $compilationUri"
-        $payload = @{
-            name = $compilationJobName
-            properties = @{
-                configuration = @{
-                    name = $Name
-                }
-                parameters = $ParameterValues
-            }
-        } |  ConvertTo-Json
-        write-verbose $payload
-
-        $rslt = Invoke-RestMethod -Method Put `
-            -Uri $compilationUri `
-            -Body $payload `
-            -ContentType 'application/json' `
-            -Headers $headers `
-            -ErrorAction Stop
-        if(-not $AutoCompile)
-        {
-            return $rslt
-        }
-
-        if($WaitForCompletion)
-        {
-            do
+            } |  ConvertTo-Json
+            write-verbose $payload
+    
+            $rslt = Invoke-RestMethod -Method Put `
+                -Uri $configUri `
+                -Body $payload `
+                -ContentType 'application/json; charset=utf-8' `
+                -Headers $headers `
+                -ErrorAction Stop
+            if(-not $AutoCompile)
             {
-                write-Verbose 'Waiting for compilation job to complete'
-                Start-Sleep -Seconds 5
-                $rslt = Get-AutoObject -objectType Compilationjobs -Name $compilationJobName
-            }while($rslt.properties.provisioningState -in @('Processing'))
+                return $rslt
+            }
+    
+            #place compilation job
+            write-verbose "Creating compilation job on $compilationUri"
+            $payload = @{
+                name = $compilationJobName
+                properties = @{
+                    configuration = @{
+                        name = $Name
+                    }
+                    parameters = $ParameterValues
+                }
+            } |  ConvertTo-Json
+            write-verbose $payload
+    
+            $rslt = Invoke-RestMethod -Method Put `
+                -Uri $compilationUri `
+                -Body $payload `
+                -ContentType 'application/json' `
+                -Headers $headers `
+                -ErrorAction Stop
+            if(-not $AutoCompile)
+            {
+                return $rslt
+            }
+    
+            if($WaitForCompletion)
+            {
+                do
+                {
+                    write-Verbose 'Waiting for compilation job to complete'
+                    Start-Sleep -Seconds 5
+                    $rslt = Get-AutoObject -objectType Compilationjobs -Name $compilationJobName
+                }while($rslt.properties.provisioningState -in @('Processing'))
+            }
+            $rslt
         }
-        $rslt
+        catch {
+            write-error $_
+            throw;
+        }
     }
 }
 
@@ -869,42 +906,48 @@ Function Add-AutoWebhook
     }
     process
     {
-        write-verbose "Checking webhook on $Uri"
         try {
-            Get-AutoObject -Name $Name -objectType Webhooks | Out-Null
-            if($Force)
-            {
-                #webhook likely exists -> remove first
-                Remove-AutoObject -Name $Name -objectType Webhooks
+            write-verbose "Checking webhook on $Uri"
+            try {
+                Get-AutoObject -Name $Name -objectType Webhooks | Out-Null
+                if($Force)
+                {
+                    #webhook likely exists -> remove first
+                    Remove-AutoObject -Name $Name -objectType Webhooks
+                }
             }
+            catch {
+                if($_.Exception.Response.StatusCode -ne 'NotFound') {throw}
+            }
+            
+            #creating new webhook if does not exist of -Force
+            #otherwise updating existing -> new url not reurned in this case
+            write-verbose "Modifying webhook on $Uri"
+            $payload = @{
+                name = $Name
+                properties = @{
+                    runbook = @{
+                        name = $RunbookName
+                    }
+                    expiryTime = $ExpiresOn
+                    isEnabled = $true
+                    parameters = $Parameters
+                    runOn = $RunOn
+                }
+            } |  ConvertTo-Json
+            write-verbose $payload
+    
+            Invoke-RestMethod -Method Put `
+                -Uri $Uri `
+                -Body $payload `
+                -ContentType 'application/json' `
+                -Headers $headers `
+                -ErrorAction Stop
         }
         catch {
-            if($_.Exception.Response.StatusCode -ne 'NotFound') {throw}
+            write-error $_
+            throw;
         }
-        
-        #creating new webhook if does not exist of -Force
-        #otherwise updating existing -> new url not reurned in this case
-        write-verbose "Modifying webhook on $Uri"
-        $payload = @{
-            name = $Name
-            properties = @{
-                runbook = @{
-                    name = $RunbookName
-                }
-                expiryTime = $ExpiresOn
-                isEnabled = $true
-                parameters = $Parameters
-                runOn = $RunOn
-            }
-        } |  ConvertTo-Json
-        write-verbose $payload
-
-        Invoke-RestMethod -Method Put `
-            -Uri $Uri `
-            -Body $payload `
-            -ContentType 'application/json' `
-            -Headers $headers `
-            -ErrorAction Stop
     }
 }
 
