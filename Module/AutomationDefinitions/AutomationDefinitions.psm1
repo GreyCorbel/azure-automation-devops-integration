@@ -326,7 +326,11 @@ function New-ModuleDefinition
         $Version,
         [string]
             #Link to module (typically in PS Gallery), without the version
-            #module import mechanism the constructs url for module by putting together VersionIndependentLink and version to download the module
+            # module import mechanism the constructs url for module by putting together VersionIndependentLink and version to download the module
+            #If this parameter is not specified, it means that m,odule is not published in public repository
+            # in this case, module import mechanism looks for module implementation in the Modules folder under /Source folder
+            # and packs it to zip file, uploads to blob container in given atroeage account, generates SAS token for it and constructs URL with SAS token
+            # Url is then passed to automation account as download link for module
         $VersionIndependentLink,
         [int]
             #Order for module import
