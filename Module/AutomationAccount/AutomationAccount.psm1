@@ -689,7 +689,7 @@ function Get-AutoModuleUrl
 
     begin
     {
-        $moduleName = [System.IO.Path]::GetFileNameWithoutExtension($modulePath)
+        $moduleName = [System.IO.Path]::GetFileName($modulePath)
         $tempFile = [system.io.path]::Combine([system.io.path]::GetTempPath(),"$moduleName`.zip")
     }
     process
