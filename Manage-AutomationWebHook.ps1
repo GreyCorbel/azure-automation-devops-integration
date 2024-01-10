@@ -77,6 +77,8 @@ foreach($def in $definitions)
             -ExpiresOn $Expires `
             -Parameters $def.Parameters
         $managedWebhooks+=$webhook
+        #send new webhook to pipeline to allow further processing
+        # e.g. update respective EventGrid subscription
         $webhook
         continue; 
     }
