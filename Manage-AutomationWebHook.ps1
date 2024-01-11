@@ -47,7 +47,7 @@ $managedWebhooks = @()
 $definitions = @(Get-DefinitionFiles -FileType WebHooks)
 foreach($def in $definitions)
 {
-    $existingWebhook = $existingWebhooks | Where-Object{$_.Name.StartsWith("$($def.NamePrefix)-",[StringComparison]::InvariantCultureIgnoreCase)}
+    $existingWebhook = $existingWebhooks | Where-Object{$_.properties.runbook.name -eq $def.RunbookName}
     $needsNewWebhook = $true
     foreach($wh in $existingWebhook)
     {
@@ -65,6 +65,7 @@ foreach($def in $definitions)
             continue
         }
         #expired
+        Write-Host "Removing expired webhook $($wh.Name)"
         Remove-AutoObject -Name $wh.Name -objectType Webhooks | Out-Null
     }
     if($needsNewWebhook)
@@ -77,8 +78,6 @@ foreach($def in $definitions)
             -ExpiresOn $Expires `
             -Parameters $def.Parameters
         $managedWebhooks+=$webhook
-        #send new webhook to pipeline to allow further processing
-        # e.g. update respective EventGrid subscription
         $webhook
         continue; 
     }
@@ -92,6 +91,7 @@ if($FullSync)
     {
         if($wh.Name -notin $managedWebhooks.Name)
         {
+            Write-Host "Removing unmanaged webhook $($wh.Name)"
             Remove-AutoObject -Name $wh.Name -objectType Webhooks | Out-Null
         }
     }
