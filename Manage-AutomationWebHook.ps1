@@ -40,7 +40,9 @@ Init-Environment -ProjectDir $ProjectDir -Environment $EnvironmentName
 #if running outside of this task, you may need to call Connect-AzAccount manually
 Connect-AutoAutomationAccount -Subscription $subscription -ResourceGroup $ResourceGroup -AutomationAccount $AutomationAccount
 
-[int32]$ts = ([DateTime]::UtcNow - (new-object DateTime(1970,1,1,0,0,0,0,0,'Utc'))).TotalSeconds
+$base = new-object DateTime(1970,1,1)
+$base = [DateTime]::SpecifyKind($base, 'Utc')
+[int32]$ts = ([DateTime]::UtcNow - $base).TotalSeconds
 
 $existingWebhooks = Get-AutoObject -objectType Webhooks
 $managedWebhooks = @()
