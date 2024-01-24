@@ -397,15 +397,23 @@ if (Check-Scope -Scope $scope -RequiredScope 'JobSchedules') {
     }
     if($fullSync)
     {
+        "Removing unmanaged job schedules"
         foreach($jobSchedule in $alljobSchedules)
         {
-            if($jobSchedule.properties.runbook.name -in $managedSchedules.properties.runbook.name -and  $jobSchedule.properties.schedule.name -in $managedSchedules.properties.schedule.name)
+            $result = $managedSchedules `
+            | Where-Object{$_.properties.runbook.name -eq $jobSchedule.properties.runbook.name} `
+            | Where-Object{$_.properties.schedule.name -eq $jobSchedule.properties.schedule.name}
+
+            if($null -ne $result)
             {
                 #schedule is managed
                 continue;
             }
-            "Unlinking schedule $($jobSchedule.properties.schedule.name) from runbook $($jobSchedule.properties.runbook.name)"
-            Remove-AutoObject -Name $jobSchedule.Name -objectType JobSchedules
+            else
+            {
+                "Unlinking schedule $($jobSchedule.properties.schedule.name) from runbook $($jobSchedule.properties.runbook.name)"
+                Remove-AutoObject -Name $jobSchedule.properties.jobScheduleId -objectType JobSchedules
+            }
         }
     }
 }
