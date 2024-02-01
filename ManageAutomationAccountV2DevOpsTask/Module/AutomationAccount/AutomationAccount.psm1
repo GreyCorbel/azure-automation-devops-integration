@@ -1,35 +1,33 @@
+function Initialize-AadAuthenticationFactory 
+{
+    param
+    (
+        [string]$servicePrincipalId,
+        [string]$servicePrincipalKey,
+        [string]$tenantId
+    )
+    process
+    {
+        #create authnetication factory and store it into the script variable
+        $script:aadAuthenticationFactory = New-AadAuthenticationFactory -TenantId $tenantId -ClientId $servicePrincipalId -ClientSecret $servicePrincipalKey | Out-Null
+    }
+}
+
 function Get-AutoAccessToken
 {
     param
     (
-        [string]$ResourceUri = "https://management.azure.com",
+        [string]$ResourceUri = "https://management.azure.com/.default",
         [switch]$AsHashTable
     )
 
     process
     {
-        if($null -eq $script:tokenCache[$ResourceUri])
-        {
-            write-verbose "Creating token for $resourceUri"
-            $script:tokenCache[$ResourceUri] = Get-AzAccessToken -ResourceUri $resourceUri
-        } else
-        {
-            if($script:tokenCache[$ResourceUri].ExpiresOn.UtcDateTime -lt [DateTime]::UtcNow.AddMinutes(5))
-            {
-                write-verbose "Refreshing token for $resourceUri"
-                $script:tokenCache[$ResourceUri] = Get-AzAccessToken -ResourceUri $resourceUri
-            }
-        }
-        if($AsHashTable)
-        {
-            @{
-                Authorization = "$($script:tokenCache[$ResourceUri].Type) $($script:tokenCache[$ResourceUri].Token)"
-            }
-        }
-        else
-        {
-            $script:tokenCache[$ResourceUri]
-        }
+        if ($null -eq $script:aadAuthenticationFactory)
+		{
+			throw ('Call Initialize-AadAuthenticationFactory first')
+		}
+		Get-AadToken -Factory $script:aadAuthenticationFactory -Scopes $ResourceUri -AsHashTable:$AsHashTable
     }
 }
 
