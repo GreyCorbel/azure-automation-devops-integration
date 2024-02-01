@@ -5,7 +5,7 @@ on:
     branches:
       - master
     paths:
-      - 'package.json'
+      - 'ManageAutomationAccountV2DevOpsTask/package.json'
 
 jobs:
   build:
