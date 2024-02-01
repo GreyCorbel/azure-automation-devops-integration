@@ -1,33 +1,26 @@
 name: Build and Publish VSIX - Manage-AutomationAccount - azure pipeline task
-
 on:
   push:
     branches:
       - master
     paths:
-      - 'ManageAutomationAccountV2DevOpsTask/package.json'
-
+      - 'ManageAutomationAccountV2DevOpsTask/task.json'
 jobs:
   build:
     runs-on: windows-latest
-    
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v2
-
     - name: Setup .NET SDK
       uses: actions/setup-dotnet@v1
       with:
         dotnet-version: '2.x'
-
     - name: Install Node.js
       run: |
         choco install nodejs -y
-
     - name: Install tfx-cli
       run: |
         npm install -g tfx-cli
-
     - name: Generate and Upload VSIX file
       env:
         NODE_AUTH_TOKEN: ${{ secrets.PAT_ROMAN }}
