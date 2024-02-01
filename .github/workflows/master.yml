@@ -3,7 +3,7 @@ name: Build and Publish VSIX - Manage-AutomationAccount - azure pipeline task
 on:
   push:
     branches:
-      - main
+      - master
     paths:
       - 'package.json'
 
