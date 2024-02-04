@@ -1,7 +1,7 @@
 Param
 (
     [Parameter(Mandatory)]
-    [ValidateSet('Runbooks', 'Variables', 'Configurations', 'Schedules', 'Modules', 'JobSchedules',"Webhooks")]
+    [ValidateSet('Runbooks', 'Variables', 'Configurations', 'Schedules', 'Modules', 'JobSchedules')]
     [string[]]
     #What we are deploying
     $Scope,
@@ -38,7 +38,7 @@ Param
     #name of blob container where to upload private modules to
     #SAS token valid for 2 hours is then created a used to generate content link for module
     #so as automation account can use it to upload module to itself
-    #Needed when StorageAccount specified
+    #Required when StorageAccount specified
     $StorageAccountContainer,
     [Parameter()]
     [Switch]
@@ -111,8 +111,153 @@ if (Check-Scope -Scope $scope -RequiredScope 'Variables') {
 #endregion Variables
 
 #region Modules
+function Upload-ModulesForHybridWorker
+{
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$storageAccount,
+        [Parameter(Mandatory = $true)]
+        [string]$storageContainerName,
+        [Parameter(Mandatory = $false)]
+        [string]$storageBlobName = "required-modules.json",
+        [Parameter(Mandatory = $true)]
+        [Array]$body
+    )
+    begin
+    {
+        $h = Get-AutoAccessToken -ResourceUri 'https://storage.azure.com' -AsHashTable
+        $h['x-ms-version'] = '2023-11-03'
+        $h['x-ms-date'] = [DateTime]::UtcNow.ToString('R')
+        $h['x-ms-blob-type'] = 'BlockBlob'
+    }
+    process
+    {
 
-Function GetModuleContentLink
+    $rsp = Invoke-RestMethod `
+        -Uri "https://$($storageAccount).blob.core.windows.net/$($storageContainerName)/$($storageBlobName)" `
+        -Headers $h `
+        -body ($body|ConvertTo-Json)`
+        -Method PUT
+    }
+}
+
+function Check-CustomModule
+{
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$storageAccount,
+        [Parameter(Mandatory = $true)]
+        [string]$storageContainerName,
+        [Parameter(Mandatory = $true)]
+        [string]$moduleName
+    )
+    begin
+    {
+        $h = Get-AutoAccessToken -ResourceUri 'https://storage.azure.com' -AsHashTable
+        $h['x-ms-version'] = '2023-11-03'
+        $h['x-ms-date'] = [DateTime]::UtcNow.ToString('R')
+        $h['x-ms-blob-type'] = 'BlockBlob'
+    }
+    process
+    {
+        try
+        {
+            $rsp = Invoke-RestMethod `
+            -Uri "https://$($storageAccount).blob.core.windows.net/$($storageContainerName)/$($moduleName).zip" `
+            -Headers $h `
+            -ErrorAction Stop
+        }
+        catch
+        {}
+         
+        if($rsp)
+        {
+            return [bool]$true 
+        }
+        else
+        {
+            return [bool]$false
+        }
+    }
+}
+
+
+function Get-ModulesForHybridWorker
+{
+    param(
+        $definitions,
+        $desktopModules,
+        $storageAccount,
+        $storageAccountContainer
+    )
+
+    begin
+    {
+        $requiredModules = @()
+        
+        # workers currently running on 5.1
+        $runtimeVersion = "5.1"
+        
+        # these modules will be excluded from sync by default always
+        $builtInModules = @("Microsoft.PowerShell.Diagnostics","Microsoft.WSMan.Management", "Microsoft.PowerShell.Utility", "Microsoft.PowerShell.Security","Microsoft.PowerShell.Core")
+        $builtInModules += @("Microsoft.PowerShell.Management", "GPRegistryPolicyParser", "Orchestrator.AssetManagement.Cmdlets")
+        $dscModules = @("AuditPolicyDsc","ComputerManagementDsc","PSDscResources", "SecurityPolicyDsc", "StateConfigCompositeResources", "xDSCDomainjoin", "xPowerShellExecutionPolicy", "xRemoteDesktopAdmin","AutomationPSModuleResource")
+
+        $ModuleToIgnore += $builtInModules
+        $ModuleToIgnore += $dscModules
+        
+        $psRepoSourcelocation = (Get-psrepository|Where-Object{$_.Name -eq "PSGallery"}).sourcelocation
+    }
+
+    process
+    {
+        # process definition files runtime version 5.
+        foreach($module in $definitions|Where-Object{$_.RuntimeVersion -eq $runtimeVersion})
+        {
+            if($module.VersionIndependentLink -eq "")
+            {
+                
+                    # make sure we dont import one module twice
+                    [bool]$check = Check-CustomModule -storageAccount $storageAccount -storageContainerName $storageAccountContainer -moduleName $module.name 
+                    
+                    # if exists in storage account --> get sas url only
+                    if($check)
+                    {
+                        $source = GetBlobSasUrl -Permissions "r" -storageAccount $storageaccount -blobPath "$($storageAccountContainer)/$($module.name).zip"
+                    }
+                    else # if does not exist --> upload module and get SaS URL
+                    {
+                        $source = GetModuleContentLink -moduleDefinition $module -storageAccount $storageAccount -storageAccountContainer $storageAccountContainer
+                    }
+            }
+            else
+            {
+                $source = GetModuleContentLink -moduleDefinition $module -storageAccount $storageAccount -storageAccountContainer $storageAccountContainer
+            }
+          
+            $requiredModules += [PSCustomObject]@{
+                Name = $module.name
+                Version = $module.version
+                Source = $source
+            }
+        }
+
+        # process automation account modules
+        foreach($module in ($desktopModules|Where-Object{$_.Name -notin $requiredModules.name -and $_.name -notin $ModuleToIgnore}))
+        {
+            $requiredModules += [PSCustomObject]@{
+                Name = $module.name
+                Version = $module.properties.version
+                Source = "$($psRepoSourcelocation)/package/$($module.name)/$($module.properties.version)"
+            }
+        }
+       return $requiredModules    
+    }
+}
+
+
+function GetModuleContentLink
 {
     param
     (
@@ -125,12 +270,7 @@ Function GetModuleContentLink
     {
         if(-not [string]::IsNullOrEmpty($moduleDefinition.VersionIndependentLink))
         {
-            $uri = $moduleDefinition.VersionIndependentLink
-            if(-not [string]::IsNullOrEmpty($moduleDefinition.Version))
-            {
-                $uri =  "$uri/$($moduleDefinition.Version)"
-            }
-            return $uri
+            return "$($moduleDefinition.VersionIndependentLink)/$($moduleDefinition.Version)"
         }
         else
         {
@@ -149,11 +289,9 @@ Function GetModuleContentLink
         }
     }
 }
-
 if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
     "Processing Modules"
     
-    #Get requested (non-default) modules from runbook definitions
     $definitions = @(Get-DefinitionFiles -FileType Modules)
 
     $definitions = $definitions | Sort-Object -Property Order
@@ -237,6 +375,21 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
             Write-Error "Some modules failed to import"
         }
         #shall we wit for some time before importing next batch?
+
+        # process modules for hybrid workers
+
+        $requiredModules = Get-ModulesForHybridWorker `
+            -definitions $definitions `
+            -desktopModules $desktopModules `
+            -storageAccount $storageAccount `
+            -storageAccountContainer $storageAccountContainer
+
+        # upload definition file for hybrid workers
+        Upload-ModulesForHybridWorker `
+            -storageAccount $storageAccount `
+            -storageContainerName $storageAccountContainer `
+            -body $requiredModules
+
     }
     if($FullSync)
     {
@@ -384,9 +537,16 @@ if (Check-Scope -Scope $scope -RequiredScope 'JobSchedules') {
     $definitions = @(Get-DefinitionFiles -FileType JobSchedules)
 
     $alljobSchedules =  Get-AutoObject -objectType JobSchedules
+    $existingRunbooks = Get-AutoObject -objectType Runbooks
     $managedSchedules = @()
     foreach($def in $definitions)
     {
+        "Checking runbook existence: $($def.runbookName)"
+        if(-not ($existingRunbooks.Name -contains $def.runbookName))
+        {
+            Write-Warning "Runbook $($def.runbookName) does not exist --> skipping job schedule"
+            continue
+        }
         "Updating schedule $($def.scheduleName) on $($def.runbookName)"
         $jobSchedule = Add-AutoJobSchedule -RunbookName $def.runbookName `
             -ScheduleName $def.scheduleName `
@@ -397,15 +557,23 @@ if (Check-Scope -Scope $scope -RequiredScope 'JobSchedules') {
     }
     if($fullSync)
     {
+        "Removing unmanaged job schedules"
         foreach($jobSchedule in $alljobSchedules)
         {
-            if($jobSchedule.properties.runbook.name -in $managedSchedules.properties.runbook.name -and  $jobSchedule.properties.schedule.name -in $managedSchedules.properties.schedule.name)
+            $result = $managedSchedules `
+            | Where-Object{$_.properties.runbook.name -eq $jobSchedule.properties.runbook.name} `
+            | Where-Object{$_.properties.schedule.name -eq $jobSchedule.properties.schedule.name}
+
+            if($null -ne $result)
             {
                 #schedule is managed
                 continue;
             }
-            "Unlinking schedule $($jobSchedule.properties.schedule.name) from runbook $($jobSchedule.properties.runbook.name)"
-            Remove-AutoObject -Name $jobSchedule.Name -objectType JobSchedules
+            else
+            {
+                "Unlinking schedule $($jobSchedule.properties.schedule.name) from runbook $($jobSchedule.properties.runbook.name)"
+                Remove-AutoObject -Name $jobSchedule.properties.jobScheduleId -objectType JobSchedules
+            }
         }
     }
 }
@@ -464,4 +632,3 @@ if (Check-Scope -Scope $scope -RequiredScope 'Configurations') {
     }
 }
 #endregion Dsc
-

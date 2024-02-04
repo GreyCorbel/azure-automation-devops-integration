@@ -45,6 +45,8 @@ $base = [DateTime]::SpecifyKind($base, 'Utc')
 [int32]$ts = ([DateTime]::UtcNow - $base).TotalSeconds
 
 $existingWebhooks = Get-AutoObject -objectType Webhooks
+$existingRunbooks = Get-AutoObject -objectType Runbooks
+
 $managedWebhooks = @()
 $definitions = @(Get-DefinitionFiles -FileType WebHooks)
 foreach($def in $definitions)
@@ -72,6 +74,13 @@ foreach($def in $definitions)
     }
     if($needsNewWebhook)
     {
+        "Checking runbook existence: $($def.runbookName)"
+        if(-not ($existingRunbooks.Name -contains $def.runbookName))
+        {
+            Write-Warning "Runbook $($def.runbookName) does not exist --> skipping webhook"
+            continue
+        }
+
         $Expires = [DateTime]::UtcNow + [Timespan]::Parse($def.Expiration)
         $webhook = Add-AutoWebhook `
             -Name "$($def.NamePrefix)-$ts" `
