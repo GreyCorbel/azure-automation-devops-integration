@@ -356,10 +356,13 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
         {
             Write-Error "Some modules failed to import"
         }
-        #shall we wit for some time before importing next batch?
+        #shall we wait for some time before importing next batch?
 
+        if([string]::IsNullOrEmpty($StorageAccount) -or [string]::IsNullOrEmpty($storageAccountContainer))
+        {
+            continue
+        }
         # process modules for hybrid workers
-
         $requiredModules = Get-ModulesForHybridWorker `
             -definitions $definitions `
             -desktopModules $desktopModules `
