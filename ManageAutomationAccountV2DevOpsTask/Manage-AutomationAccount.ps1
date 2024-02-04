@@ -1,54 +1,10 @@
-Param
-(
-    [Parameter(Mandatory)]
-    [ValidateSet('Runbooks', 'Variables', 'Configurations', 'Schedules', 'Modules', 'JobSchedules')]
-    [string[]]
-    #What we are deploying
-    $Scope,
-    [Parameter(Mandatory)]
-    [string]
-    #Name of the stage/environment we're deploying
-    $EnvironmentName,
-    [Parameter(Mandatory)]
-    [string]
-    #root folder of automation account content
-    $ProjectDir,
-    [Parameter(Mandatory)]
-    [string]
-    #name of the subscription where automation account is located
-    $Subscription,
-    [Parameter(Mandatory)]
-    [string]
-    #name of the resource group where automation account is located
-    $ResourceGroup,
-    [Parameter(Mandatory)]
-    [string]
-    #name of automation account that we deploy to
-    $AutomationAccount,
-    [Parameter()]
-    [string]
-    #name of storage account used for uploading of private modules to automation account
-    #caller must have permission to:
-    #  - upload blobs
-    #  - create SAS tokens for uplaoded blobs
-    #Not needed if private modules not used
-    $StorageAccount,
-    [Parameter()]
-    [string]
-    #name of blob container where to upload private modules to
-    #SAS token valid for 2 hours is then created a used to generate content link for module
-    #so as automation account can use it to upload module to itself
-    #Required when StorageAccount specified
-    $StorageAccountContainer,
-    [Parameter()]
-    [Switch]
-    #whether or not to remove any existing runbooks and variables from automation account that are not source-controlled 
-    $FullSync,
-    [Switch]
-    #whether to report missing implementation file
-    #Note: it may be perfectly OK not to have implementation file, if artefact is meant to be used just in subset of environments
-    $ReportMissingImplementation
-)
+#load VstsTaskSdk module
+Write-Verbose "VstsTaskSD installing..."
+Install-Module -Name VstsTaskSdk -Force -Scope CurrentUser -AllowClobber
+
+#load AadAuthentiacationFactory
+Write-Verbose "AadAuthenticationFactory installing..."
+Install-Module AadAuthenticationFactory -Force -Scope CurrentUser
 
 #load Automation account REST wrapper
 $modulePath = [System.IO.Path]::Combine($PSScriptRoot,'Module','AutomationAccount')
@@ -56,6 +12,32 @@ Import-Module $modulePath -Force
 #load runtime support
 $modulePath = [System.IO.Path]::Combine($PSScriptRoot, 'Module', 'AutoRuntime')
 Import-Module $modulePath -Force
+
+#read pipeline variables
+Write-Verbose "Reading pipeline variables..."
+$scope = Get-VstsInput -Name 'scope' -Require
+$environmentName = Get-VstsInput -Name 'environmentName' -Require
+$projectDir = Get-VstsInput -Name 'projectDir' -Require
+$subscription = Get-VstsInput -Name 'subscription' -Require
+$azureSubscription = Get-VstsInput -Name 'azureSubscription' -Require
+$resourceGroup = Get-VstsInput -Name 'resourceGroup' -Require
+$automationAccount = Get-VstsInput -Name 'automationAccount' -Require
+$storageAccount = Get-VstsInput -Name 'storageAccount'
+$storageAccountContainer = Get-VstsInput -Name 'storageAccountContainer'
+$fullSync = Get-VstsInput -Name 'fullSync'
+$reportMissingImplementation = Get-VstsInput -Name 'reportMissingImplementation'
+
+# retrieve service connection object
+$serviceConnection = Get-VstsEndpoint -Name $azureSubscription -Require
+
+# get service connection object properties
+$servicePrincipalId = $serviceConnection.auth.parameters.serviceprincipalid
+$servicePrincipalkey = $serviceConnection.auth.parameters.serviceprincipalkey
+$tenantId = $serviceConnection.auth.parameters.tenantid
+
+#initialize aadAuthenticationFactory
+Write-Verbose "Initialize AadAuthenticationFactory object..."
+Initialize-AadAuthenticationFactory -servicePrincipalId $servicePrincipalId -servicePrincipalKey $servicePrincipalkey -tenantId $tenantId
 
 #initialize runtime according to environment environment
 Init-Environment -ProjectDir $ProjectDir -Environment $EnvironmentName

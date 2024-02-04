@@ -1,0 +1,37 @@
+{
+    "manifestVersion": 1,
+    "id": "Manage-AutomationAccount",
+    "name": "Manage-AutomationAccount",
+    "version": "1.5.3",
+    "icon": "icon.png",
+    "publisher": "GreyCorbelSolutions",
+    "targets": [
+        {
+            "id": "Microsoft.VisualStudio.Services"
+        }
+    ],    
+    "description": "A task demonstrates integration of Azure automation account and Azure Template Specs into DevOps source control and release pipeline.",
+    "categories": [
+        "Azure Pipelines"
+    ],
+    "icons": {
+        "default": "icon.png"       
+    },
+    "files": [
+        {
+            "path": ""
+        }
+    ],
+    "contributions": [
+        {
+            "id": "ManageAutomationAccountV2DevOpsTask",
+            "type": "ms.vss-distributed-task.task",
+            "targets": [
+                "ms.vss-distributed-task.tasks"
+            ],
+            "properties": {
+                "name": "ManageAutomationAccountV2DevOpsTask"
+            }
+        }
+    ]
+}
