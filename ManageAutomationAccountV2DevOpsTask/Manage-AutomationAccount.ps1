@@ -15,7 +15,7 @@ Import-Module $modulePath -Force
 
 #read pipeline variables
 Write-Verbose "Reading pipeline variables..."
-$scope = (Get-VstsInput -Name 'scope' -Require)  -split ','
+$scope = (Get-VstsInput -Name 'scope' -Require) -split ','
 $environmentName = Get-VstsInput -Name 'environmentName' -Require
 $projectDir = Get-VstsInput -Name 'projectDir' -Require
 $subscription = Get-VstsInput -Name 'subscription' -Require
