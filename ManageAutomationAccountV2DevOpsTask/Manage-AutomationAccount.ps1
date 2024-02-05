@@ -210,7 +210,7 @@ function Get-ModulesForHybridWorker
                     # if exists in storage account --> get sas url only
                     if($check)
                     {
-                        $source = GetBlobSasUrl -Permissions "r" -storageAccount $storageaccount -blobPath "$($storageAccountContainer)/$($module.name).zip"
+                        $source = Get-BlobSasUrl -Permissions "r" -storageAccount $storageaccount -blobPath "$($storageAccountContainer)/$($module.name).zip"
                     }
                     else # if does not exist --> upload module and get SaS URL
                     {

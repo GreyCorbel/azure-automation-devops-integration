@@ -710,7 +710,7 @@ function Get-AutoModuleUrl
 
         #file uploaded, create SAS-ed URL
         Write-Verbose "Getting SAS token for uploaded module"
-        GetBlobSasUrl -ExpiresIn '02:00' -Permissions 'r' -storageAccount $storageAccount -blobPath "$storageAccountFolder/$moduleName`.zip"
+        Get-BlobSasUrl -ExpiresIn '02:00' -Permissions 'r' -storageAccount $storageAccount -blobPath "$storageAccountFolder/$moduleName`.zip"
     }
     end
     {
@@ -1011,7 +1011,7 @@ function Wait-AutoObjectProcessing
     }
 }
 
-Function GetBlobSasUrl
+Function Get-BlobSasUrl
 {
     param
     (
