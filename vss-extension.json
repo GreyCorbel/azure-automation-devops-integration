@@ -2,7 +2,7 @@
     "manifestVersion": 1,
     "id": "Manage-AutomationAccount",
     "name": "Manage-AutomationAccount",
-    "version": "1.6.7",
+    "version": "1.6.8",
     "publisher": "GreyCorbelSolutions",
     "targets": [
         {
@@ -14,7 +14,7 @@
         "Azure Pipelines"
     ],
     "icons": {
-        "default": "icon.png"
+        "default": "Manage-AutomationAccount/icon.png"
     },
     "files": [
         {
@@ -23,13 +23,13 @@
     ],
     "contributions": [
         {
-            "id": "ManageAutomationAccountV2DevOpsTask",
+            "id": "Manage-AutomationAccount",
             "type": "ms.vss-distributed-task.task",
             "targets": [
                 "ms.vss-distributed-task.tasks"
             ],
             "properties": {
-                "name": "ManageAutomationAccountV2DevOpsTask"
+                "name": "Manage-AutomationAccount"
             }
         }
     ]
