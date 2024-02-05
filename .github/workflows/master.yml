@@ -31,6 +31,9 @@ jobs:
         # Navigate to the task directory
         cd ManageAutomationAccountV2DevOpsTask
 
+        # Create ps_modules directory if it doesn't exist
+        mkdir -p ps_modules
+
         # Install VstsTaskSdk
         Install-Module -Name VstsTaskSdk -Force -Scope CurrentUser -AllowClobber -ErrorAction Stop
 
