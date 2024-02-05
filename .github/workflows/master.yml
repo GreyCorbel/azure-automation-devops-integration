@@ -32,7 +32,7 @@ jobs:
         cd ManageAutomationAccountV2DevOpsTask
 
         # Install VstsTaskSdk
-        Install-Module -Name VstsTaskSdk -Force -Scope CurrentUser -ErrorAction Stop
+        Install-Module -Name VstsTaskSdk -Force -Scope CurrentUser -AllowClobber -ErrorAction Stop
 
     - name: Generate and Upload VSIX file
       env:
