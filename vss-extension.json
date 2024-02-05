@@ -2,8 +2,8 @@
     "manifestVersion": 1,
     "id": "Manage-AutomationAccount",
     "name": "Manage-AutomationAccount",
-    "version": "1.5.11",
-    "icon": "icon.png",
+    "version": "1.5.12",
+    "icon": "ManageAutomationAccountV2DevOpsTask/icon.png",
     "publisher": "GreyCorbelSolutions",
     "targets": [
         {

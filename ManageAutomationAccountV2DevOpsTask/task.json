@@ -4,7 +4,7 @@
   "friendlyName": "ManageAutomationAccountV2DevOpsTask",
   "description": "Integration of AAC into DevOps source control and release pipeline",
   "author": "GreyCorbel s.r.o.",
-  "icon": "icon.png",
+  "icon": "ManageAutomationAccountV2DevOpsTask/icon.png",
   "helpMarkDown": "Integration of AAC into DevOps source control and release pipeline",
   "category": "Utility",
   "visibility": [
@@ -15,7 +15,7 @@
   "version": {
     "Major": "1",
     "Minor": "5",
-    "Patch": "11"
+    "Patch": "12"
   },
   "minimumAgentVersion": "1.95.0",
   "instanceNameFormat": "ManageAutomationAccountV2DevOpsTask $(message)",
