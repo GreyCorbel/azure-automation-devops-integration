@@ -2,8 +2,9 @@
     "manifestVersion": 1,
     "id": "Manage-AutomationAccount",
     "name": "Manage-AutomationAccount",
-    "version": "1.6.8",
+    "version": "1.6.9",
     "publisher": "GreyCorbelSolutions",
+    "icon": "icon.png",
     "targets": [
         {
             "id": "Microsoft.VisualStudio.Services"
@@ -14,7 +15,7 @@
         "Azure Pipelines"
     ],
     "icons": {
-        "default": "Manage-AutomationAccount/icon.png"
+        "default": "icon.png"
     },
     "files": [
         {
