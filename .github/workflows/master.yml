@@ -29,13 +29,13 @@ jobs:
     - name: Install VstsTaskSdk
       run: |
         # Navigate to the task directory
-        cd ManageAutomationAccountV2DevOpsTask
+        # cd ManageAutomationAccountV2DevOpsTask
 
         # Create ps_modules directory if it doesn't exist
-        mkdir -p ps_modules
+        # mkdir -p ps_modules
 
         # Install VstsTaskSdk
-        Install-Module -Name VstsTaskSdk -Force -Scope CurrentUser -AllowClobber -ErrorAction Stop
+        # Install-Module -Name VstsTaskSdk -Force -Scope CurrentUser -AllowClobber -ErrorAction Stop
 
     - name: Generate and Upload VSIX file
       env:
