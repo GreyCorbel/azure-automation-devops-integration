@@ -15,7 +15,7 @@
   "version": {
     "Major": "1",
     "Minor": "6",
-    "Patch": "4"
+    "Patch": "5"
   },
   "minimumAgentVersion": "1.95.0",
   "instanceNameFormat": "ManageAutomationAccountV2DevOpsTask $(message)",

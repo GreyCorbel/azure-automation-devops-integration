@@ -1,20 +1,24 @@
 #load VstsTaskSdk module
-Write-Verbose "VstsTaskSD installing..."
+Write-Host "VstsTaskSD installing..."
 Install-Module -Name VstsTaskSdk -Force -Scope CurrentUser -AllowClobber
+Write-Host "Installation succeeded!"
 
 #load AadAuthentiacationFactory
-Write-Verbose "AadAuthenticationFactory installing..."
+Write-Host "AadAuthenticationFactory installing..."
 Install-Module AadAuthenticationFactory -Force -Scope CurrentUser
+Write-Host "Installation succeeded!"
 
 #load Automation account REST wrapper
+Write-Host "Importing internal PS modules..."
 $modulePath = [System.IO.Path]::Combine($PSScriptRoot,'Module','AutomationAccount')
 Import-Module $modulePath -Force
 #load runtime support
 $modulePath = [System.IO.Path]::Combine($PSScriptRoot, 'Module', 'AutoRuntime')
 Import-Module $modulePath -Force
+Write-Host "Import succeeded!"
 
 #read pipeline variables
-Write-Verbose "Reading pipeline variables..."
+Write-Host "Reading pipeline variables... (Using vstsTaskSdk)"
 $scope = (Get-VstsInput -Name 'scope' -Require) -split ','
 $environmentName = Get-VstsInput -Name 'environmentName' -Require
 $projectDir = Get-VstsInput -Name 'projectDir' -Require
@@ -26,7 +30,9 @@ $storageAccount = Get-VstsInput -Name 'storageAccount'
 $storageAccountContainer = Get-VstsInput -Name 'storageAccountContainer'
 $fullSync = Get-VstsInput -Name 'fullSync'
 $reportMissingImplementation = Get-VstsInput -Name 'reportMissingImplementation'
+Write-Host "Loading finished!"
 
+Write-Host "Starting process..."
 # retrieve service connection object
 $serviceConnection = Get-VstsEndpoint -Name $azureSubscription -Require
 
@@ -107,7 +113,7 @@ function Upload-ModulesForHybridWorker
     )
     begin
     {
-        $h = Get-AutoAccessToken -ResourceUri 'https://storage.azure.com' -AsHashTable
+        $h = Get-AutoAccessToken -ResourceUri 'https://storage.azure.com/.default' -AsHashTable
         $h['x-ms-version'] = '2023-11-03'
         $h['x-ms-date'] = [DateTime]::UtcNow.ToString('R')
         $h['x-ms-blob-type'] = 'BlockBlob'
@@ -136,7 +142,7 @@ function Check-CustomModule
     )
     begin
     {
-        $h = Get-AutoAccessToken -ResourceUri 'https://storage.azure.com' -AsHashTable
+        $h = Get-AutoAccessToken -ResourceUri 'https://storage.azure.com/.default' -AsHashTable
         $h['x-ms-version'] = '2023-11-03'
         $h['x-ms-date'] = [DateTime]::UtcNow.ToString('R')
         $h['x-ms-blob-type'] = 'BlockBlob'
