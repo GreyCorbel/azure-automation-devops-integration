@@ -1,10 +1,8 @@
 #load VstsTaskSdk module
-Write-Host "VstsTaskSD installing..."
+Write-Host "Installing dependencies..."
 Install-Module -Name VstsTaskSdk -Force -Scope CurrentUser -AllowClobber
-Write-Host "Installation succeeded!"
 
 #load AadAuthentiacationFactory
-Write-Host "AadAuthenticationFactory installing..."
 Install-Module AadAuthenticationFactory -Force -Scope CurrentUser
 Write-Host "Installation succeeded!"
 

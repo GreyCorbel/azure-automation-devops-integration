@@ -697,7 +697,7 @@ function Get-AutoModuleUrl
         Compress-Archive -Path $modulePath -DestinationPath $tempFile -Update
         #get compressinon results
         #upload to storage account
-        $h = Get-AutoAccessToken -ResourceUri 'https://storage.azure.com' -AsHashTable
+        $h = Get-AutoAccessToken -ResourceUri 'https://storage.azure.com/.default' -AsHashTable
         #block id statically set to '1' and we assume only uploading single block
         $blobUri = "https://$storageAccount.blob.core.windows.net/$storageAccountFolder/$moduleName`.zip"
         Write-Verbose "Uploading compressed module to $blobUri"
@@ -1082,7 +1082,7 @@ Function Get-DelegationToken
     process
     {
         $payload = [string]::Format($payloadTemplate, $startDate.ToString('yyyy-MM-ddTHH:mm:ssZ'), ($startDate+$ExpiresIn).ToString('yyyy-MM-ddTHH:mm:ssZ'))
-        $h = Get-AutoAccessToken -ResourceUri 'https://storage.azure.com' -AsHashTable
+        $h = Get-AutoAccessToken -ResourceUri 'https://storage.azure.com/.default' -AsHashTable
         $h['x-ms-version'] = '2022-11-02'
 
         $rsp = Invoke-RestMethod -Method Post -Uri "https://$storageAccountName.blob.core.windows.net/`?restype=service`&comp=userdelegationkey" -Headers $h -body $payload -ContentType 'text/xml'
