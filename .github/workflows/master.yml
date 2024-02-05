@@ -11,7 +11,7 @@ jobs:
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v2
-      
+
     - name: Setup .NET SDK
       uses: actions/setup-dotnet@v1
       with:
@@ -19,19 +19,17 @@ jobs:
 
     - name: Install Node.js
       run: |
-        choco install nodejs -y
+        choco install nodejs -y -Force
 
     - name: Install tfx-cli
       run: |
         npm install -g tfx-cli
+        npm install -g uuid@latest
 
     - name: Install VstsTaskSdk
       run: |
         # Navigate to the task directory
         cd ManageAutomationAccountV2DevOpsTask
-
-        # Create ps_modules directory if it doesn't exist
-        mkdir -p ps_modules
 
         # Install VstsTaskSdk
         Install-Module -Name VstsTaskSdk -Force -Scope CurrentUser -ErrorAction Stop
