@@ -2,7 +2,7 @@
     "manifestVersion": 1,
     "id": "Manage-AutomationAccount",
     "name": "Manage-AutomationAccount",
-    "version": "1.5.12",
+    "version": "1.6.0",
     "icon": "ManageAutomationAccountV2DevOpsTask/icon.png",
     "publisher": "GreyCorbelSolutions",
     "targets": [
@@ -14,9 +14,6 @@
     "categories": [
         "Azure Pipelines"
     ],
-    "icons": {
-        "default": "ManageAutomationAccountV2DevOpsTask/icon.png"       
-    },
     "files": [
         {
             "path": ""
