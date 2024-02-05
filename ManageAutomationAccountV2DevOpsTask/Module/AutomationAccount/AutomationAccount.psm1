@@ -9,7 +9,7 @@ function Initialize-AadAuthenticationFactory
     process
     {
         #create authnetication factory and store it into the script variable
-        $script:aadAuthenticationFactory = New-AadAuthenticationFactory -TenantId $tenantId -ClientId $servicePrincipalId -ClientSecret $servicePrincipalKey | Out-Null
+        $script:aadAuthenticationFactory = New-AadAuthenticationFactory -TenantId $tenantId -ClientId $servicePrincipalId -ClientSecret $servicePrincipalKey
     }
 }
 
