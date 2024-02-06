@@ -35,7 +35,8 @@ jobs:
         mkdir -p ps_modules
 
         # Install VstsTaskSdk
-        Save-Module –Name VstsTaskSdk –Path .\ps_modules -Force -Scope CurrentUser -AllowClobber
+        Write-Host "VstsTaskSdk installing..."
+        Save-Module –Name VstsTaskSdk –Path .\ps_modules -Force
 
         cd ps_modules
         cd VstsTaskSdk
