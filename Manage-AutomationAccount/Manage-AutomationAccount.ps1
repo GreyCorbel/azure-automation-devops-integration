@@ -16,8 +16,9 @@ Import-Module $modulePath -Force
 Write-Host "Import succeeded!"
 
 #read pipeline variables
+[char[]]$delimiters = @(',',' ')
 Write-Host "Reading pipeline variables... (Using vstsTaskSdk)"
-$scope = (Get-VstsInput -Name 'scope' -Require) -split ','
+$scope = (Get-VstsInput -Name 'scope' -Require).Split($delimiters,[StringSplitOptions]::RemoveEmptyEntries)
 $environmentName = Get-VstsInput -Name 'environmentName' -Require
 $projectDir = Get-VstsInput -Name 'projectDir' -Require
 $subscription = Get-VstsInput -Name 'subscription' -Require
