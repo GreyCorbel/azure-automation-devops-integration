@@ -58,8 +58,12 @@ jobs:
             Remove-Item -Path $directoryWithFiles.FullName -Recurse -Force
 
             Write-Host "Subfolder was deleted."
+
+            # get list of files
+            Write-Host "Moved files to: ($sourcePath) after process:"
+            Get-ChildItem -Path $sourcePath
         } else {
-            Write-Host "There is no directory vith files."
+            Write-Host "There is no directory with files."
             }
 
     - name: Generate and Upload VSIX file
