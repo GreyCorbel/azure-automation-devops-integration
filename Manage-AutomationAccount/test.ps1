@@ -78,3 +78,26 @@ Write-Host "token data:" + $tokenData
 $tokenDataToJson = $tokenData | ConvertTo-Json -Depth 9
 Write-Host "token data as json:" + $tokenDataToJson
 
+
+
+
+
+
+Save-Module –Name VstsTaskSdk –Path .\ps_modules -Force
+$sourcePath = Get-Location
+$directoryWithFiles = Get-ChildItem -Path $sourcePath -Directory | Where-Object { (Get-ChildItem $_.FullName -File).Count -gt 0 } | Select-Object -First 1
+
+# Pokud byl nalezen podadresář s obsahem
+if ($directoryWithFiles) {
+    # Kopíruj soubory z podadresáře zpět do původního adresáře
+    Copy-Item -Path "$($directoryWithFiles.FullName)\*" -Destination $sourcePath -Recurse -Force
+
+    Write-Host "Obsah podadresáře byl zkopírován do původního adresáře ($sourcePath)."
+
+    # Smaž původní podadresář včetně obsahu
+    Remove-Item -Path $directoryWithFiles.FullName -Recurse -Force
+
+    Write-Host "Původní podadresář byl smazán."
+} else {
+    Write-Host "Nebyly nalezeny žádné podadresáře s obsahem."
+}

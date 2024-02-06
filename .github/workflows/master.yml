@@ -29,13 +29,37 @@ jobs:
     - name: Install VstsTaskSdk
       run: |
         # Navigate to the task directory
-        # cd ManageAutomationAccountV2DevOpsTask
+        cd Manage-AutomationAccount
 
         # Create ps_modules directory if it doesn't exist
-        # mkdir -p ps_modules
+        mkdir -p ps_modules
 
         # Install VstsTaskSdk
-        # Install-Module -Name VstsTaskSdk -Force -Scope CurrentUser -AllowClobber -ErrorAction Stop
+        Save-Module –Name VstsTaskSdk –Path .\ps_modules -Force -Scope CurrentUser -AllowClobber
+
+        cd ps_modules
+        cd VstsTaskSdk
+        Write-Host "Directory contains:"
+        ls
+
+        $sourcePath = Get-Location
+        # find a directory with vstsTaskSdk version
+        $directoryWithFiles = Get-ChildItem -Path $sourcePath -Directory | Where-Object { (Get-ChildItem $_.FullName -File).Count -gt 0 } | Select-Object -First 1
+
+        # If directory cointain file, do process
+        if ($directoryWithFiles) {
+            # copy files to root folder
+            Copy-Item -Path "$($directoryWithFiles.FullName)\*" -Destination $sourcePath -Recurse -Force
+
+            Write-Host "Files from subfolder was copied to root folder ($sourcePath)."
+
+            # delete subfolder
+            Remove-Item -Path $directoryWithFiles.FullName -Recurse -Force
+
+            Write-Host "Subfolder was deleted."
+        } else {
+            Write-Host "There is no directory vith files."
+            }
 
     - name: Generate and Upload VSIX file
       env:
