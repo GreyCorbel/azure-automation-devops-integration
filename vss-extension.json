@@ -2,7 +2,7 @@
     "manifestVersion": 1,
     "id": "Manage-AutomationAccount",
     "name": "Manage-AutomationAccount",
-    "version": "1.8.2",
+    "version": "1.8.7",
     "publisher": "GreyCorbelSolutions",
     "targets": [
         {
@@ -26,7 +26,10 @@
     },
     "files": [
         {
-            "path": "Manage-AutomationAccount"
+            "path": "Tasks/Manage-AutomationAccount"
+        },
+        {
+            "path": "Tasks/Manage-AutomationWebHook"
         }
     ],
     "contributions": [
@@ -37,7 +40,17 @@
                 "ms.vss-distributed-task.tasks"
             ],
             "properties": {
-                "name": "Manage-AutomationAccount"
+                "name": "Tasks/Manage-AutomationAccount"
+            }
+        },
+        {
+            "id": "Manage-AutomationWebHook",
+            "type": "ms.vss-distributed-task.task",
+            "targets": [
+                "ms.vss-distributed-task.tasks"
+            ],
+            "properties": {
+                "name": "Tasks/Manage-AutomationWebHook"
             }
         }
     ]

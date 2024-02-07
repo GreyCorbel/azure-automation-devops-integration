@@ -4,7 +4,7 @@ on:
     branches:
       - master
     paths:
-      - 'Manage-AutomationAccount/task.json'
+      - 'Tasks/**/task.json'
 jobs:
   build:
     runs-on: windows-latest

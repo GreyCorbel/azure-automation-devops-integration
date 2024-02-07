@@ -1,37 +1,45 @@
-Param
-(
-    [Parameter(Mandatory)]
-    [string]
-    #Name of the stage/environment we're deploying
-    $EnvironmentName,
-    [Parameter(Mandatory)]
-    [string]
-    #root folder of automation account content
-    $ProjectDir,
-    [Parameter(Mandatory)]
-    [string]
-    #name of the subscription where automation account is located
-    $Subscription,
-    [Parameter(Mandatory)]
-    [string]
-    #name of the resource group where automation account is located
-    $ResourceGroup,
-    [Parameter(Mandatory)]
-    [string]
-    #name of automation account that we deploy to
-    $AutomationAccount,
-    [Parameter()]
-    [Switch]
-    #whether or not to remove any existing webhooks not covered by definitions
-    $FullSync
-)
+#load VstsTaskSdk module
+Write-Host "Installing dependencies..."
+Install-Module -Name VstsTaskSdk -Force -Scope CurrentUser -AllowClobber
+
+#load AadAuthentiacationFactory
+Install-Module AadAuthenticationFactory -Force -Scope CurrentUser
+Write-Host "Installation succeeded!"
 
 #load Automation account REST wrapper
-$modulePath = [System.IO.Path]::Combine($PSScriptRoot,'Module','AutomationAccount')
+Write-Host "Importing internal PS modules..."
+$parentDirectory = Split-Path -Path $PSScriptRoot -Parent
+$grandparentDirectory = Split-Path -Path $parentDirectory -Parent
+$modulePath = [System.IO.Path]::Combine($grandparentDirectory,'Module','AutomationAccount')
 Import-Module $modulePath -Force
 #load runtime support
-$modulePath = [System.IO.Path]::Combine($PSScriptRoot, 'Module', 'AutoRuntime')
+$modulePath = [System.IO.Path]::Combine($grandparentDirectory, 'Module', 'AutoRuntime')
 Import-Module $modulePath -Force
+Write-Host "Import succeeded!"
+
+#read pipeline variables
+Write-Host "Reading pipeline variables... (Using vstsTaskSdk)"
+$environmentName = Get-VstsInput -Name 'environmentName' -Require
+$projectDir = Get-VstsInput -Name 'projectDir' -Require
+$subscription = Get-VstsInput -Name 'subscription' -Require
+$azureSubscription = Get-VstsInput -Name 'azureSubscription' -Require
+$resourceGroup = Get-VstsInput -Name 'resourceGroup' -Require
+$automationAccount = Get-VstsInput -Name 'automationAccount' -Require
+$fullSync = Get-VstsInput -Name 'fullSync'
+Write-Host "Loading finished!"
+
+Write-Host "Starting process..."
+# retrieve service connection object
+$serviceConnection = Get-VstsEndpoint -Name $azureSubscription -Require
+
+# get service connection object properties
+$servicePrincipalId = $serviceConnection.auth.parameters.serviceprincipalid
+$servicePrincipalkey = $serviceConnection.auth.parameters.serviceprincipalkey
+$tenantId = $serviceConnection.auth.parameters.tenantid
+
+#initialize aadAuthenticationFactory
+Write-Verbose "Initialize AadAuthenticationFactory object..."
+Initialize-AadAuthenticationFactory -servicePrincipalId $servicePrincipalId -servicePrincipalKey $servicePrincipalkey -tenantId $tenantId
 
 #initialize runtime according to environment environment
 Init-Environment -ProjectDir $ProjectDir -Environment $EnvironmentName

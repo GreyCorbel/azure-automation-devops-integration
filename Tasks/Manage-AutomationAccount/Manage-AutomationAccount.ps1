@@ -7,11 +7,13 @@ Install-Module AadAuthenticationFactory -Force -Scope CurrentUser
 Write-Host "Installation succeeded!"
 
 #load Automation account REST wrapper
+$parentDirectory = Split-Path -Path $PSScriptRoot -Parent
+$grandparentDirectory = Split-Path -Path $parentDirectory -Parent
 Write-Host "Importing internal PS modules..."
-$modulePath = [System.IO.Path]::Combine($PSScriptRoot,'Module','AutomationAccount')
+$modulePath = [System.IO.Path]::Combine($grandparentDirectory,'Module','AutomationAccount')
 Import-Module $modulePath -Force
 #load runtime support
-$modulePath = [System.IO.Path]::Combine($PSScriptRoot, 'Module', 'AutoRuntime')
+$modulePath = [System.IO.Path]::Combine($grandparentDirectory, 'Module', 'AutoRuntime')
 Import-Module $modulePath -Force
 Write-Host "Import succeeded!"
 
