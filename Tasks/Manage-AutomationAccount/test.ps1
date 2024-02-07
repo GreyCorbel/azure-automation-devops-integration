@@ -1,3 +1,7 @@
-$parentDirectory = Split-Path -Path $PSScriptRoot -Parent
-$grandparentDirectory = Split-Path -Path $parentDirectory -Parent
-$grandparentDirectory
+# Get the directory of the script
+$scriptDirectory = Split-Path $script:MyInvocation.MyCommand.Path
+$scriptDirectory
+
+# Create absolute path to the task directory
+$taskDirectory = Join-Path $scriptDirectory "Tasks\$taskDirectoryName"
+$taskDirectory

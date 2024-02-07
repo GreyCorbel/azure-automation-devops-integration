@@ -28,95 +28,65 @@ jobs:
 
     - name: Install VstsTaskSdk
       run: |
-        # install vstsTaskSdk for manage-automationAccount task
-        # Navigate to the task directory
-        Write-Host "Do process for Manage-AutomationAccount task."
-        Write-Host "Navigate to Manage-AutomationAccount directory."
-        cd Tasks
-        cd Manage-AutomationAccount
+        # Function to install VstsTaskSdk for a given task
+        function Install-VstsTaskSdk ($taskDirectoryName) {
+            # Get the directory of the script
+            $scriptDirectory = Split-Path $script:MyInvocation.MyCommand.Path
 
-        # Create ps_modules directory if it doesn't exist
-        mkdir -p ps_modules
+            # Create absolute path to the task directory
+            $taskDirectory = Join-Path $scriptDirectory "Tasks\$taskDirectoryName"
 
-        # Install VstsTaskSdk
-        Write-Host "Manage-AutomationAccount VstsTaskSdk installing..."
-        Save-Module –Name VstsTaskSdk –Path .\ps_modules -Force
-        Write-Host "Installing finished."
+            # Navigate to the task directory
+            Write-Host "Do process for $taskDirectoryName task."
+            Write-Host "Navigate to $taskDirectoryName directory."
+            Set-Location -Path $taskDirectory
 
-        cd ps_modules
-        cd VstsTaskSdk
-        Write-Host "Manage-AutomationAccount directory contains:"
-        ls
+            # Create ps_modules directory if it doesn't exist
+            mkdir -p ps_modules
 
-        $sourcePath = Get-Location
-        # find a directory with vstsTaskSdk version
-        $directoryWithFiles = Get-ChildItem -Path $sourcePath -Directory | Where-Object { (Get-ChildItem $_.FullName -File).Count -gt 0 } | Select-Object -First 1
+            # Install VstsTaskSdk
+            Write-Host "$taskDirectoryName VstsTaskSdk installing..."
+            Save-Module –Name VstsTaskSdk –Path .\ps_modules -Force
+            Write-Host "Installing finished."
 
-        # If directory cointain file, do process
-        if ($directoryWithFiles) {
-            # copy files to root folder
-            Copy-Item -Path "$($directoryWithFiles.FullName)\*" -Destination $sourcePath -Recurse -Force
+            Set-Location -Path (Join-Path $taskDirectory "ps_modules\VstsTaskSdk")
 
-            Write-Host "Files from subfolder was copied to root folder ($sourcePath)."
+            Write-Host "$taskDirectoryName directory contains:"
+            ls
 
-            # delete subfolder
-            Remove-Item -Path $directoryWithFiles.FullName -Recurse -Force
+            $sourcePath = Get-Location
+            # find a directory with vstsTaskSdk version
+            $directoryWithFiles = Get-ChildItem -Path $sourcePath -Directory | Where-Object { (Get-ChildItem $_.FullName -File).Count -gt 0 } | Select-Object -First 1
 
-            Write-Host "Subfolder was deleted."
+            # If directory cointain file, do process
+            if ($directoryWithFiles) {
+                # copy files to root folder
+                Copy-Item -Path "$($directoryWithFiles.FullName)\*" -Destination $sourcePath -Recurse -Force
 
-            # get list of files
-            Write-Host "Moved files to: ($sourcePath) after process:"
-            Get-ChildItem -Path $sourcePath
-        } else {
-            Write-Host "There is no directory with files."
+                Write-Host "Files from subfolder was copied to root folder ($sourcePath)."
+
+                # delete subfolder
+                Remove-Item -Path $directoryWithFiles.FullName -Recurse -Force
+
+                Write-Host "Subfolder was deleted."
+
+                # get list of files
+                Write-Host "Moved files to: ($sourcePath) after process:"
+                Get-ChildItem -Path $sourcePath
+            } else {
+                Write-Host "There is no directory with files."
             }
 
+            # Navigate back to the root folder
+            Set-Location -Path $scriptDirectory
+        }
 
+        # Install VstsTaskSdk for Manage-AutomationAccount task
+        Install-VstsTaskSdk "Manage-AutomationAccount"
 
-        # install vstsTaskSdk for manage-automationAccount task
-        # Navigate to the task directory
-        Write-Host "Do process for Manage-AutomationWebHook task."
-        Write-Host "Navigate to Manage-AutomationWebHook directory."
-        cd ..
-        cd ..
-        cd ..
-        cd Manage-AutomationWebHook
+        # Install VstsTaskSdk for Manage-AutomationWebHook task
+        Install-VstsTaskSdk "Manage-AutomationWebHook"
 
-        # Create ps_modules directory if it doesn't exist
-        mkdir -p ps_modules
-
-        # Install VstsTaskSdk
-        Write-Host "Manage-AutomationWebHook VstsTaskSdk installing..."
-        Save-Module –Name VstsTaskSdk –Path .\ps_modules -Force
-        Write-Host "Installing finished."
-
-        cd ps_modules
-        cd VstsTaskSdk
-        Write-Host "Manage-AutomationWebHook directory contains:"
-        ls
-
-        $sourcePath = Get-Location
-        # find a directory with vstsTaskSdk version
-        $directoryWithFiles = Get-ChildItem -Path $sourcePath -Directory | Where-Object { (Get-ChildItem $_.FullName -File).Count -gt 0 } | Select-Object -First 1
-
-        # If directory cointain file, do process
-        if ($directoryWithFiles) {
-            # copy files to root folder
-            Copy-Item -Path "$($directoryWithFiles.FullName)\*" -Destination $sourcePath -Recurse -Force
-
-            Write-Host "Files from subfolder was copied to root folder ($sourcePath)."
-
-            # delete subfolder
-            Remove-Item -Path $directoryWithFiles.FullName -Recurse -Force
-
-            Write-Host "Subfolder was deleted."
-
-            # get list of files
-            Write-Host "Moved files to: ($sourcePath) after process:"
-            Get-ChildItem -Path $sourcePath
-        } else {
-            Write-Host "There is no directory with files."
-            }
 
     - name: Generate and Upload VSIX file
       env:
