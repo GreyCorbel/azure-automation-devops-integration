@@ -28,12 +28,22 @@ jobs:
 
     - name: Install VstsTaskSdk
       run: |
-        # Function to install VstsTaskSdk for a given task
+       # Function to install VstsTaskSdk for a given task
         function Install-VstsTaskSdk ($taskDirectoryName) {
+            # Get the directory of the script
+            $scriptDirectory = Split-Path $script:MyInvocation.MyCommand.Path
+            Write-Host "scriptDirectory:"
+            $scriptDirectory
+
+            # Create absolute path to the task directory
+            $taskDirectory = Join-Path $scriptDirectory "Tasks\$taskDirectoryName"
+            Write-Host "taskDirectory:"
+            $taskDirectory
+
             # Navigate to the task directory
             Write-Host "Do process for $taskDirectoryName task."
             Write-Host "Navigate to $taskDirectoryName directory."
-            cd "Tasks\$taskDirectoryName"
+            Set-Location -Path $taskDirectory
 
             # Create ps_modules directory if it doesn't exist
             mkdir -p ps_modules
@@ -43,8 +53,8 @@ jobs:
             Save-Module –Name VstsTaskSdk –Path .\ps_modules -Force
             Write-Host "Installing finished."
 
-            cd ps_modules
-            cd VstsTaskSdk
+            Set-Location -Path (Join-Path $taskDirectory "ps_modules\VstsTaskSdk")
+
             Write-Host "$taskDirectoryName directory contains:"
             ls
 
@@ -72,8 +82,7 @@ jobs:
             }
 
             # Navigate back to the root folder
-            cd ..
-            cd ..
+            Set-Location -Path $scriptDirectory
         }
 
         # Install VstsTaskSdk for Manage-AutomationAccount task
@@ -81,6 +90,7 @@ jobs:
 
         # Install VstsTaskSdk for Manage-AutomationWebHook task
         Install-VstsTaskSdk "Manage-AutomationWebHook"
+
 
     - name: Generate and Upload VSIX file
       env:
