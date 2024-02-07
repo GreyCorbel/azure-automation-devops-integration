@@ -2,7 +2,7 @@
     "manifestVersion": 1,
     "id": "Manage-AutomationAccount",
     "name": "Manage-AutomationAccount",
-    "version": "1.8.1",
+    "version": "1.8.2",
     "publisher": "GreyCorbelSolutions",
     "targets": [
         {
@@ -15,6 +15,14 @@
     ],
     "icons": {
         "default": "images/icon.png"
+    },
+    "content": {
+        "details": {
+            "path": "readme.md"
+        },
+        "license": {
+            "path": "eula.md"
+        }
     },
     "files": [
         {
