@@ -32,7 +32,7 @@ jobs:
         # Navigate to the task directory
         Write-Host "Do process for Manage-AutomationAccount task."
         Write-Host "Navigate to Manage-AutomationAccount directory."
-        cd Tests
+        cd Tasks
         cd Manage-AutomationAccount
 
         # Create ps_modules directory if it doesn't exist
