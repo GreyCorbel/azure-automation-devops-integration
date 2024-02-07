@@ -2,7 +2,7 @@
     "manifestVersion": 1,
     "id": "Manage-AutomationAccount",
     "name": "Manage-AutomationAccount",
-    "version": "1.7.8",
+    "version": "1.8.1",
     "publisher": "GreyCorbelSolutions",
     "targets": [
         {
@@ -16,6 +16,11 @@
     "icons": {
         "default": "images/icon.png"
     },
+    "files": [
+        {
+            "path": "Manage-AutomationAccount"
+        }
+    ],
     "contributions": [
         {
             "id": "Manage-AutomationAccount",
