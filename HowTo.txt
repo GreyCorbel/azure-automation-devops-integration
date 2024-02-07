@@ -1,0 +1,18 @@
+Návod:
+https://4bes.nl/2021/02/21/create-a-custom-azure-devops-powershell-task/#:~:text=Create%20a%20custom%20Azure%20DevOps%20pipeline%20task%20for,script%20...%208%20Configure%20task.json%20...%20More%20items
+
+Vytvoření adresářové struktury
+tfx build tasks create --task-name ManageAutomationAccount --friendly-name Manage-AutomationAccount --description 'Integration of AAC into DevOps source control and release pipeline' --author 'GreyCorbel s.r.o.'  
+
+Add VstsTaskModule
+Save-Module –Name VstsTaskSdk –Path .\PipelineTask\ps_modules -Force 
+
+Vytvoření vsix souboru
+tfx extension create --manifest-globs vss-extension.json
+
+Marketplace portal:
+https://marketplace.visualstudio.com/manage/publishers/greycorbelsolutions
+
+Autoatické nasazení do marketplace:
+tfx extension publish --publisher GreyCorbelSolutions --manifest-globs vss-extension.json --token ""
+*token - ulozen v github environment secrets - token musí mít scope na marketplace (v definici PAT token v DevOps)
