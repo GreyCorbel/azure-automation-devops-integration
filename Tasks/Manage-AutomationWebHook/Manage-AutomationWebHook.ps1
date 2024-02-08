@@ -82,7 +82,7 @@ foreach($def in $definitions)
     }
     if($needsNewWebhook)
     {
-        "Checking runbook existence: $($def.runbookName)"
+        Write-Host "Checking runbook existence: $($def.runbookName)"
         if(-not ($existingRunbooks.Name -contains $def.runbookName))
         {
             Write-Warning "Runbook $($def.runbookName) does not exist --> skipping webhook"
