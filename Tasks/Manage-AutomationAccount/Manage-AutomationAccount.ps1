@@ -171,22 +171,17 @@ function Check-CustomModule
     }
 }
 
-
 function Get-ModulesForHybridWorker
 {
     param(
         $definitions,
-        $desktopModules,
         $storageAccount,
         $storageAccountContainer
     )
 
     begin
     {
-        $requiredModules = @()
-        
-        # workers currently running on 5.1
-        $runtimeVersion = "5.1"
+        $requiredModules = @()        
         
         # these modules will be excluded from sync by default always
         $builtInModules = @("Microsoft.PowerShell.Diagnostics","Microsoft.WSMan.Management", "Microsoft.PowerShell.Utility", "Microsoft.PowerShell.Security","Microsoft.PowerShell.Core")
@@ -195,18 +190,16 @@ function Get-ModulesForHybridWorker
 
         $ModuleToIgnore += $builtInModules
         $ModuleToIgnore += $dscModules
-        
-        $psRepoSourcelocation = (Get-psrepository|Where-Object{$_.Name -eq "PSGallery"}).sourcelocation
     }
 
     process
     {
-        # process definition files runtime version 5.
-        foreach($module in $definitions|Where-Object{$_.RuntimeVersion -eq $runtimeVersion})
+        # process definition files only
+        foreach($module in $definitions)
         {
+            # we check if its custom module --> meaning there is no source URL from PS gallery defined
             if($module.VersionIndependentLink -eq "")
             {
-                
                     # make sure we dont import one module twice
                     [bool]$check = Check-CustomModule -storageAccount $storageAccount -storageContainerName $storageAccountContainer -moduleName $module.name 
                     
@@ -220,31 +213,21 @@ function Get-ModulesForHybridWorker
                         $source = GetModuleContentLink -moduleDefinition $module -storageAccount $storageAccount -storageAccountContainer $storageAccountContainer
                     }
             }
+            # get powershell gallery URL 
             else
             {
                 $source = GetModuleContentLink -moduleDefinition $module -storageAccount $storageAccount -storageAccountContainer $storageAccountContainer
             }
-          
             $requiredModules += [PSCustomObject]@{
                 Name = $module.name
                 Version = $module.version
                 Source = $source
-            }
-        }
-
-        # process automation account modules
-        foreach($module in ($desktopModules|Where-Object{$_.Name -notin $requiredModules.name -and $_.name -notin $ModuleToIgnore}))
-        {
-            $requiredModules += [PSCustomObject]@{
-                Name = $module.name
-                Version = $module.properties.version
-                Source = "$($psRepoSourcelocation)/package/$($module.name)/$($module.properties.version)"
+                RuntimeVersion = $module.RuntimeVersion
             }
         }
        return $requiredModules    
     }
 }
-
 
 function GetModuleContentLink
 {
@@ -370,9 +353,7 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
             continue
         }
         # process modules for hybrid workers
-        $requiredModules = Get-ModulesForHybridWorker `
-            -definitions $definitions `
-            -desktopModules $desktopModules `
+        $requiredModules = Get-ModulesForHybridWorker -definitions $definitions `
             -storageAccount $storageAccount `
             -storageAccountContainer $storageAccountContainer
 

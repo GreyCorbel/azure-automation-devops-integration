@@ -1064,7 +1064,6 @@ Function Get-BlobSasUrl
         "https://$storageAccount.blob.core.windows.net/$blobPath$uriParams"
     }
 }
-
 Function Get-DelegationToken
 {
     param
@@ -1086,9 +1085,19 @@ Function Get-DelegationToken
         $h['x-ms-version'] = '2022-11-02'
 
         $rsp = Invoke-RestMethod -Method Post -Uri "https://$storageAccountName.blob.core.windows.net/`?restype=service`&comp=userdelegationkey" -Headers $h -body $payload -ContentType 'text/xml'
-        $data=$rsp.Substring(3)
-        $keyInfo=([xml]$data).UserDelegationKey
-        $keyInfo
+        $data =$rsp.Substring(3)
+        
+        # catch PS7 xml format issue
+        if($PSVersionTable.PSVersion.Major -eq "7")
+        {
+            [xml]$xml=  $data.Replace('xml version="1.0" encoding="utf-8"?>','')
+            $keyInfo = $xml.SelectSingleNode("//UserDelegationKey")
+        }
+        else 
+        {
+            $keyInfo=([xml]$data).UserDelegationKey
+        }
+        return $keyInfo
     }
 }
 
