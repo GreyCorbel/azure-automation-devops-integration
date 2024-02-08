@@ -16,3 +16,27 @@ https://marketplace.visualstudio.com/manage/publishers/greycorbelsolutions
 Autoatické nasazení do marketplace:
 tfx extension publish --publisher GreyCorbelSolutions --manifest-globs vss-extension.json --token ""
 *token - ulozen v github environment secrets - token musí mít scope na marketplace (v definici PAT token v DevOps)
+
+jak předat data obsažená v v tasku v proměnné do pipeline a dál s ní pracovat:
+V ps1 scriptu, který je zabalen do pipeline tasku (v našem případě manage-automauionwebhook.ps1) se výstupní proměnná $managedWebhooks nastaví jako task proměnná:
+ 
+Write-Host "##vso[task.setvariable variable=managedWebhooks;]$managedWebhooks"
+ 
+A pak tohle je ten konstrukt v pipeline:
+ 
+# odehraješ custom task
+  - task: Manage-AutomationWebHook@1
+    inputs:
+      environmentName: 'test'
+      projectDir: 'test'
+      subscription: 'test'
+      azureSubscription: 'DHL - O365v2 deployment'
+      resourceGroup: 'test'
+      automationAccount: 'test'
+    name: CustomTask
+ 
+# a pak voláš v powershellu takto:
+  - powershell: |
+      # Použití výstupní proměnné z vlastního tasku
+      Write-Host "data z tasku jsou: $(managedWebhooks)"
+    name: UseCustomTaskOutput
