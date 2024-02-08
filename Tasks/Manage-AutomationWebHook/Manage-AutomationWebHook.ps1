@@ -115,3 +115,6 @@ if($FullSync)
         }
     }
 }
+
+#set manageWebHooks as task variable
+Write-Host "##vso[task.setvariable variable=managedWebhooks;]$managedWebhooks"

@@ -17,7 +17,7 @@
   "version": {
     "Major": "1",
     "Minor": "9",
-    "Patch": "7"
+    "Patch": "8"
   },
   "minimumAgentVersion": "1.95.0",
   "instanceNameFormat": "Manage-AutomationWebHook $(message)",
@@ -81,7 +81,7 @@
   ],
   "execution": {
     "PowerShell3": {
-      "target": "test.ps1"
+      "target": "Manage-AutomationWebHook.ps1"
     }
   }
 }
