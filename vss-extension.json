@@ -2,7 +2,7 @@
     "manifestVersion": 1,
     "id": "Manage-AutomationAccount",
     "name": "Manage-AutomationAccount",
-    "version": "1.9.10",
+    "version": "1.9.11",
     "publisher": "GreyCorbelSolutions",
     "targets": [
         {
@@ -32,7 +32,7 @@
             "path": "Tasks/Manage-AutomationWebHook"
         },
         {
-            "path": "Modules"
+            "path": "Module"
         }
 
     ],
