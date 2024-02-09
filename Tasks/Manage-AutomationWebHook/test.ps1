@@ -1,4 +1,6 @@
 # Get the directory of the script
-$scriptDirectory = "necum vole"
-$scriptDirectory
-Write-Host "##vso[task.setvariable variable=$managedWebhooks;]$managedWebhooks"
+$parentDirectory = Split-Path -Path $PSScriptRoot -Parent
+$grandparentDirectory = Split-Path -Path $parentDirectory -Parent
+$grandparentDirectory
+$modulePath = [System.IO.Path]::Combine($grandparentDirectory,'Module','AutomationAccount')
+$modulePath

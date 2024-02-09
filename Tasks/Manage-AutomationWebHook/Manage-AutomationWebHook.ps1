@@ -11,9 +11,11 @@ Write-Host "Importing internal PS modules..."
 $parentDirectory = Split-Path -Path $PSScriptRoot -Parent
 $grandparentDirectory = Split-Path -Path $parentDirectory -Parent
 $modulePath = [System.IO.Path]::Combine($grandparentDirectory,'Module','AutomationAccount')
+Write-Host "module path: $modulePath"
 Import-Module $modulePath -Force
 #load runtime support
 $modulePath = [System.IO.Path]::Combine($grandparentDirectory, 'Module', 'AutoRuntime')
+Write-Host "module path: $modulePath"
 Import-Module $modulePath -Force
 Write-Host "Import succeeded!"
 
