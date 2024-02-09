@@ -8,13 +8,13 @@ Write-Host "Installation succeeded!"
 
 #load Automation account REST wrapper
 Write-Host "Importing internal PS modules..."
-$parentDirectory = Split-Path -Path $PSScriptRoot -Parent
-$grandparentDirectory = Split-Path -Path $parentDirectory -Parent
-$modulePath = [System.IO.Path]::Combine($grandparentDirectory,'Module','AutomationAccount')
+#$parentDirectory = Split-Path -Path $PSScriptRoot -Parent
+#$grandparentDirectory = Split-Path -Path $parentDirectory -Parent
+$modulePath = [System.IO.Path]::Combine($PSScriptRoot,'Module','AutomationAccount')
 Write-Host "module path: $modulePath"
 Import-Module $modulePath -Force
 #load runtime support
-$modulePath = [System.IO.Path]::Combine($grandparentDirectory, 'Module', 'AutoRuntime')
+$modulePath = [System.IO.Path]::Combine($PSScriptRoot, 'Module', 'AutoRuntime')
 Write-Host "module path: $modulePath"
 Import-Module $modulePath -Force
 Write-Host "Import succeeded!"
