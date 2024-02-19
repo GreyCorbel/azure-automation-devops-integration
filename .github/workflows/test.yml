@@ -12,7 +12,7 @@ jobs:
   # This workflow contains a single job called "build"
   build:
     # The type of runner that the job will run on
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -27,8 +27,8 @@ jobs:
           
           $packageInfo = Save-Package -Name VstsTaskSdk -Path $sdkFolder -Force
           $sdk = [System.IO.Path]::Combine($sdkFolder, $packageInfo.Name)
-          Move-Item -Path [System.IO.Path]::Combine($sdk, $packageInfo.Version, '*') -Destination $sdk
-          Remove-Item [System.IO.Path]::Combine($sdk, $packageInfo.Version) -Force -Recurse
+          Move-Item -Path ([System.IO.Path]::Combine($sdk, $packageInfo.Version, '*')) -Destination $sdk
+          Remove-Item ([System.IO.Path]::Combine($sdk, $packageInfo.Version)) -Force -Recurse
           Write-Host "Downloaded SDK $($packageInfo.Name) version $($packageInfo.Version) to $sdkFolder"
           "taskSdk=$sdk" >> "$GITHUB_ENV"
       # Runs a set of commands using the runners shell
