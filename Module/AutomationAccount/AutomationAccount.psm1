@@ -108,12 +108,12 @@ function Get-AutoPowershell7Module
     begin
     {
         $headers = Get-AutoAccessToken -AsHashTable
-        $uri = "https://management.azure.com$AutomationAccountResourceId/powershell7Modules"
+        $uri = "https://management.azure.com$AutomationAccountResourceId/powershell72Modules"
         if(-not [string]::IsnullOrEmpty($Name))
         {
             $uri = "$uri/$Name"
         }
-        $uri = "$uri`?api-version=2019-06-01`&runtimeVersion=7.2"
+        $uri = "$uri`?api-version=2023-11-01"
 
     }
     process
@@ -228,7 +228,7 @@ Function Remove-AutoPowershell7Module
     begin
     {
         $headers = Get-AutoAccessToken -AsHashTable
-        $uri = "https://management.azure.com$AutomationAccountResourceId/Powershell7Modules/$Name`?api-version=2019-06-01`&runtimeVersion=7.2"
+        $uri = "https://management.azure.com$AutomationAccountResourceId/Powershell72Modules/$Name`?api-version=2023-11-01"
     }
     process
     {
@@ -454,7 +454,7 @@ Function Add-AutoPowershell7Module
     begin
     {
         $headers = Get-AutoAccessToken -AsHashTable
-        $uri = "https://management.azure.com$AutomationAccountResourceId/powershell7Modules/$Name`?api-version=2019-06-01`&runtimeVersion=7.2"
+        $uri = "https://management.azure.com$AutomationAccountResourceId/powershell72Modules/$Name`?api-version=2023-11-01"
     }
     process
     {
@@ -598,17 +598,15 @@ Function Add-AutoPowershell7Runbook
         [switch]
         $WaitForCompletion,
         [Parameter()]
-        [string]$Location = "westeurope",
-        [Parameter()]
         [string]$AutomationAccountResourceId = $script:AutomationAccountResourceId
     )
 
     begin
     {
         $headers = Get-AutoAccessToken -AsHashTable
-        $runbookUri = "https://management.azure.com$AutomationAccountResourceId/runbooks/$Name`?api-version=2022-06-30-preview"
+        $runbookUri = "https://management.azure.com$AutomationAccountResourceId/runbooks/$Name`?api-version=2023-11-01"
         $runbookContentUri = "https://management.azure.com$AutomationAccountResourceId/runbooks/$Name/draft/content`?api-version=2022-08-08"
-        $runbookPublishUri = "https://management.azure.com$AutomationAccountResourceId/runbooks/$Name/publish`?api-version=2022-08-08"
+        $runbookPublishUri = "https://management.azure.com$AutomationAccountResourceId/runbooks/$Name/publish`?api-version=2023-11-01"
     }
     process
     {
@@ -616,10 +614,8 @@ Function Add-AutoPowershell7Runbook
             write-verbose "Modifying runbook on $runbookUri"
             $payload = @{
                 name = $Name
-                location = $location
                 properties = @{
-                    runbookType = 'PowerShell'
-                    runtime = 'PowerShell-7.2'
+                    runbookType = 'PowerShell72'
                     description = $Description
                 }
             } |  ConvertTo-Json
