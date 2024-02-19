@@ -26,65 +26,51 @@ jobs:
         npm install -g tfx-cli
         npm install -g uuid@latest
 
-    - name: Install VstsTaskSdk
+    - name: Download VstsTaskSdk
+      shell: pwsh
       run: |
-       # Function to install VstsTaskSdk for a given task
-        function Install-VstsTaskSdk ($taskDirectoryName) {
-            # Navigate to the task directory
-            Write-Host "Do process for $taskDirectoryName task."
-            Write-Host "Navigate to $taskDirectoryName directory."
-            cd "Tasks\$taskDirectoryName"
+        $sdkFolder = [System.IO.Path]::Combine($env:GITHUB_WORKSPACE, 'taskSdk')
+            
+        $packageInfo = Save-Package -Name VstsTaskSdk -Path $sdkFolder -Force
+        $sdk = [System.IO.Path]::Combine($sdkFolder, $packageInfo.Name)
+        Move-Item -Path ([System.IO.Path]::Combine($sdk, $packageInfo.Version, '*')) -Destination $sdk
+        Remove-Item ([System.IO.Path]::Combine($sdk, $packageInfo.Version)) -Force -Recurse
+        Write-Host "Downloaded SDK $($packageInfo.Name) version $($packageInfo.Version) to $sdkFolder"
+        #save for next step
+        "taskSdk=$sdk" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-            # Create ps_modules directory if it doesn't exist
-            mkdir -p ps_modules
-
-            # Install VstsTaskSdk
-            Write-Host "$taskDirectoryName VstsTaskSdk installing..."
-            Save-Module –Name VstsTaskSdk –Path .\ps_modules -Force
-            Write-Host "Installing finished."
-
-            cd ps_modules
-            cd VstsTaskSdk
-            Write-Host "$taskDirectoryName directory contains:"
-            ls
-
-            $sourcePath = Get-Location
-            # find a directory with vstsTaskSdk version
-            $directoryWithFiles = Get-ChildItem -Path $sourcePath -Directory | Where-Object { (Get-ChildItem $_.FullName -File).Count -gt 0 } | Select-Object -First 1
-
-            # If directory cointain file, do process
-            if ($directoryWithFiles) {
-                # copy files to root folder
-                Copy-Item -Path "$($directoryWithFiles.FullName)\*" -Destination $sourcePath -Recurse -Force
-
-                Write-Host "Files from subfolder was copied to root folder ($sourcePath)."
-
-                # delete subfolder
-                Remove-Item -Path $directoryWithFiles.FullName -Recurse -Force
-
-                Write-Host "Subfolder was deleted."
-
-                # get list of files
-                Write-Host "Moved files to: ($sourcePath) after process:"
-                Get-ChildItem -Path $sourcePath
-            } else {
-                Write-Host "There is no directory with files."
-            }
-
-            # Navigate back to the root folder
-            cd ..
-            cd ..
-            cd ..
-            cd ..
+    - name: Install Task Sdk to tasks
+      shell: pwsh
+      run: |
+        # Install VstsTaskSdk for tasks defined in Tasks folder
+        $sdk = $env:taskSdk
+        $tasksFolder = [System.IO.Path]::Combine($env:GITHUB_WORKSPACE,'Tasks')
+        $tasks = Get-ChildItem $tasksFolder -Directory
+        foreach($task in $tasks.Name)
+        {
+            Write-Host "Installing Tasks SDK to $task"
+            Copy-Item -Path $sdk -Destination ([System.IO.Path]::Combine($tasksFolder,$task,'ps_modules')) -Force -Recurse
         }
 
-        # Install VstsTaskSdk for Manage-AutomationAccount task
-        Install-VstsTaskSdk "Manage-AutomationAccount"
-
-        # Install VstsTaskSdk for Manage-AutomationWebHook task
-        Install-VstsTaskSdk "Manage-AutomationWebHook"
-
-
+    - name: Set tasks version
+      shell: pwsh
+      run: |
+        $tasksFolder = [System.IO.Path]::Combine($env:GITHUB_WORKSPACE,'Tasks')
+        $extensionInfo = get-content ([System.IO.Path]::Combine($env:GITHUB_WORKSPACE, 'vss-extension.json')) | ConvertFrom-Json -Depth 99
+        $extensionVersion = [System.Version]::Parse($extensionInfo.version)
+        $versionInfo =[ordered]@{ 
+            Major = $v.Major
+            Minor = $v.Minor
+            Patch = $v.Build
+        }
+        $tasks = Get-ChildItem $tasksFolder -Directory
+        foreach($task in $tasks.Name)
+        {
+            Write-Host "Setting version of task $task to $extensionVersion"
+            $taskInfo = get-content ([System.IO.Path]::Combine($tasksFolder,$task,'task.json')) | ConvertFrom-Json -Depth 99
+            $taskInfo.version = $versionInfo
+            $taskInfo | ConvertTo-Json -Depth 99 | Out-File -Path ([System.IO.Path]::Combine($tasksFolder,$task,'task.json')) -Force
+        }
 
     - name: Generate and Upload VSIX file
       env:
