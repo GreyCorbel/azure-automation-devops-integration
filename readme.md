@@ -12,6 +12,6 @@ There are no specific requirements that the extension requires.
 No special setting is required.
 
 ## Release Notes
-Initial release of Cosmos Manage-AutomationAccount Extension.
+Initial release of Manage-AutomationAccount Extension.
 
 **Enjoy!**
