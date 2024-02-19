@@ -23,16 +23,17 @@ jobs:
       - name: Download Tasks SDK
         shell: pwsh
         run: |
-          $sdkFolder = [System.IO.Path]::Combine("$env:GITHUB_WORKSPACE,'taskSdk')
+          $sdkFolder = [System.IO.Path]::Combine($env:GITHUB_WORKSPACE,'taskSdk')
           
           $packageInfo = Save-Package -Name VstsTaskSdk -Path $sdkFolder
-          Move-Item -Path "$sdkFolder\$($packageInfo.Name)\$($packageInfo.Version)\*" -Destination "$sdkFolder\$($packageInfo.Name)"
-          Remove-Item "$sdkFolder\$($packageInfo.Name)\$($packageInfo.Version)" -Force -Recurse
+          $sdk = [System.IO.Path]::Combine($sdkFolder,$packageInfo.Name)
+          Move-Item -Path [System.IO.Path]::Combine($sdk,$packageInfo.Version,'*') -Destination $sdk
+          Remove-Item [System.IO.Path]::Combine($sdk,$packageInfo.Version) -Force -Recurse
           Write-Host "Downloaded SDK $($packageInfo.Name) version $($packageInfo.Version) to $sdkFolder"
-          "taskSdkFolder=$sdkFolder\$($packageInfo.Name)" >> "$GITHUB_ENV"
+          "taskSdk=$sdk" >> "$GITHUB_ENV"
       # Runs a set of commands using the runners shell
       - name: Echo SDK folder
         shell: pwsh
         run: |
-          $sdkFolder = $env:taskSdkFolder
-          "SDK folder is: $dkFolder"
+          $sdk = $env:taskSdk
+          "SDK folder is: $sdk"
