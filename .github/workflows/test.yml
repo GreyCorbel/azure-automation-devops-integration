@@ -23,8 +23,8 @@ jobs:
       - name: Download Tasks SDK
         shell: pwsh
         run: |
-          $sdkFolder = "$env:GITHUB_WORKSPACE\taskSdk"
-          New-Item -Path $sdkFolder
+          $sdkFolder = [System.IO.Path]::Combine("$env:GITHUB_WORKSPACE,'taskSdk')
+          
           $packageInfo = Save-Package -Name VstsTaskSdk -Path $sdkFolder
           Move-Item -Path "$sdkFolder\$($packageInfo.Name)\$($packageInfo.Version)\*" -Destination "$sdkFolder\$($packageInfo.Name)"
           Remove-Item "$sdkFolder\$($packageInfo.Name)\$($packageInfo.Version)" -Force -Recurse
