@@ -25,7 +25,7 @@ jobs:
         run: |
           $sdkFolder = [System.IO.Path]::Combine($env:GITHUB_WORKSPACE,'taskSdk')
           
-          $packageInfo = Save-Package -Name VstsTaskSdk -Path $sdkFolder
+          $packageInfo = Save-Package -Name VstsTaskSdk -Path $sdkFolder -Force
           $sdk = [System.IO.Path]::Combine($sdkFolder,$packageInfo.Name)
           Move-Item -Path [System.IO.Path]::Combine($sdk,$packageInfo.Version,'*') -Destination $sdk
           Remove-Item [System.IO.Path]::Combine($sdk,$packageInfo.Version) -Force -Recurse
