@@ -16,7 +16,7 @@ Import-Module $modulePath -Force
 #load runtime support
 $modulePath = [System.IO.Path]::Combine($PSScriptRoot, 'Module', 'AutoRuntime')
 Write-Host "module path: $modulePath"
-Import-Module $modulePath -Force
+Import-Module $modulePath -Force -WarningAction SilentlyContinue
 Write-Host "Import succeeded!"
 
 #read pipeline variables
