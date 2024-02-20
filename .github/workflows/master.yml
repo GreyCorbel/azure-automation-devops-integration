@@ -51,7 +51,7 @@ jobs:
             Copy-Item -Path $sdk -Destination ([System.IO.Path]::Combine($tasksFolder,$task,'ps_modules','VstsTaskSdk')) -Force -Recurse
 
             # Copy Module folder to each task subfolder
-            Copy-Item -Path "$env:GITHUB_WORKSPACE\Module" -Destination ([System.IO.Path]::Combine($env:GITHUB_WORKSPACE,'Tasks',$task')) -Recurse -Force
+            Copy-Item -Path "$env:GITHUB_WORKSPACE\Module" -Destination ([System.IO.Path]::Combine($env:GITHUB_WORKSPACE,'Tasks',$task)) -Recurse -Force
         }
 
     - name: Set tasks version
