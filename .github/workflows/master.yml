@@ -30,10 +30,13 @@ jobs:
       shell: pwsh
       run: |
         $sdkFolder = [System.IO.Path]::Combine($env:GITHUB_WORKSPACE, 'taskSdk')
+        Write-Host "sdkFolder: $sdkFolder"
             
         $packageInfo = Save-Package -Name VstsTaskSdk -Path $sdkFolder -Force
         $sdk = [System.IO.Path]::Combine($sdkFolder, $packageInfo.Name)
+        Write-Host "sdk: $sdk"
         Move-Item -Path ([System.IO.Path]::Combine($sdk, $packageInfo.Version, '*')) -Destination $sdk
+        Write-Host "cesta instalace: ([System.IO.Path]::Combine($sdk, $packageInfo.Version, '*'))"
         Remove-Item ([System.IO.Path]::Combine($sdk, $packageInfo.Version)) -Force -Recurse
         Write-Host "Downloaded SDK $($packageInfo.Name) version $($packageInfo.Version) to $sdkFolder"
         #save for next step
@@ -44,6 +47,7 @@ jobs:
       run: |
         # Install VstsTaskSdk for tasks defined in Tasks folder
         $sdk = $env:taskSdk
+        Write-Host "sdk of next step: $sdk"
         $tasksFolder = [System.IO.Path]::Combine($env:GITHUB_WORKSPACE,'Tasks')
         $tasks = Get-ChildItem $tasksFolder -Directory
         foreach($task in $tasks.Name)
