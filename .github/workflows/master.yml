@@ -59,9 +59,9 @@ jobs:
         $extensionInfo = get-content ([System.IO.Path]::Combine($env:GITHUB_WORKSPACE, 'vss-extension.json')) | ConvertFrom-Json -Depth 99
         $extensionVersion = [System.Version]::Parse($extensionInfo.version)
         $versionInfo =[ordered]@{ 
-            Major = $v.Major
-            Minor = $v.Minor
-            Patch = $v.Build
+            Major = $extensionVersion.Major
+            Minor = $extensionVersion.Minor
+            Patch = $extensionVersion.Build
         }
         $tasks = Get-ChildItem $tasksFolder -Directory
         foreach($task in $tasks.Name)
