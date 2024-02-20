@@ -33,6 +33,11 @@ jobs:
         Write-Host "sdkFolder: $sdkFolder"
             
         $packageInfo = Save-Package -Name VstsTaskSdk -Path $sdkFolder -Force
+
+        Write-Host "packageInfo: $packageInfo"
+        Write-Host "packageInfo.Version: $packageInfo.Version"
+        Write-Host "packageInfo.Version: $($packageInfo.Version)"
+
         $sdk = [System.IO.Path]::Combine($sdkFolder, $packageInfo.Name)
         Write-Host "sdk: $sdk"
         Move-Item -Path ([System.IO.Path]::Combine($sdk, $packageInfo.Version, '*')) -Destination $sdk
