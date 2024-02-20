@@ -2,7 +2,7 @@
     "manifestVersion": 1,
     "id": "Manage-AutomationAccount",
     "name": "Manage-AutomationAccount",
-    "version": "1.9.34",
+    "version": "1.9.35",
     "publisher": "GreyCorbelSolutions",
     "targets": [
         {
@@ -10,6 +10,9 @@
         }
     ],    
     "description": "A task demonstrates integration of Azure automation account and Azure Template Specs into DevOps source control and release pipeline.",
+    "galleryFlags": [
+        "Preview"
+    ],
     "categories": [
         "Azure Pipelines"
     ],
