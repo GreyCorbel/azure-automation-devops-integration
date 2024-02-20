@@ -58,9 +58,9 @@ jobs:
         foreach($task in $tasks.Name)
         {
             Write-Host "Installing Tasks SDK to $task"
-            Copy-Item -Path $sdk -Destination ([System.IO.Path]::Combine($tasksFolder,$task,'ps_modules')) -Force -Recurse
+            Copy-Item -Path $sdk -Destination ([System.IO.Path]::Combine($tasksFolder,$task,'ps_modules','VstsTaskSdk')) -Force -Recurse
             Write-Host "cesta k souborum: " + $tasksFolder + $task + 'ps_modules'
-            $list = Get-ChildItem -Path ([System.IO.Path]::Combine($tasksFolder,$task,'ps_modules'))
+            $list = Get-ChildItem -Path ([System.IO.Path]::Combine($tasksFolder,$task,'ps_modules','VstsTaskSdk'))
             Write-Host "$list"
         }
 
