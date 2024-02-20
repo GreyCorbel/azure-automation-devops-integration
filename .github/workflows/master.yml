@@ -4,7 +4,7 @@ on:
     branches:
       - master
     paths:
-      - 'Tasks/**/task.json'
+      - 'vss-extension.json'
 jobs:
   build:
     runs-on: windows-latest
