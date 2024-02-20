@@ -30,9 +30,7 @@ jobs:
       shell: pwsh
       run: |
         $sdkFolder = [System.IO.Path]::Combine($env:GITHUB_WORKSPACE, 'sdkTask')
-            
         $packageInfo = Save-package -Name VstsTaskSdk -Path $sdkFolder -Force
-
         $sdk = [System.IO.Path]::Combine($sdkFolder, $packageInfo.Name)
         Move-Item -Path ([System.IO.Path]::Combine($sdk, $($packageInfo.Version), '*')) -Destination $sdk
         Remove-Item ([System.IO.Path]::Combine($sdk, $($packageInfo.Version))) -Force -Recurse
@@ -51,6 +49,9 @@ jobs:
         {
             Write-Host "Installing Tasks SDK to $task"
             Copy-Item -Path $sdk -Destination ([System.IO.Path]::Combine($tasksFolder,$task,'ps_modules','VstsTaskSdk')) -Force -Recurse
+
+            # Copy Module folder to each task subfolder
+            Copy-Item -Path "$env:GITHUB_WORKSPACE\Module" -Destination ([System.IO.Path]::Combine($env:GITHUB_WORKSPACE,'Tasks',$task')) -Recurse -Force
         }
 
     - name: Set tasks version

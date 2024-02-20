@@ -38,15 +38,11 @@ Write-Host "Loading finished!"
 Write-Host "Starting process..."
 # retrieve service connection object
 $serviceConnection = Get-VstsEndpoint -Name $azureSubscription -Require
-Write-Host "serviceConnection: $serviceConnection"
 
 # get service connection object properties
 $servicePrincipalId = $serviceConnection.auth.parameters.serviceprincipalid
-Write-Host "servicePrincipalId: $servicePrincipalId"
 $servicePrincipalkey = $serviceConnection.auth.parameters.serviceprincipalkey
-Write-Host "servicePrincipalkey: $servicePrincipalkey"
 $tenantId = $serviceConnection.auth.parameters.tenantid
-Write-Host "tenantId: $tenantId"
 
 #initialize aadAuthenticationFactory
 Write-Verbose "Initialize AadAuthenticationFactory object..."
