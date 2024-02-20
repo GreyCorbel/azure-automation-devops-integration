@@ -29,7 +29,7 @@ jobs:
     - name: Download VstsTaskSdk
       shell: pwsh
       run: |
-        $sdkFolder = [System.IO.Path]::Combine($env:GITHUB_WORKSPACE, 'taskSdk')
+        $sdkFolder = [System.IO.Path]::Combine($env:GITHUB_WORKSPACE, 'ps_modules')
         Write-Host "sdkFolder: $sdkFolder"
             
         $packageInfo = Save-Package -Name VstsTaskSdk -Path $sdkFolder -Force
