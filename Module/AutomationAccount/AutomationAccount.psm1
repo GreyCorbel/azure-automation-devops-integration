@@ -161,7 +161,7 @@ function Get-AutoObject
         {
             $uri = "$uri/$Name"
         }
-        $uri = "$uri`?api-version=2018-06-30"
+        $uri = "$uri`?api-version=2023-11-01"
     }
     process
     {
@@ -194,7 +194,7 @@ Function Remove-AutoObject
         [Parameter(Mandatory)]
         [string]$Name,
         [Parameter(Mandatory)]
-        [ValidateSet('Variables','Runbooks','Schedules','Configurations','Modules','Webhooks','JobSchedules')]
+        [ValidateSet('Variables','Runbooks','Schedules','Configurations','Modules','Webhooks','JobSchedules','Powershell72Modules')]
         [string]$objectType,
         [Parameter()]
         [string]$AutomationAccountResourceId = $script:AutomationAccountResourceId
@@ -203,7 +203,7 @@ Function Remove-AutoObject
     begin
     {
         $headers = Get-AutoAccessToken -AsHashTable
-        $uri = "https://management.azure.com$AutomationAccountResourceId/$objectType/$Name`?api-version=2018-06-30"
+        $uri = "https://management.azure.com$AutomationAccountResourceId/$objectType/$Name`?api-version=2023-11-01"
     }
     process
     {
@@ -260,7 +260,7 @@ Function Add-AutoVariable
     begin
     {
         $headers = Get-AutoAccessToken -AsHashTable
-        $uri = "https://management.azure.com$AutomationAccountResourceId/variables/$Name`?api-version=2019-06-01"
+        $uri = "https://management.azure.com$AutomationAccountResourceId/variables/$Name`?api-version=2023-11-01"
     }
     process
     {
@@ -320,7 +320,7 @@ Function Add-AutoSchedule
     begin
     {
         $headers = Get-AutoAccessToken -AsHashTable
-        $uri = "https://management.azure.com$AutomationAccountResourceId/schedules/$Name`?api-version=2019-06-01"
+        $uri = "https://management.azure.com$AutomationAccountResourceId/schedules/$Name`?api-version=2023-11-01"
     }
     process
     {
@@ -399,7 +399,7 @@ Function Add-AutoModule
     begin
     {
         $headers = Get-AutoAccessToken -AsHashTable
-        $uri = "https://management.azure.com$AutomationAccountResourceId/modules/$Name`?api-version=2019-06-01"
+        $uri = "https://management.azure.com$AutomationAccountResourceId/modules/$Name`?api-version=2023-11-01"
     }
     process
     {
@@ -501,7 +501,7 @@ Function Add-AutoRunbook
         [Parameter(Mandatory)]
         [string]$Name,
         [Parameter(Mandatory)]
-        [ValidateSet('Graph','GraphPowerShell','GraphPowerShellWorkflow','PowerShell','PowerShellWorkflow','Python2','Python3','Script')]
+        [ValidateSet('Graph','GraphPowerShell','GraphPowerShellWorkflow','PowerShell','PowerShellWorkflow','Python2','Python3','Script','Powershell72')]
         [string]$Type,
         [Parameter(Mandatory)]
         [string]$Content,
@@ -520,9 +520,9 @@ Function Add-AutoRunbook
     begin
     {
         $headers = Get-AutoAccessToken -AsHashTable
-        $runbookUri = "https://management.azure.com$AutomationAccountResourceId/runbooks/$Name`?api-version=2019-06-01"
-        $runbookContentUri = "https://management.azure.com$AutomationAccountResourceId/runbooks/$Name/draft/content`?api-version=2019-06-01"
-        $runbookPublishUri = "https://management.azure.com$AutomationAccountResourceId/runbooks/$Name/publish`?api-version=2019-06-01"
+        $runbookUri = "https://management.azure.com$AutomationAccountResourceId/runbooks/$Name`?api-version=2023-11-01"
+        $runbookContentUri = "https://management.azure.com$AutomationAccountResourceId/runbooks/$Name/draft/content`?api-version=2022-08-08"
+        $runbookPublishUri = "https://management.azure.com$AutomationAccountResourceId/runbooks/$Name/publish`?api-version=2023-11-01"
     }
     process
     {
@@ -743,7 +743,7 @@ Function Add-AutoConfiguration
     begin
     {
         $headers = Get-AutoAccessToken -AsHashTable
-        $configUri = "https://management.azure.com$AutomationAccountResourceId/configurations/$Name`?api-version=2019-06-01"
+        $configUri = "https://management.azure.com$AutomationAccountResourceId/configurations/$Name`?api-version=2023-11-01"
         $compilationJobName = "$Name-$((New-Guid))"
         $compilationUri = "https://management.azure.com$AutomationAccountResourceId/compilationjobs/$compilationJobName`?api-version=2019-06-01"
     }
@@ -838,7 +838,7 @@ Function Add-AutoJobSchedule
     {
         $headers = Get-AutoAccessToken -AsHashTable
         $jobScheduleName = "$((New-Guid))"
-        $Uri = "https://management.azure.com$AutomationAccountResourceId/jobSchedules/$jobScheduleName`?api-version=2019-06-01"
+        $Uri = "https://management.azure.com$AutomationAccountResourceId/jobSchedules/$jobScheduleName`?api-version=2023-11-01"
     }
     process
     {
