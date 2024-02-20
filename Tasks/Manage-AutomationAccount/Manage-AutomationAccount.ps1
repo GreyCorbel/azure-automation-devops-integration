@@ -448,7 +448,7 @@ if (Check-Scope -Scope $scope -RequiredScope 'Runbooks') {
     $importingRunbooks=@()
     foreach($runbook in $definitions)
     {
-        "Processing runbook $($runbook.Name) for runtime $($runbook.RuntimeVersion)"
+        "Processing runbook $($runbook.Name) of type $($runbook.Type)"
         $implementationFile = Get-FileToProcess -FileType Runbooks -FileName $runbook.Implementation
         if([string]::IsnullOrEmpty($ImplementationFile))
         {
