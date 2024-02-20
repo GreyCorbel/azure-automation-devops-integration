@@ -455,26 +455,14 @@ if (Check-Scope -Scope $scope -RequiredScope 'Runbooks') {
             write-warning "Missing implementation file --> skipping"
             continue
         }
-        switch($runbook.RuntimeVersion)
-        {
-            '5.1' {
-                $importingRunbooks+=Add-AutoRunbook `
-                    -Name $runbook.Name `
-                    -Type  $runbook.Type `
-                    -Content (Get-Content -Path $ImplementationFile -Raw) `
-                    -Description $runbook.Description `
-                    -AutoPublish:$runbook.AutoPublish
-                break;
-            }
-            '7.2' {
-                $importingRunbooks+=Add-AutoPowershell7Runbook `
-                    -Name $runbook.Name `
-                    -Content (Get-Content -Path $ImplementationFile -Raw) `
-                    -Description $runbook.Description `
-                    -AutoPublish:$runbook.AutoPublish
-                break;
-            }
-        }
+        #use location from runbook definition, if specified, otherwise we default to automation acocunt location
+        $importingRunbooks+=Add-AutoRunbook `
+            -Name $runbook.Name `
+            -Type  $runbook.Type `
+            -Content (Get-Content -Path $ImplementationFile -Raw) `
+            -Location $runbook.location `
+            -Description $runbook.Description `
+            -AutoPublish:$runbook.AutoPublish
     }
     #wait for runbook import completion
     if($importingRunbooks.Count -gt 0)

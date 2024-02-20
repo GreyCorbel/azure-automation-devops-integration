@@ -87,7 +87,16 @@ function Connect-AutoAutomationAccount
         {
             throw "Subscription $Subscription no found"
         }
-        $script:AutomationAccountResourceId = "$($subscriptionObject.id)/resourceGroups/$ResourceGroup/providers/Microsoft.Automation/automationAccounts/$AutomationAccount"    }
+        $script:AutomationAccountResourceId = "$($subscriptionObject.id)/resourceGroups/$ResourceGroup/providers/Microsoft.Automation/automationAccounts/$AutomationAccount"
+
+        $headers = Get-AutoAccessToken -AsHashTable
+        $uri = "https://management.azure.com$AutomationAccountResourceId`?api-version=2023-11-01"
+        $rslt = Invoke-RestMethod `
+            -Uri $uri `
+            -Headers $headers `
+            -ErrorAction Stop
+        $script:accountLocation = $rslt.location
+    }
 }
 
 #region Get/Remove
@@ -512,7 +521,7 @@ Function Add-AutoRunbook
         [switch]
         $WaitForCompletion,
         [Parameter()]
-        [string]$Location = "westeurope",
+        [string]$Location,
         [Parameter()]
         [string]$AutomationAccountResourceId = $script:AutomationAccountResourceId
     )
@@ -527,6 +536,7 @@ Function Add-AutoRunbook
     process
     {
         try {
+            if($location = '') {$location =  = $script:accountLocation}
             write-verbose "Modifying runbook on $runbookUri"
             $payload = @{
                 name = $Name
@@ -573,95 +583,6 @@ Function Add-AutoRunbook
             {
                 write-Verbose 'Waiting for publishing of the runbook'
                 Wait-AutoObjectProcessing -Name $name -objectType Runbooks
-            }
-            $rslt
-        }
-        catch {
-            write-error $_
-            throw;
-        }
-    }
-}
-
-Function Add-AutoPowershell7Runbook
-{
-    param
-    (
-        [Parameter(Mandatory)]
-        [string]$Name,
-        [Parameter(Mandatory)]
-        [string]$Content,
-        [Parameter()]
-        [string]$Description,
-        [switch]
-        $AutoPublish,
-        [switch]
-        $WaitForCompletion,
-        [Parameter()]
-        [string]$AutomationAccountResourceId = $script:AutomationAccountResourceId
-    )
-
-    begin
-    {
-        $headers = Get-AutoAccessToken -AsHashTable
-        $runbookUri = "https://management.azure.com$AutomationAccountResourceId/runbooks/$Name`?api-version=2023-11-01"
-        $runbookContentUri = "https://management.azure.com$AutomationAccountResourceId/runbooks/$Name/draft/content`?api-version=2022-08-08"
-        $runbookPublishUri = "https://management.azure.com$AutomationAccountResourceId/runbooks/$Name/publish`?api-version=2023-11-01"
-    }
-    process
-    {
-        try {
-            write-verbose "Modifying runbook on $runbookUri"
-            $payload = @{
-                name = $Name
-                properties = @{
-                    runbookType = 'PowerShell72'
-                    description = $Description
-                }
-            } |  ConvertTo-Json
-            write-verbose $payload
-    
-            $rslt = Invoke-RestMethod -Method Put `
-                -Uri $runbookUri `
-                -Body $payload `
-                -ContentType 'application/json' `
-                -Headers $headers `
-                -ErrorAction Stop
-            if($rslt.properties.provisioningState -ne 'Succeeded')
-            {
-                return $rslt
-            }
-    
-            write-verbose "Uploading runbook content to $runbookContentUri"
-            Invoke-RestMethod -Method Put `
-                -Uri $runbookContentUri `
-                -Body $Content `
-                -ContentType 'text/powershell' `
-                -Headers $headers `
-                -ErrorAction Stop | Out-Null
-            if(-not $AutoPublish)
-            {
-                return $rslt
-            }
-    
-            write-verbose "Publishing runbook on $runbookPublishUri"
-            #returns $null response
-            Invoke-RestMethod -Method Post `
-                -Uri $runbookPublishUri `
-                -Body '{}' `
-                -ContentType 'application/json' `
-                -Headers $headers `
-                -ErrorAction Stop | Out-Null
-    
-            if($WaitForCompletion)
-            {
-                do
-                {
-                    write-Verbose 'Waiting for publishing of the runbook'
-                    Start-Sleep -Seconds 5
-                    $rslt = Get-AutoObject -objectType Runbooks -Name $Name
-    
-                }while($rslt.properties.provisioningState -in @('Creating'))
             }
             $rslt
         }

@@ -8,14 +8,13 @@ function New-RunbookDefinition
         [string]
             #Name of the file that has runbook content
         $Implementation,
-        [ValidateSet('Graph','GraphPowerShell','GraphPowerShellWorkflow','PowerShell','PowerShellWorkflow','Python2','Python3','Script')]
+        [ValidateSet('Graph','GraphPowerShell','GraphPowerShellWorkflow','PowerShell','PowerShellWorkflow','PowerShell','Python2','Python3','Script')]
         [string]
             #Type of the runbook
         $Type,
-        [ValidateSet('5.1','7.2')]
         [string]
             #Type of the runbook
-        $RuntimeVersion,
+        $Location = 'westeurope',
         [string[]]
             #reserved for future use
         $SupportedRequestTypes,
@@ -39,7 +38,7 @@ function New-RunbookDefinition
             Name = $Name
             Implementation = $Implementation
             Type = $Type
-            RuntimeVersion = $RuntimeVersion
+            Location = $Location
             SupportedRequestTypes = $SupportedRequestTypes
             AutoPublish = (-not $DoNotPublish.IsPresent)
             RequiredModules = $RequiredModules
