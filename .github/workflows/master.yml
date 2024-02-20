@@ -32,7 +32,7 @@ jobs:
         $sdkFolder = [System.IO.Path]::Combine($env:GITHUB_WORKSPACE, 'ps_modules')
         Write-Host "sdkFolder: $sdkFolder"
             
-        $packageInfo = Save-Module -Name VstsTaskSdk -Path $sdkFolder -Force
+        $packageInfo = Save-package -Name VstsTaskSdk -Path $sdkFolder -Force
 
         Write-Host "packageInfo: $packageInfo"
         Write-Host "packageInfo.Version: $packageInfo.Version"
