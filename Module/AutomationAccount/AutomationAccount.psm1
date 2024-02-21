@@ -90,7 +90,7 @@ function Connect-AutoAutomationAccount
         $script:AutomationAccountResourceId = "$($subscriptionObject.id)/resourceGroups/$ResourceGroup/providers/Microsoft.Automation/automationAccounts/$AutomationAccount"
 
         $headers = Get-AutoAccessToken -AsHashTable
-        $uri = "https://management.azure.com$AutomationAccountResourceId`?api-version=2023-11-01"
+        $uri = "https://management.azure.com$($script:AutomationAccountResourceId)`?api-version=2023-11-01"
         $rslt = Invoke-RestMethod `
             -Uri $uri `
             -Headers $headers `
