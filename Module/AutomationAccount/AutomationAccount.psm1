@@ -87,6 +87,7 @@ function Connect-AutoAutomationAccount
         {
             throw "Subscription $Subscription no found"
         }
+        "Connected to subscription $Subscription"
         $script:AutomationAccountResourceId = "$($subscriptionObject.id)/resourceGroups/$ResourceGroup/providers/Microsoft.Automation/automationAccounts/$AutomationAccount"
 
         $headers = Get-AutoAccessToken -AsHashTable
@@ -96,6 +97,7 @@ function Connect-AutoAutomationAccount
             -Headers $headers `
             -ErrorAction Stop
         $script:accountLocation = $rslt.location
+        "Automation account validated; location: $($script:accountLocation)"
     }
 }
 
@@ -536,7 +538,7 @@ Function Add-AutoRunbook
     process
     {
         try {
-            if($location = '') {$location =  = $script:accountLocation}
+            if($location = '') {$location = $script:accountLocation}
             write-verbose "Modifying runbook on $runbookUri"
             $payload = @{
                 name = $Name
