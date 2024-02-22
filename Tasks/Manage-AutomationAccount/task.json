@@ -98,7 +98,7 @@
       "name": "fullSync",
       "type": "boolean",
       "label": "Full sync",
-      "defaultValue": "",
+      "defaultValue": false,
       "required": false,
       "helpMarkDown": "Whether or not to remove any existing runbooks and variables from automation account that are not source-controlled."
     },    
@@ -106,9 +106,17 @@
       "name": "reportMissingImplementation",
       "type": "boolean",
       "label": "Report missing implementation",
-      "defaultValue": "",
+      "defaultValue": false,
       "required": false,
       "helpMarkDown": "Whether to report missing implementation file. Note: it may be perfectly OK not to have implementation file, if artefact is meant to be used just in subset of environments."
+    },    
+    {
+      "name": "verbose",
+      "type": "boolean",
+      "label": "Detailed logging",
+      "defaultValue": false,
+      "required": false,
+      "helpMarkDown": "Specifies task logging level - standard or verbose"
     }
   ],
   "execution": {

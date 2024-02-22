@@ -1,3 +1,23 @@
+#read pipeline variables
+Write-Host "Reading task parameters"
+[char[]]$delimiters = @(',',' ')
+$scope = (Get-VstsInput -Name 'scope' -Require).Split($delimiters,[StringSplitOptions]::RemoveEmptyEntries)
+$environmentName = Get-VstsInput -Name 'environmentName' -Require
+$projectDir = Get-VstsInput -Name 'projectDir' -Require
+$subscription = Get-VstsInput -Name 'subscription' -Require
+$azureSubscription = Get-VstsInput -Name 'azureSubscription' -Require
+$resourceGroup = Get-VstsInput -Name 'resourceGroup' -Require
+$automationAccount = Get-VstsInput -Name 'automationAccount' -Require
+$storageAccount = Get-VstsInput -Name 'storageAccount'
+$storageAccountContainer = Get-VstsInput -Name 'storageAccountContainer'
+$fullSync = Get-VstsInput -Name 'fullSync'
+$reportMissingImplementation = Get-VstsInput -Name 'reportMissingImplementation'
+$verboseLog = Get-VstsInput -Name 'verbose'
+
+if($verboseLog)
+{
+    $VerbosePreference = 'Continue'
+}
 #load VstsTaskSdk module
 Write-Host "Installing dependencies..."
 Install-Module -Name VstsTaskSdk -Force -Scope CurrentUser -AllowClobber
@@ -19,21 +39,6 @@ Write-Host "module path: $modulePath"
 Import-Module $modulePath -Force -WarningAction SilentlyContinue
 Write-Host "Import succeeded!"
 
-#read pipeline variables
-[char[]]$delimiters = @(',',' ')
-Write-Host "Reading pipeline variables... (Using vstsTaskSdk)"
-$scope = (Get-VstsInput -Name 'scope' -Require).Split($delimiters,[StringSplitOptions]::RemoveEmptyEntries)
-$environmentName = Get-VstsInput -Name 'environmentName' -Require
-$projectDir = Get-VstsInput -Name 'projectDir' -Require
-$subscription = Get-VstsInput -Name 'subscription' -Require
-$azureSubscription = Get-VstsInput -Name 'azureSubscription' -Require
-$resourceGroup = Get-VstsInput -Name 'resourceGroup' -Require
-$automationAccount = Get-VstsInput -Name 'automationAccount' -Require
-$storageAccount = Get-VstsInput -Name 'storageAccount'
-$storageAccountContainer = Get-VstsInput -Name 'storageAccountContainer'
-$fullSync = Get-VstsInput -Name 'fullSync'
-$reportMissingImplementation = Get-VstsInput -Name 'reportMissingImplementation'
-Write-Host "Loading finished!"
 
 Write-Host "Starting process..."
 # retrieve service connection object
@@ -595,3 +600,8 @@ if (Check-Scope -Scope $scope -RequiredScope 'Configurations') {
     }
 }
 #endregion Dsc
+
+if($verboseLog)
+{
+    $VerbosePreference = 'SilentlyContinue'
+}
