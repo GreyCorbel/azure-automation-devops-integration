@@ -3,22 +3,18 @@
   "id": "c3e84ba0-be86-11ee-aff3-5d686ed5c05d",
   "name": "Manage-AutomationAccount",
   "friendlyName": "Manage-AutomationAccount",
-  "description": "Integration of AAC into DevOps source control and release pipeline",
+  "description": "Deploys runbooks, variables, schedules and their links to runbooks, modules and Dsc configurations to Azure  Automation account",
   "author": "GreyCorbel s.r.o.",
   "publisher": "GreyCorbel s.r.o.",
   "icon": "icon.png",
-  "helpMarkDown": "Integration of AAC into DevOps source control and release pipeline",
+  "helpMarkDown": "For details, see task source code repository [https://github.com/GreyCorbel/azure-automation-devops-integration](https://github.com/GreyCorbel/azure-automation-devops-integration)",
   "category": "Utility",
   "visibility": [
     "Build",
     "Release"
   ],
   "demands": [],
-  "version": {
-    "Major": "1",
-    "Minor": "9",
-    "Patch": "15"
-  },
+  "version": null,
   "minimumAgentVersion": "1.95.0",
   "instanceNameFormat": "Manage-AutomationAccount $(message)",
   "inputs": [

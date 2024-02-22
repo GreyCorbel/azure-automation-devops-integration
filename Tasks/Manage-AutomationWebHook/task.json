@@ -3,22 +3,18 @@
   "id": "c3e84ba0-be86-11ee-aff3-5d686ed5c05f",
   "name": "Manage-AutomationWebHook",
   "friendlyName": "Manage-AutomationWebHook",
-  "description": "Update existing webhooks.",
+  "description": "Checks for webhook expiration in automation account and automatically creates a new instance when webhook is about to expire",
   "author": "GreyCorbel s.r.o.",
   "publisher": "GreyCorbel s.r.o.",
   "icon": "icon.png",
-  "helpMarkDown": "Update existing webhooks.",
+  "helpMarkDown": "For details and usage, see task source code repository [https://github.com/GreyCorbel/azure-automation-devops-integration](https://github.com/GreyCorbel/azure-automation-devops-integration)",
   "category": "Utility",
   "visibility": [
     "Build",
     "Release"
   ],
   "demands": [],
-  "version": {
-    "Major": "1",
-    "Minor": "9",
-    "Patch": "15"
-  },
+  "version": null,
   "minimumAgentVersion": "1.95.0",
   "instanceNameFormat": "Manage-AutomationWebHook $(message)",
   "inputs": [
@@ -77,6 +73,14 @@
       "defaultValue": "",
       "required": false,
       "helpMarkDown": "Whether or not to remove any existing runbooks and variables from automation account that are not source-controlled."
+    },    
+    {
+      "name": "verbose",
+      "type": "boolean",
+      "label": "Detailed logging",
+      "defaultValue": false,
+      "required": false,
+      "helpMarkDown": "Specifies task logging level - standard or verbose"
     }
   ],
   "execution": {
