@@ -73,14 +73,6 @@
       "defaultValue": "",
       "required": false,
       "helpMarkDown": "Whether or not to remove any existing runbooks and variables from automation account that are not source-controlled."
-    },    
-    {
-      "name": "verbose",
-      "type": "boolean",
-      "label": "Detailed logging",
-      "defaultValue": false,
-      "required": false,
-      "helpMarkDown": "Specifies task logging level - standard or verbose"
     }
   ],
   "execution": {
