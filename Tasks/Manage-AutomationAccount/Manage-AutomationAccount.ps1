@@ -545,7 +545,7 @@ if (Check-Scope -Scope $scope -RequiredScope 'JobSchedules') {
                 write-warning "Missing setting file $($def.Settings) --> skipping"
                 continue
             }
-            $setting = get-content $settingsFile -Encoding utf8 | ConvertFrom-Json -Depth 9
+            $setting = get-content $settingsFile -Encoding utf8 | ConvertFrom-Json
             if(-not [string]::IsNullOrEmpty($setting.RunOn)) {$runOn = $setting.RunOn}
             if(-not [string]::IsNullOrEmpty($setting.Parameters)) {$params = $setting.Parameters}
         }
