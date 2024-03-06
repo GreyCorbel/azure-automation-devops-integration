@@ -594,6 +594,98 @@ Function Add-AutoRunbook
         }
     }
 }
+Function Add-AutoPowershell7Runbook
+{
+    param
+    (
+        [Parameter(Mandatory)]
+        [string]$Name,
+        [Parameter(Mandatory)]
+        [string]$Content,
+        [Parameter()]
+        [string]$Description,
+        [switch]
+        $AutoPublish,
+        [switch]
+        $WaitForCompletion,
+        [Parameter()]
+        [string]$Location = "westeurope",
+        [Parameter()]
+        [string]$AutomationAccountResourceId = $script:AutomationAccountResourceId
+    )
+
+    begin
+    {
+        $headers = Get-AutoAccessToken -AsHashTable
+        $runbookUri = "https://management.azure.com$AutomationAccountResourceId/runbooks/$Name`?api-version=2022-06-30-preview"
+        $runbookContentUri = "https://management.azure.com$AutomationAccountResourceId/runbooks/$Name/draft/content`?api-version=2022-08-08"
+        $runbookPublishUri = "https://management.azure.com$AutomationAccountResourceId/runbooks/$Name/publish`?api-version=2022-08-08"
+    }
+    process
+    {
+        try {
+            write-verbose "Modifying runbook on $runbookUri"
+            $payload = @{
+                name = $Name
+                location = $location
+                properties = @{
+                    runbookType = 'PowerShell'
+                    runtime = 'PowerShell-7.2'
+                    description = $Description
+                }
+            } |  ConvertTo-Json
+            write-verbose $payload
+    
+            $rslt = Invoke-RestMethod -Method Put `
+                -Uri $runbookUri `
+                -Body $payload `
+                -ContentType 'application/json' `
+                -Headers $headers `
+                -ErrorAction Stop
+            if($rslt.properties.provisioningState -ne 'Succeeded')
+            {
+                return $rslt
+            }
+    
+            write-verbose "Uploading runbook content to $runbookContentUri"
+            Invoke-RestMethod -Method Put `
+                -Uri $runbookContentUri `
+                -Body $Content `
+                -ContentType 'text/powershell' `
+                -Headers $headers `
+                -ErrorAction Stop | Out-Null
+            if(-not $AutoPublish)
+            {
+                return $rslt
+            }
+    
+            write-verbose "Publishing runbook on $runbookPublishUri"
+            #returns $null response
+            Invoke-RestMethod -Method Post `
+                -Uri $runbookPublishUri `
+                -Body '{}' `
+                -ContentType 'application/json' `
+                -Headers $headers `
+                -ErrorAction Stop | Out-Null
+    
+            if($WaitForCompletion)
+            {
+                do
+                {
+                    write-Verbose 'Waiting for publishing of the runbook'
+                    Start-Sleep -Seconds 5
+                    $rslt = Get-AutoObject -objectType Runbooks -Name $Name
+    
+                }while($rslt.properties.provisioningState -in @('Creating'))
+            }
+            $rslt
+        }
+        catch {
+            write-error $_
+            throw;
+        }
+    }
+}
 
 function Get-AutoModuleUrl
 {
@@ -1047,5 +1139,3 @@ function GetSasSignature
         }
     }
 }
-
-$script:tokenCache = @{}

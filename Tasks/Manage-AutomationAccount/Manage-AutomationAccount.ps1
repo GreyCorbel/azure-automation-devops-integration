@@ -453,21 +453,33 @@ if (Check-Scope -Scope $scope -RequiredScope 'Runbooks') {
     $importingRunbooks=@()
     foreach($runbook in $definitions)
     {
-        "Processing runbook $($runbook.Name) of type $($runbook.Type)"
+        "Processing runbook $($runbook.Name) for runtime $($runbook.RuntimeVersion)"
         $implementationFile = Get-FileToProcess -FileType Runbooks -FileName $runbook.Implementation
         if([string]::IsnullOrEmpty($ImplementationFile))
         {
             write-warning "Missing implementation file --> skipping"
             continue
         }
-        #use location from runbook definition, if specified, otherwise we default to automation acocunt location
-        $importingRunbooks+=Add-AutoRunbook `
-            -Name $runbook.Name `
-            -Type  $runbook.Type `
-            -Content (Get-Content -Path $ImplementationFile -Raw) `
-            -Location $runbook.location `
-            -Description $runbook.Description `
-            -AutoPublish:$runbook.AutoPublish
+        switch($runbook.RuntimeVersion)
+        {
+            '5.1' {
+                $importingRunbooks+=Add-AutoRunbook `
+                    -Name $runbook.Name `
+                    -Type  $runbook.Type `
+                    -Content (Get-Content -Path $ImplementationFile -Raw) `
+                    -Description $runbook.Description `
+                    -AutoPublish:$runbook.AutoPublish
+                break;
+            }
+            '7.2' {
+                $importingRunbooks+=Add-AutoPowershell7Runbook `
+                    -Name $runbook.Name `
+                    -Content (Get-Content -Path $ImplementationFile -Raw) `
+                    -Description $runbook.Description `
+                    -AutoPublish:$runbook.AutoPublish
+                break;
+            }
+        }
     }
     #wait for runbook import completion
     if($importingRunbooks.Count -gt 0)
@@ -505,7 +517,9 @@ if (Check-Scope -Scope $scope -RequiredScope 'JobSchedules') {
     $definitions = @(Get-DefinitionFiles -FileType JobSchedules)
 
     $alljobSchedules =  Get-AutoObject -objectType JobSchedules
+    $allSchedules = Get-AutoObject -objectType Schedules
     $existingRunbooks = Get-AutoObject -objectType Runbooks
+
     $managedSchedules = @()
     foreach($def in $definitions)
     {
@@ -515,11 +529,31 @@ if (Check-Scope -Scope $scope -RequiredScope 'JobSchedules') {
             Write-Warning "Runbook $($def.runbookName) does not exist --> skipping job schedule"
             continue
         }
+        "Checking schedule existence: $($def.scheduleName)"
+        if(-not ($allSchedules.Name -contains $def.scheduleName))
+        {
+            Write-Warning "Schedule $($def.scheduleName) does not exist --> skipping job schedule"
+            continue
+        }
+        $runOn = ''
+        $params = [PSCustomObject]@{}
+        if(-not [string]::IsNullOrEmpty($def.Settings))
+        {
+            $settingsFile = Get-FileToProcess -FileType JobSchedules -FileName $def.Settings
+            if([string]::IsnullOrEmpty($settingsFile))
+            {
+                write-warning "Missing setting file $($def.Settings) --> skipping"
+                continue
+            }
+            $setting = get-content $settingsFile -Encoding utf8 | ConvertFrom-Json -Depth 9
+            if(-not [string]::IsNullOrEmpty($setting.RunOn)) {$runOn = $setting.RunOn}
+            if(-not [string]::IsNullOrEmpty($setting.Parameters)) {$params = $setting.Parameters}
+        }
         "Updating schedule $($def.scheduleName) on $($def.runbookName)"
         $jobSchedule = Add-AutoJobSchedule -RunbookName $def.runbookName `
             -ScheduleName $def.scheduleName `
-            -RunOn $(if($def.runOn -eq 'Azure' -or [string]::IsnullOrEmpty($def.runOn)) {''} else {$def.runOn}) `
-            -Parameters $def.Parameters
+            -RunOn $runOn `
+            -Parameters $Params
         
         $managedSchedules += $jobSchedule
     }
