@@ -546,7 +546,7 @@ if (Check-Scope -Scope $scope -RequiredScope 'JobSchedules') {
                 continue
             }
             $setting = get-content $settingsFile -Encoding utf8 | ConvertFrom-Json
-            if(-not [string]::IsNullOrEmpty($setting.RunOn)) {$runOn = $setting.RunOn}
+            if((-not [string]::IsNullOrEmpty($setting.RunOn)) -and $setting.RunOn -ne 'Azure') {$runOn = $setting.RunOn}
             if(-not [string]::IsNullOrEmpty($setting.Parameters)) {$params = $setting.Parameters}
         }
         "Updating schedule $($def.scheduleName) on $($def.runbookName)"
