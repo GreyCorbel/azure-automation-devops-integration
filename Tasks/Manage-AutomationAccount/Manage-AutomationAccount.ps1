@@ -535,7 +535,6 @@ if (Check-Scope -Scope $scope -RequiredScope 'JobSchedules') {
             Write-Warning "Schedule $($def.scheduleName) does not exist --> skipping job schedule"
             continue
         }
-        $runOn = ''
         $params = [PSCustomObject]@{}
         if(-not [string]::IsNullOrEmpty($def.Settings))
         {
@@ -546,13 +545,12 @@ if (Check-Scope -Scope $scope -RequiredScope 'JobSchedules') {
                 continue
             }
             $setting = get-content $settingsFile -Encoding utf8 | ConvertFrom-Json
-            if((-not [string]::IsNullOrEmpty($setting.RunOn)) -and ($setting.RunOn -ne 'Azure')) {$runOn = $setting.RunOn}
             if(-not [string]::IsNullOrEmpty($setting.Parameters)) {$params = $setting.Parameters}
         }
         "Updating schedule $($def.scheduleName) on $($def.runbookName)"
         $jobSchedule = Add-AutoJobSchedule -RunbookName $def.runbookName `
             -ScheduleName $def.scheduleName `
-            -RunOn $runOn `
+            -RunOn $(if($setting.runOn -eq 'Azure' -or [string]::IsnullOrEmpty($setting.runOn)) {''} else {$setting.runOn}) `
             -Parameters $Params
         
         $managedSchedules += $jobSchedule
