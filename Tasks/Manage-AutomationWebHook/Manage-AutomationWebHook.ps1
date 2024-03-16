@@ -30,7 +30,7 @@ $automationAccount = Get-VstsInput -Name 'automationAccount' -Require
 $fullSync = Get-VstsInput -Name 'fullSync'
 Write-Host "Loading finished!"
 
-Write-Host "Starting process..."
+Write-Host "Starting processing"
 # retrieve service connection object
 $serviceConnection = Get-VstsEndpoint -Name $azureSubscription -Require
 
@@ -55,7 +55,9 @@ $base = [DateTime]::SpecifyKind($base, 'Utc')
 [int32]$ts = ([DateTime]::UtcNow - $base).TotalSeconds
 
 $existingWebhooks = Get-AutoObject -objectType Webhooks
+Write-Host "Existing webhooks: $($existingWebhooks.Count)"
 $existingRunbooks = Get-AutoObject -objectType Runbooks
+write-host "Existing runbooks: $($existingRunbooks.Count)"
 
 $managedWebhooks = @()
 $newWebhooks = @()
@@ -63,6 +65,7 @@ $newWebhooks = @()
 $definitions = @(Get-DefinitionFiles -FileType WebHooks)
 foreach($def in $definitions)
 {
+    Write-Host "Processing webhook for runbook: $($def.RunbookName)"
     $existingWebhook = $existingWebhooks | Where-Object{$_.properties.runbook.name -eq $def.RunbookName}
     $needsNewWebhook = $true
     foreach($wh in $existingWebhook)
@@ -118,6 +121,7 @@ foreach($def in $definitions)
         }
 
         $Expires = [DateTime]::UtcNow + [Timespan]::Parse($def.Expiration)
+        Write-Host "Adding new webhook for runbook $($def.RunbookName)"
         $webhook = Add-AutoWebhook `
             -Name "$($def.NamePrefix)-$ts" `
             -RunbookName $def.RunbookName `
