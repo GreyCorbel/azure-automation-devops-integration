@@ -119,7 +119,22 @@ if($FullSync)
         }
     }
 }
-
+#This is for PS5 and its JSON serialization specifics
+function Get-SerializedData
+{
+    param($data)
+    process
+    {
+        switch($data.count)
+        {
+            0 {'[]'; break;}
+            1 {"[$($data | ConvertTo-Json -Compress)]"; break;}
+            default {$data | ConvertTo-Json -Compress; break;}
+        }
+    }
+}
 #set manageWebHooks as task variable
-Write-Host "##vso[task.setvariable variable=managedWebhooks;issecret=true]$managedWebhooks"
-Write-Host "##vso[task.setvariable variable=newWebhooks;issecret=true]$newWebhooks"
+$variableValue = Get-SerializedData -data $managedWebhooks
+Write-Host "##vso[task.setvariable variable=managedWebhooks;issecret=true]$variableValue"
+$variableValue = Get-SerializedData -data $newWebhooks
+Write-Host "##vso[task.setvariable variable=newWebhooks;issecret=true]$variableValue"
