@@ -128,8 +128,8 @@ function Get-SerializedData
         switch($data.count)
         {
             0 {'[]'; break;}
-            1 {"[$($data | ConvertTo-Json -Compress)]"; break;}
-            default {$data | ConvertTo-Json -Compress; break;}
+            1 {"[$($data | ConvertTo-Json -Compress -Depth 9)]"; break;}
+            default {$data | ConvertTo-Json -Compress -Depth 9; break;}
         }
     }
 }
