@@ -222,10 +222,19 @@ Function Remove-AutoObject
     begin
     {
         $headers = Get-AutoAccessToken -AsHashTable
-        $uri = "https://management.azure.com$AutomationAccountResourceId/$objectType/$Name`?api-version=2023-11-01"
+        $uri = "https://management.azure.com$AutomationAccountResourceId/$objectType/$Name"
     }
     process
     {
+        if($objectType -ne 'Webhooks')
+        {
+            $uri = "$uri`?api-version=2023-11-01"
+        }
+        else {
+            #webhooks not available in 2023-11-01 (yet?)
+            $uri = "$uri`?api-version=2018-06-30"
+        }
+
         write-verbose "Sending DELETE to $Uri"
         Invoke-RestMethod -Method Delete `
         -Uri $Uri `
