@@ -176,6 +176,15 @@ function Get-AutoObject
     }
     process
     {
+        if($objectType -ne 'Webhooks')
+        {
+            $uri = "$uri`?api-version=2023-11-01"
+        }
+        else {
+            #webhooks not available in 2023-11-01 (yet?)
+            $uri = "$uri`?api-version=2018-06-30"
+        }
+
         $pageUri = $uri
         do
         {
