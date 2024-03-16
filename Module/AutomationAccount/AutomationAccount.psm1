@@ -172,7 +172,6 @@ function Get-AutoObject
         {
             $uri = "$uri/$Name"
         }
-        $uri = "$uri`?api-version=2023-11-01"
     }
     process
     {
