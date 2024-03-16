@@ -68,13 +68,21 @@ foreach($def in $definitions)
     foreach($wh in $existingWebhook)
     {
         $ValidityOverlap = [Timespan]::Parse($def.Overlap)
-        if($wh.properties.expiryTime - $ValidityOverlap -gt [DateTime]::Now)
+        if($wh.properties.expiryTime -is [string])
+        {
+            $expiration = [DateTime]::Parse($wh.properties.expiryTime)
+        }
+        else
+        {
+            $expiration = $wh.properties.expiryTime
+        }
+        if(($expiration - $ValidityOverlap) -gt [DateTime]::Now)
         {
             $needsNewWebhook = $false
             $managedWebhooks+=$wh
             continue
         }
-        if($wh.properties.expiryTime -gt [DateTime]::Now)
+        if($existingWebhooks -gt [DateTime]::Now)
         {
             #about to expire, but not expired yet
             $managedWebhooks+=$wh
