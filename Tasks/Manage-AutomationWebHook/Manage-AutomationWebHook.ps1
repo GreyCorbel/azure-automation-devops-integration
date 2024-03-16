@@ -92,14 +92,30 @@ foreach($def in $definitions)
             Write-Warning "Runbook $($def.runbookName) does not exist --> skipping webhook"
             continue
         }
+        $runOn = ''
+        $params = [PSCustomObject]@{}
+        if(-not [string]::IsNullOrEmpty($def.Settings))
+        {
+            $settingsFile = Get-FileToProcess -FileType Webhooks -FileName $def.Settings
+            if([string]::IsnullOrEmpty($settingsFile))
+            {
+                write-warning "Missing setting file $($def.Settings) --> skipping"
+                continue
+            }
+            Write-Host "Settings file found: $settingsFile"
+
+            $setting = get-content $settingsFile -Encoding utf8 | ConvertFrom-Json -Depth 9
+            if((-not [string]::IsNullOrEmpty($setting.RunOn) -and ($setting.RunOn -ne 'Azure'))) {$runOn = $setting.RunOn}
+            if(-not [string]::IsNullOrEmpty($setting.Parameters)) {$params = $setting.Parameters}
+        }
 
         $Expires = [DateTime]::UtcNow + [Timespan]::Parse($def.Expiration)
         $webhook = Add-AutoWebhook `
             -Name "$($def.NamePrefix)-$ts" `
             -RunbookName $def.RunbookName `
-            -RunOn $(if($def.runOn -eq 'Azure' -or [string]::IsnullOrEmpty($def.runOn)) {''} else {$def.runOn}) `
+            -RunOn $runOn `
             -ExpiresOn $Expires `
-            -Parameters $def.Parameters
+            -Parameters $params
         $managedWebhooks+=$webhook
         $newWebhooks += $webhook
         continue; 
