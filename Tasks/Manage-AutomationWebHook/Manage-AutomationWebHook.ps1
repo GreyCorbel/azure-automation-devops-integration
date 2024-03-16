@@ -115,7 +115,7 @@ foreach($def in $definitions)
             }
             Write-Host "Settings file found: $settingsFile"
 
-            $setting = get-content $settingsFile -Encoding utf8 | ConvertFrom-Json -Depth 9
+            $setting = get-content $settingsFile -Encoding utf8 | ConvertFrom-Json
             if((-not [string]::IsNullOrEmpty($setting.RunOn) -and ($setting.RunOn -ne 'Azure'))) {$runOn = $setting.RunOn}
             if(-not [string]::IsNullOrEmpty($setting.Parameters)) {$params = $setting.Parameters}
         }
