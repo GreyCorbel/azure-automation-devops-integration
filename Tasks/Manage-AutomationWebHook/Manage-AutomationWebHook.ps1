@@ -58,6 +58,8 @@ $existingWebhooks = Get-AutoObject -objectType Webhooks
 $existingRunbooks = Get-AutoObject -objectType Runbooks
 
 $managedWebhooks = @()
+$newWebhooks = @()
+
 $definitions = @(Get-DefinitionFiles -FileType WebHooks)
 foreach($def in $definitions)
 {
@@ -99,7 +101,7 @@ foreach($def in $definitions)
             -ExpiresOn $Expires `
             -Parameters $def.Parameters
         $managedWebhooks+=$webhook
-        $webhook
+        $newWebhooks += $webhook
         continue; 
     }
 }
@@ -119,4 +121,5 @@ if($FullSync)
 }
 
 #set manageWebHooks as task variable
-Write-Host "##vso[task.setvariable variable=managedWebhooks;]$managedWebhooks"
+Write-Host "##vso[task.setvariable variable=managedWebhooks;issecret=true]$managedWebhooks"
+Write-Host "##vso[task.setvariable variable=newWebhooks;issecret=true]$newWebhooks"
