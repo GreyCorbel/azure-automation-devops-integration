@@ -1,0 +1,6 @@
+{
+    "Name":  "ManageModulesConfig",
+    "Description":  "Dsc configuration to ensure sync of modules between automation account and hybrid workers.",
+    "Implementation":  "Prepare-ManageModulesConfig.ps1",
+    "AutoCompile":  true
+}

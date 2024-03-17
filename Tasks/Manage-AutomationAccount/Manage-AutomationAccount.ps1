@@ -13,10 +13,22 @@ $storageAccountContainer = Get-VstsInput -Name 'storageAccountContainer'
 $fullSync = Get-VstsInput -Name 'fullSync'
 $reportMissingImplementation = Get-VstsInput -Name 'reportMissingImplementation'
 $verboseLog = Get-VstsInput -Name 'verbose'
+$helperHybridWorkerModuleSync =  Get-VstsInput -Name 'helperHybridWorkerModuleSync'
+
+#load Automation account REST wrapper
+$parentDirectory = Split-Path -Path $PSScriptRoot -Parent
+$grandparentDirectory = Split-Path -Path $parentDirectory -Parent
 
 if($verboseLog)
 {
     $VerbosePreference = 'Continue'
+}
+
+if($helperHybridWorkerModuleSync)
+{
+    $blobNameModulesJson = "required-modules.json"
+    $manageModulesPs1 = "Manage-Modules.ps1"
+    $manageModulesPs1Path = "$($grandparentDirectory)\Helpers\HybridWorkerModuleSync\$($manageModulesPS1)"
 }
 #load VstsTaskSdk module
 Write-Host "Installing dependencies..."
@@ -26,9 +38,6 @@ Install-Module -Name VstsTaskSdk -Force -Scope CurrentUser -AllowClobber
 Install-Module AadAuthenticationFactory -Force -Scope CurrentUser
 Write-Host "Installation succeeded!"
 
-#load Automation account REST wrapper
-#$parentDirectory = Split-Path -Path $PSScriptRoot -Parent
-#$grandparentDirectory = Split-Path -Path $parentDirectory -Parent
 Write-Host "Importing internal PS modules..."
 $modulePath = [System.IO.Path]::Combine($PSScriptRoot,'Module','AutomationAccount')
 Write-Host "module path: $modulePath"
@@ -107,6 +116,35 @@ if (Check-Scope -Scope $scope -RequiredScope 'Variables') {
 #endregion Variables
 
 #region Modules
+function Upload-FileToBlob
+{
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$storageAccount,
+        [Parameter(Mandatory = $true)]
+        [string]$storageContainerName,
+        [Parameter(Mandatory = $true)]
+        [string]$filePath,
+        [Parameter(Mandatory = $true)]
+        [string]$storageBlobName
+    )
+    
+    begin
+    {
+        $h = Get-AutoAccessToken -ResourceUri 'https://storage.azure.com/.default' -AsHashTable
+        $h['x-ms-version'] = '2023-11-03'
+        $h['x-ms-date'] = [DateTime]::UtcNow.ToString('R')
+        $h['x-ms-blob-type'] = 'BlockBlob'
+    }
+    process
+    {
+        $rsp =Invoke-RestMethod `
+        -Uri "https://$($storageAccount).blob.core.windows.net/$($storageContainerName)/$($storageBlobName)" `
+        -Headers $h `
+        -InFile $filePath `
+        -Method Put
+    }
+}
 function Upload-ModulesForHybridWorker
 {
     param(
@@ -115,7 +153,7 @@ function Upload-ModulesForHybridWorker
         [Parameter(Mandatory = $true)]
         [string]$storageContainerName,
         [Parameter(Mandatory = $false)]
-        [string]$storageBlobName = "required-modules.json",
+        [string]$storageBlobName,
         [Parameter(Mandatory = $true)]
         [Array]$body
     )
@@ -359,16 +397,28 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
         {
             continue
         }
-        # process modules for hybrid workers
-        $requiredModules = Get-ModulesForHybridWorker -definitions $definitions `
-            -storageAccount $storageAccount `
-            -storageAccountContainer $storageAccountContainer
+        # using solution for sync of powershell modules between automation account and hybrid workers - if you wish to not use the solution set $helperHybridWorkerModuleSync = $false
+        if($helperHybridWorkerModuleSync)
+        {
+            # process modules for hybrid workers
+            $requiredModules = Get-ModulesForHybridWorker -definitions $definitions `
+                -storageAccount $storageAccount `
+                -storageAccountContainer $storageAccountContainer
 
-        # upload definition file for hybrid workers
-        Upload-ModulesForHybridWorker `
-            -storageAccount $storageAccount `
-            -storageContainerName $storageAccountContainer `
-            -body $requiredModules
+            # upload definition file for hybrid workers to storage Account
+            Upload-ModulesForHybridWorker `
+                -storageAccount $storageAccount `
+                -storageContainerName $storageAccountContainer `
+                -body $requiredModules `
+                -storageBlobName $blobNameModulesJson
+            
+            # upload Manage-Modules.ps1 to storage account
+            Upload-FileToBlob `
+                -storageAccount $storageAccount `
+                -storageContainerName $storageAccountContainer `
+                -filePath $manageModulesPS1Path `
+                -storageBlobName $manageModulesPS1
+        }
 
     }
     if($FullSync)
@@ -606,7 +656,7 @@ if (Check-Scope -Scope $scope -RequiredScope 'Configurations') {
             -Description $def.Description `
             -AutoCompile:$def.AutoCompile `
             -Parameters $def.Parameters `
-            -ParameterValues $def.$ParameterValues
+            -ParameterValues $def.ParameterValues
         if($def.autoCompile)
         {
             #we received compilation job here
@@ -616,6 +666,21 @@ if (Check-Scope -Scope $scope -RequiredScope 'Configurations') {
     if($CompilationJobs.Count -gt 0)
     {
         Wait-AutoObjectProcessing -Name $compilationJobs.Name -objectType Compilationjobs | select-object name, @{N='provisioningState'; E={$_.properties.provisioningState}} | Out-String
+        # get config to assign
+        $configToAssign = Get-DscNodeConfiguration -Subscription $subscription -ResourceGroup $resourceGroup -AutomationAccount $automationAccount|`
+        Where-object{$_.properties.configuration.name -eq  $CompilationJobs.properties.configuration.name}
+    
+        # get nodes 
+        $nodes = Get-DscNodes -Subscription $subscription -ResourceGroup $resourceGroup -AutomationAccount $automationAccount
+
+        # assign compiled config to node
+        foreach($node in $nodes)
+        {
+            Write-Verbose "Assigning $($configToassign.name) to $($node.name)"
+            $rslt= Assign-DscNodeConfig -Subscription $subscription -ResourceGroup $resourceGroup -AutomationAccount $automationAccount -NodeConfigId $configToAssign.name -NodeName $node.properties.nodeId
+            Write-Verbose "Configuration assigned"
+            $rslt|fl
+        }
     }
     if($fullSync)
     {
