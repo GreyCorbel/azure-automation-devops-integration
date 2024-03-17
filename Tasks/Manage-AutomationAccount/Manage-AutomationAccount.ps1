@@ -15,6 +15,10 @@ $reportMissingImplementation = Get-VstsInput -Name 'reportMissingImplementation'
 $verboseLog = Get-VstsInput -Name 'verbose'
 $helperHybridWorkerModuleSync =  Get-VstsInput -Name 'helperHybridWorkerModuleSync'
 
+#load Automation account REST wrapper
+$parentDirectory = Split-Path -Path $PSScriptRoot -Parent
+$grandparentDirectory = Split-Path -Path $parentDirectory -Parent
+
 if($verboseLog)
 {
     $VerbosePreference = 'Continue'
@@ -34,9 +38,6 @@ Install-Module -Name VstsTaskSdk -Force -Scope CurrentUser -AllowClobber
 Install-Module AadAuthenticationFactory -Force -Scope CurrentUser
 Write-Host "Installation succeeded!"
 
-#load Automation account REST wrapper
-#$parentDirectory = Split-Path -Path $PSScriptRoot -Parent
-#$grandparentDirectory = Split-Path -Path $parentDirectory -Parent
 Write-Host "Importing internal PS modules..."
 $modulePath = [System.IO.Path]::Combine($PSScriptRoot,'Module','AutomationAccount')
 Write-Host "module path: $modulePath"
