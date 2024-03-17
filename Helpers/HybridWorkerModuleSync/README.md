@@ -23,7 +23,7 @@ Note: If you use Azure VM this step is not required.
   - Run the script in elevated prompt on your server - make sure you allow all outbound URLs or you use proxy 
 
 
-2) To register Server to DSC: Run .\Register-HybridWorkerToDsc.ps1 script in elevated prompt on your HybridWorker, that allows you to register your server into Dsc. Update lines below. You can get your URL and key from AutomationAccount\Keys. 
+2) To register Server to DSC: Run .\Register-HybridWorkerToDsc.ps1 script in elevated prompt on your HybridWorker, that will register your server into Dsc. Update lines below. You can get your URL and key from AutomationAccount\Keys. 
 ```Powershell
      RegistrationUrl = 'REGISTRATION_URL';
      RegistrationKey = 'REGISTRATION_KEY';
@@ -42,7 +42,7 @@ Once this step is done, you can see your worker registered in Automation Account
 
 3) To create Managed Identity
 
-Note: Arc Connect machine do not provide an option to use system assigned identity, therefore we have to create user assigned identity, by following these steps: 
+Note: Arc Connect machine do not provide an option to use system assigned managed identity, therefore we have to create user assigned managed identity, by following these steps: 
 - Search for Managed Identities
 - Click Create
 - Select Resource group to which you want to assign managed identity
@@ -64,10 +64,9 @@ Note: Arc Connect machine do not provide an option to use system assigned identi
 1) Prepare Config Script
   - Under Helpers folder - find HybridWorkerModulesSync folder and open the script Prepare-ManageModulesConfig.ps1
   - Update lines below with your storage account and container details.
-  - You can also update other variables like where the script will be store locally on your hybrid worker. 
-  - Script also support usage of Azure VM instead of Arc Connected machine (e.g. for testing purposes)
+  - You can also update other variables like where the script will be stored locally on your hybrid worker. 
+  - Script also supports usage of Azure VM instead of Arc Connected machine (e.g. for testing purposes)
   - Make sure that $manageModulesScriptName is same as name of the script inside folder HybridWorkerModuleSync 
-
   ``` PowerShell
   param(
         $script:blobNameModulesJson = 'required-modules.json',
@@ -80,7 +79,8 @@ Note: Arc Connect machine do not provide an option to use system assigned identi
     )
 
   ```
-2)  Move the script Prepare-ManageModulesConfig.ps1 to YOUR_PROJECT_FOLDER\Source\Common\Configurations
+
+2) Move the script Prepare-ManageModulesConfig.ps1 to YOUR_PROJECT_FOLDER\Source\Common\Configurations
 3) Under Helpers Folder - find ManageModules.json file and move file to YOUR_PROJECT_FOLDER\Definitions\Configurations
 ```json
 {
@@ -90,7 +90,17 @@ Note: Arc Connect machine do not provide an option to use system assigned identi
     "AutoCompile":  true
 }
 ```
-4) Switch task parameter 'helperHybridWorkerModuleSyncof' of your Automation Account to true. 
+4) Switch task parameter 'helperHybridWorkerModuleSync' of your Automation Account to true and set path to Manage-Modules.ps1 script if you move it outside of Helpers\HybridWorkerModulesSync folder. All others related variables are these: 
+
+```POwershell
+if($helperHybridWorkerModuleSync)
+{
+    $blobNameModulesJson = "required-modules.json"
+    $manageModulesPs1 = "Manage-Modules.ps1"
+    $manageModulesPs1Path = "$($grandparentDirectory)\Helpers\HybridWorkerModuleSync\$($manageModulesPS1)"
+}
+```
+
 5) Deploy your code
 6) You are done and good to go
  
@@ -100,12 +110,12 @@ Note: Arc Connect machine do not provide an option to use system assigned identi
   - Configuration from YOUR_PROJECT_FOLDER\Source\Common\Configurations - will be compiled and uploaded to your DSC
   - Configuration will be assigned to each Node (HybridWorker) you have registered to your automation account
   - Json file with all the modules from your automation account will be created and stored to your Storage Account
-  - Manage-Module.ps1 will be copied to your Storage Account
+  - Manage-Modules.ps1 will be copied to your Storage Account
 
 After that: 
 
   - Hybrid Worker will regularly check if there any changes to modules and perform them
-  - You can track the status of your module instalaltion on each worker in your storage account container or directly under DSC blade in AutomationAccount.
+  - You can track the status of your module installation on each worker in your storage account container or directly under DSC blade in AutomationAccount.
   
   Example when worker is compliant 
   ``` json
@@ -136,7 +146,7 @@ After that:
   },
  ```
 ## Other functionalities
-  - You can add your own module repository on top of Powershell Gallery if you wish by adding following hash table into Manage-Module.ps1 script
+  - You can add your own module repository on top of Powershell Gallery if you wish by adding following hash table into Manage-Module.ps1 script (section is by default commented out)
   ```Powershell
   $script:repositories = @{
     "NAME_OF_REPO"  = "URL_TO_REPO"
