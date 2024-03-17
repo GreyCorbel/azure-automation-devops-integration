@@ -233,6 +233,7 @@ Configuration ManageModulesConfig {
                                     }
                                 }
                             }
+                            $ps7Path = Test-PSInstallation -executable pwsh
                             Write-Verbose "Executing $($ps7path) -File $using:scriptPath -blobNameModulesJson $using:blobNameModulesJson -storageAccountContainer $using:storageAccountContainer -storageAccount $using:storageAccount -machineType $using:machineType"
                             &"$($ps7path)" -File $using:scriptPath -blobNameModulesJson $using:blobNameModulesJson -storageAccountContainer $using:storageAccountContainer -storageAccount $using:storageAccount -machineType $using:machineType 
 
