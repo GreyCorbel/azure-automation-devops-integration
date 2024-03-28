@@ -76,14 +76,14 @@ foreach($entity in $supportedEntities)
     {
         'Runbooks' {
 
-            $def = New-RunbookDefinition -Name "Sample runbook" -Implementation "sample_runbook.ps1" -Type PowerShell -RuntimeVersion '7.2' -AsJson
+            $def = New-RunbookDefinition -Name "Sample runbook" -Implementation "sample_runbook.ps1" -Type PowerShell -RuntimeVersion '7.2' -DoNotPublish -AsJson
             $DefContent = $defContent.Replace('{}', $def)
             New-Item -Path "$ProjectDir/Definitions/$entity" -Name 'readme.md' -ItemType File -Value $DefContent -Force | Out-Null
             New-Item -Path "$ProjectDir/Source/$EnvironmentName/$entity" -Name 'readme.md' -ItemType File -Value $SrcContent -Force | Out-Null
             break;
         }
         'Variables' {
-            $def = New-VariableDefinition -Name "Sample variable" -Content "sample_variable.txt" -Description "Description of variable" -AsJson
+            $def = New-VariableDefinition -Name "Sample variable" -Content "sample_variable.txt" -Description "Description of variable" -Encrypted $true -AsJson
             $DefContent = $defContent.Replace('{}', $def)
             New-Item -Path "$ProjectDir/Definitions/$entity" -Name 'readme.md' -ItemType File -Value $DefContent -Force | Out-Null
             $SrcContent += "__Note__: Currently, only string variables are supported. However variable may contain JSOn string to provide runbook with structured data.  `n"
@@ -91,7 +91,7 @@ foreach($entity in $supportedEntities)
             break;
         }
         'Schedules' {
-            $def = New-ScheduleDefinition -Name 'Sample schedule' -StartTime '07:00' -Interval 15 -Frequency Minute -Description "Schedule for 15-minute interval" -AsJson
+            $def = New-ScheduleDefinition -Name 'Sample schedule' -StartTime '07:00' -Interval 15 -Frequency Minute -MonthDays 1,15,28 -WeekDays Monday,Wednesday -Description "Schedule for 15-minute interval" -AsJson
             $DefContent = $defContent.Replace('{}', $def)
             New-Item -Path "$ProjectDir/Definitions/$entity" -Name 'readme.md' -ItemType File -Value $DefContent -Force | Out-Null
             break;
@@ -116,7 +116,7 @@ foreach($entity in $supportedEntities)
             break;
         }
         'Webhooks' {
-            $def = New-WebhookDefinition -NamePrefix "Sample" -RunbookName "Sample Runbook" -RunOn MyHybridWorkerGroup -Overlap '14.00:00:00' -AsJson
+            $def = New-WebhookDefinition -NamePrefix "Sample" -RunbookName "Sample Runbook" -RunOn MyHybridWorkerGroup -Overlap '14.00:00:00' -SupportedRequestTypes CosmosLite -AsJson
             $DefContent = $defContent.Replace('{}', $def)
             New-Item -Path "$ProjectDir/Definitions/$entity" -Name 'readme.md' -ItemType File -Value $DefContent -Force | Out-Null
             break;

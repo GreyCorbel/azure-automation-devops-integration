@@ -626,7 +626,7 @@ Function Add-AutoPowershell7Runbook
         [switch]
         $WaitForCompletion,
         [Parameter()]
-        [string]$Location = "westeurope",
+        [string]$Location,
         [Parameter()]
         [string]$AutomationAccountResourceId = $script:AutomationAccountResourceId
     )
@@ -641,6 +641,7 @@ Function Add-AutoPowershell7Runbook
     process
     {
         try {
+            if([string]::IsNullOrEmpty($location)) {$location = $script:accountLocation}
             write-verbose "Modifying runbook on $runbookUri"
             $payload = @{
                 name = $Name

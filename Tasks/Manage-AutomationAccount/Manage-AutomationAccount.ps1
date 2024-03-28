@@ -468,7 +468,8 @@ if (Check-Scope -Scope $scope -RequiredScope 'Runbooks') {
                     -Type  $runbook.Type `
                     -Content (Get-Content -Path $ImplementationFile -Raw) `
                     -Description $runbook.Description `
-                    -AutoPublish:$runbook.AutoPublish
+                    -AutoPublish:$runbook.AutoPublish `
+                    -Location $runbook.Location
                 break;
             }
             '7.2' {
@@ -476,7 +477,8 @@ if (Check-Scope -Scope $scope -RequiredScope 'Runbooks') {
                     -Name $runbook.Name `
                     -Content (Get-Content -Path $ImplementationFile -Raw) `
                     -Description $runbook.Description `
-                    -AutoPublish:$runbook.AutoPublish
+                    -AutoPublish:$runbook.AutoPublish `
+                    -Location $runbook.Location
                 break;
             }
         }
