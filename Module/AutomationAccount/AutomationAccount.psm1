@@ -1,15 +1,36 @@
 function Initialize-AadAuthenticationFactory 
 {
+    [CmdletBinding()]
     param
     (
+        [Parameter(Mandatory, ParameterSetName = 'ServicePrincipal')]
         [string]$servicePrincipalId,
+        [Parameter(Mandatory, ParameterSetName = 'ServicePrincipal')]
         [string]$servicePrincipalKey,
-        [string]$tenantId
+        [Parameter(Mandatory)]
+        [string]$tenantId,
+        [Parameter(Mandatory, ParameterSetName = 'Interactive')]
+        [string]$AuthMode
     )
     process
     {
         #create authnetication factory and store it into the script variable
-        $script:aadAuthenticationFactory = New-AadAuthenticationFactory -TenantId $tenantId -ClientId $servicePrincipalId -ClientSecret $servicePrincipalKey
+        switch($PSCmdlet.ParameterSetName)
+        {
+            'ServicePrincipal' {
+                $script:aadAuthenticationFactory = New-AadAuthenticationFactory `
+                    -TenantId $tenantId `
+                    -ClientId $servicePrincipalId `
+                    -ClientSecret $servicePrincipalKey
+                break;
+            }
+            'Interactive' {
+                $script:aadAuthenticationFactory = New-AadAuthenticationFactory `
+                    -TenantId $tenantId `
+                    -AuthMode $AuthMode
+                break;
+            }
+        }
     }
 }
 
