@@ -122,15 +122,15 @@ foreach($def in $definitions)
 
         $Expires = [DateTime]::UtcNow + [Timespan]::Parse($def.Expiration)
         $SupportedRequestTypes = $def.SupportedRequestTypes
-
-        Write-Host "Adding new webhook for runbook $($def.RunbookName)"
+        $webhookName = "$($def.NamePrefix)-$ts"
+        Write-Host "Adding new webhook for runbook $($def.RunbookName) with name $webhookName"
         $webhook = Add-AutoWebhook `
             -Name "$($def.NamePrefix)-$ts" `
             -RunbookName $def.RunbookName `
             -RunOn $runOn `
             -ExpiresOn $Expires `
             -Parameters $params
-        $webhook | Add-Member -MemberType NoteProperty -Name $SupportedRequestTypes -Value $SupportedRequestTypes
+        $webhook | Add-Member -MemberType NoteProperty -Name SupportedRequestTypes -Value $SupportedRequestTypes
         $managedWebhooks+=$webhook
         $newWebhooks += $webhook
         continue; 
