@@ -20,10 +20,28 @@ if($verboseLog)
 }
 #load VstsTaskSdk module
 Write-Host "Installing dependencies..."
-Install-Module -Name VstsTaskSdk -Force -Scope CurrentUser -AllowClobber
+if($null -eq (Get-Module -Name VstsTaskSdk -ListAvailable))
+{
+    Write-Host "VstsTaskSdk module not found, installing..."
+    Install-Module -Name VstsTaskSdk -Force -Scope CurrentUser -AllowClobber
+}
+else
+{
+    Write-Host "VstsTaskSdk module found, importing..."
+    Import-Module -Name VstsTaskSdk -Force
+}
 
 #load AadAuthentiacationFactory
-Install-Module AadAuthenticationFactory -Force -Scope CurrentUser
+if($null -eq (Get-Module -Name AadAuthenticationFactory -ListAvailable))
+{
+    Write-Host "AadAuthenticationFactory module not found, installing..."
+    Install-Module -Name AadAuthenticationFactory -Force -Scope CurrentUser
+}
+else
+{
+    Write-Host "AadAuthenticationFactory module found, importing..."
+    Import-Module -Name AadAuthenticationFactory -Force
+}
 Write-Host "Installation succeeded!"
 
 #load Automation account REST wrapper
