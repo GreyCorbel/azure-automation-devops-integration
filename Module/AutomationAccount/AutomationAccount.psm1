@@ -375,9 +375,21 @@ Function Add-AutoSchedule
     {
         try {
             write-verbose "Sending content to $Uri"
-            $start = [DateTime]::UtcNow.Date + $startTime
+            switch($Frequency)
+            {
+                {$_ -in @('Hour','Minute')} {
+                    $ts = [DateTime]::UtcNow
+                    $start = $ts.Date.AddHours($ts.Hour).AddHours(1) + $startTime
+                    break;
+                }
+                default {
+                    $start = [DateTime]::UtcNow.Date + $startTime
+                    if($start -lt [DateTime]::UtcNow.AddMinutes(6)) {$start = $start.AddDays(1)}
+                    break;
+                }
+            }
             
-            if($start -lt [DateTime]::UtcNow.AddMinutes(6)) {$start = $start.AddDays(1)}
+            
             $payload = @{
                 name = $Name
                 properties = @{
