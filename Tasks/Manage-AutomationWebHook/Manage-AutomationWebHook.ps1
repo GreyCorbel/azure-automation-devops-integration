@@ -1,15 +1,9 @@
 #load VstsTaskSdk module
 Write-Host "Installing dependencies..."
-Write-Host "Installing dependencies..."
 if($null -eq (Get-Module -Name VstsTaskSdk -ListAvailable))
 {
     Write-Host "VstsTaskSdk module not found, installing..."
     Install-Module -Name VstsTaskSdk -Force -Scope CurrentUser -AllowClobber
-}
-else
-{
-    Write-Host "VstsTaskSdk module found, importing..."
-    Import-Module -Name VstsTaskSdk -Force
 }
 
 #load AadAuthentiacationFactory
@@ -17,11 +11,6 @@ if($null -eq (Get-Module -Name AadAuthenticationFactory -ListAvailable))
 {
     Write-Host "AadAuthenticationFactory module not found, installing..."
     Install-Module -Name AadAuthenticationFactory -Force -Scope CurrentUser
-}
-else
-{
-    Write-Host "AadAuthenticationFactory module found, importing..."
-    Import-Module -Name AadAuthenticationFactory -Force
 }
 Write-Host "Installation succeeded!"
 
