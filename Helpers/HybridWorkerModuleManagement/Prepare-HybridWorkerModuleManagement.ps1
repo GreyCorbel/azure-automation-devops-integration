@@ -3,7 +3,7 @@
 Script to create DSC configuration for module management and upload HybridWorkerModuleManagement.ps1 script
 #>
 
-Configuration ManageModulesConfig {
+Configuration HybridWorkerModuleManagement {
     param(
         [string]
         $blobNameModulesJson,
