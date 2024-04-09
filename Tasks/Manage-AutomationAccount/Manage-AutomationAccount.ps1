@@ -13,7 +13,7 @@ $storageAccountContainer = Get-VstsInput -Name 'storageAccountContainer'
 $fullSync = Get-VstsInput -Name 'fullSync'
 $reportMissingImplementation = Get-VstsInput -Name 'reportMissingImplementation'
 $verboseLog = Get-VstsInput -Name 'verbose'
-$helperHybridWorkerModuleSync = Get-VstsInput -Name 'helperHybridWorkerModuleSync'
+$helperHybridWorkerModuleManagement = Get-VstsInput -Name 'helperHybridWorkerModuleManagement'
 
 #load Automation account REST wrapper
 $parentDirectory = Split-Path -Path $PSScriptRoot -Parent
@@ -23,10 +23,10 @@ if ($verboseLog) {
     $VerbosePreference = 'Continue'
 }
 
-if ($helperHybridWorkerModuleSync) {
+if ($helperHybridWorkerModuleManagement) {
     $blobNameModulesJson = "required-modules.json"
-    $manageModulesPs1 = "Manage-Modules.ps1"
-    $manageModulesPs1Path = "$($grandparentDirectory)\Helpers\HybridWorkerModuleSync\$($manageModulesPS1)"
+    $manageModulesPs1 = "HybridWorkerModuleManagement.ps1"
+    $manageModulesPs1Path = "$($grandparentDirectory)\Helpers\HybridWorkerModuleManagement\$($manageModulesPS1)"
 }
 #load VstsTaskSdk module
 Write-Host "Installing dependencies..."
@@ -360,8 +360,8 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
         if ([string]::IsNullOrEmpty($StorageAccount) -or [string]::IsNullOrEmpty($storageAccountContainer)) {
             continue
         }
-        # using solution for sync of powershell modules between automation account and hybrid workers - if you wish to not use the solution set $helperHybridWorkerModuleSync = $false
-        if ($helperHybridWorkerModuleSync) {
+        # using solution for sync of powershell modules between automation account and hybrid workers - if you wish to not use the solution set $helperHybridWorkerModuleManagement = $false
+        if ($helperHybridWorkerModuleManagement) {
             # process modules for hybrid workers
             $requiredModules = Get-ModulesForHybridWorker -definitions $definitions `
                 -storageAccount $storageAccount `
@@ -374,7 +374,7 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
                 -body $requiredModules `
                 -storageBlobName $blobNameModulesJson
             
-            # upload Manage-Modules.ps1 to storage account
+            # upload HybridWorkerModuleManagement.ps1 to storage account
             Upload-FileToBlob `
                 -storageAccount $storageAccount `
                 -storageContainerName $storageAccountContainer `

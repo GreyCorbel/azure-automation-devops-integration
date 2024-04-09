@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-This script is created for purpose of PowerShell Module Sync between Automation Account and hybrid workers.
+This script is created for purpose of PowerShell Module management for hybrid workers .
 .DESCRIPTION
 Script works in the following way: 
     1) File with required modules is created as part of deployment and stored to Azure Storage Account

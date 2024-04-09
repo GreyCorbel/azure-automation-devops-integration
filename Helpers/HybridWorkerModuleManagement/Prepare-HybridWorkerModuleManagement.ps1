@@ -1,9 +1,6 @@
 <#
 .SYNOPSIS
-This script to create DSC configuration and upload Manage-Modules.ps1 script
-1) Script Manage-Modules.ps1 
-It downloads ps1 file from defined AzureStorage Location as well as create scheduled task for hybrid worker module management. 
-On top of these two main actions, you can add as many other actions as you need for management of your hybrid worker.
+Script to create DSC configuration for module management and upload HybridWorkerModuleManagement.ps1 script
 #>
 
 Configuration ManageModulesConfig {

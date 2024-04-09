@@ -64,8 +64,8 @@ Note: Arc Connect machine do not provide an option to use system assigned manage
   - Finalize the role assignment by clicking on Next or directly click on Review + assign on the bottom of the
 
 ## Config preparation
-1) Prepare Definition file ManageModules.json
-  - Under Helpers folder - find HybridWorkerModulesSync folder and open ManageModules.json file.
+1) Prepare Definition file HybridWorkerModuleManagement.json
+  - Under Helpers folder - find HybridWorkerModulesSync folder and open HybridWorkerModuleManagement.json file.
   - Update lines below with your storage account ($storageAccount) and container ($storageAccountContainer) details.
   - You can also (optionally) update other variables like: 
     -  "$workerLocalPath" --> place where the script will be stored locally on your hybrid worker. 
@@ -80,33 +80,25 @@ Note: Arc Connect machine do not provide an option to use system assigned manage
         "workerLocalPath": "C:\\ManageModules",
         "runTimeVersion": "Both", 
         "blobNameModulesJson": "required-modules.json",
-        "manageModulesScriptName": "Manage-Modules.ps1",
+        "manageModulesScriptName": "HybridWorkerModuleManagement.ps1",
         "machineType": "arc" 
     }
 
   ```
 
-2) Move the script Prepare-ManageModulesConfig.ps1 to YOUR_PROJECT_FOLDER\Source\Common\Configurations
-3) Move definition file ManageModules.json file to YOUR_PROJECT_FOLDER\Definitions\Configurations
-```json
-{
-    "Name":  "ManageModulesConfig",
-    "Description":  "Dsc configuration to ensure sync of modules between automation account and hybrid workers.",
-    "Implementation":  "Prepare-ManageModulesConfig.ps1",
-    "AutoCompile":  true
-}
-```
-4) Switch task parameter 'helperHybridWorkerModuleSync' of your Automation Account to true. All related variables inside Manage-AutomationAccount.ps1 are these: 
+2) Move the script Prepare-HybridWorkerModuleManagement.ps1 to YOUR_PROJECT_FOLDER\Source\Common\Configurations
+3) Move definition file HybridWorkerModuleManagement.json file to YOUR_PROJECT_FOLDER\Definitions\Configurations
+4) Switch task parameter 'helperHybridWorkerModuleManagement' of your Automation Account to true. All related variables inside Manage-AutomationAccount.ps1 are these: 
 
-```POwershell
-if($helperHybridWorkerModuleSync)
+```PowerShell
+
+if($helperHybridWorkerModuleManagement)
 {
     $blobNameModulesJson = "required-modules.json"
-    $manageModulesPs1 = "Manage-Modules.ps1"
-    $manageModulesPs1Path = "$($grandparentDirectory)\Helpers\HybridWorkerModuleSync\$($manageModulesPS1)"
+    $manageModulesPs1 = "HybridWorkerModuleManagement.ps1"
+    $manageModulesPs1Path = "$($grandparentDirectory)\Helpers\HybridWorkerModuleManagement\$($manageModulesPS1)"
 }
 ```
-
 5) Define all modules you would like to install under YOUR_PROJECT_FOLDER\Definitions\Configurations (json file pre module) e.g.
 ```json
 {
@@ -118,7 +110,7 @@ if($helperHybridWorkerModuleSync)
 }
 ```
 
-6) Deploy your solutin (by running Manage-AutomationAccount.ps1)
+6) Deploy your solution (by running Manage-AutomationAccount.ps1)
 7) You are done !
  
  ### What will happen now ? 
@@ -126,8 +118,8 @@ if($helperHybridWorkerModuleSync)
  As soon as you trigger deployement of your code to automation account, these steps are done: 
   - Configuration from YOUR_PROJECT_FOLDER\Source\Common\Configurations - will be compiled and uploaded to your DSC.
   - Configuration will be assigned to each Node (HybridWorker) you have. registered to your automation account.
-  - Json file ManageModules.json with all the modules from your definition folder will be created and stored to your Storage Account.
-  - Manage-Modules.ps1 will be copied to your Storage Account.
+  - Json file HybridWorkerModuleManagement.json with all the modules from your definition folder will be created and stored to your Storage Account.
+  - HybridWorkerModuleManagement.ps1 will be copied to your Storage Account.
 
 After that: 
 
@@ -178,7 +170,7 @@ Testing:
   },
  ```
 ## Other functionalities
-  - You can add your own module repository on top of Powershell Gallery if you wish by adding following hash table into Manage-Module.ps1 script (section is by default commented out)
+  - You can add your own module repository on top of Powershell Gallery if you wish by adding following hash table into HybridWorkerModuleManagement.ps1 script (section is by default commented out)
   ```Powershell
   $script:repositories = @{
     "NAME_OF_REPO"  = "URL_TO_REPO"

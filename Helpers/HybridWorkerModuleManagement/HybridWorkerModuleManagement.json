@@ -1,7 +1,7 @@
 {
-    "Name": "ManageModulesConfig",
-    "Description": "Dsc configuration to ensure sync of modules between automation account and hybrid workers.",
-    "Implementation": "Prepare-ManageModulesConfig.ps1",
+    "Name": "HybridWorkerModuleManagement",
+    "Description": "Dsc configuration for Hybrid Worker Module Management",
+    "Implementation": "Prepare-HybridWorkerModuleManagement.ps1",
     "AutoCompile": true,
     "Parameters": {
         "runTimeVersion": {
@@ -32,7 +32,7 @@
         "workerLocalPath": "C:\\ManageModules",
         "runTimeVersion": "Both", 
         "blobNameModulesJson": "required-modules.json",
-        "manageModulesScriptName": "Manage-Modules.ps1",
+        "manageModulesScriptName": "HybridWorkerModuleManagement.ps1",
         "machineType": "arc" 
     }
 }
