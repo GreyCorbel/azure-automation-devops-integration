@@ -1,5 +1,7 @@
 # Helper: PowerShell Module Management for Hybrid Worker (Automation Account).
-Use this helper you if you would like to manage PowerShell modules on all your hybrid workers in an automated way.
+Use this helper you if you would like to manage PowerShell modules on all your hybrid workers in an automated way directly from your project folder ! 
+
+Note: This helper was created due to the fact, that native DSC PackageManagement module do not work with additional parameters like -allowClobber or -Force. This leads to multiple issues when there is a need to upgrade or downgrade module. 
 
 - Prerequisites:
   - Automation Account
@@ -23,7 +25,7 @@ Note: If you use Azure VM this step is not required.
   - Run the script in elevated prompt on your server - make sure you allow all outbound URLs or you use proxy 
 
 
-2) To register Server to DSC: Run .\Register-HybridWorkerToDsc.ps1 script in elevated prompt on your HybridWorker, that will register your server into Dsc. Update lines below. You can get your URL and key from AutomationAccount\Keys. 
+2) To register Server to DSC: Run .\Register-HybridWorkerToDsc.ps1 script in elevated prompt on your HybridWorker, that will register your server into Dsc. Before you do that update lines below. You can get your URL and key from AutomationAccount\Keys. 
 ```Powershell
      RegistrationUrl = 'REGISTRATION_URL';
      RegistrationKey = 'REGISTRATION_KEY';
@@ -37,7 +39,7 @@ Note: If you use Azure VM this step is not required.
      ActionAfterReboot = 'ContinueConfiguration';
      ReportOnly = $False;
 ```
-Make sure you keep ConfigurationMode set to 'ApplyAndAutoCorrect'.
+! Make sure you keep ConfigurationMode set to 'ApplyAndAutoCorrect' !
 Once this step is done, you can see your worker registered in Automation Account under DSC blade. 
 
 3) To create Managed Identity
@@ -60,6 +62,7 @@ Note: Arc Connect machine do not provide an option to use system assigned manage
   - On members page select managed identity
   - Find worker you want to assign role to
   - Finalize the role assignment by clicking on Next or directly click on Review + assign on the bottom of the
+
 ## Config preparation
 1) Prepare Definition file ManageModules.json
   - Under Helpers folder - find HybridWorkerModulesSync folder and open ManageModules.json file.
@@ -131,6 +134,20 @@ After that:
   - Hybrid Worker will regularly check if there any changes to modules and will perform them (e.g. version upgrade/downgrade, new module).
   - You can track the status of your module installation on each worker in your storage account container or directly under DSC blade in AutomationAccount.
   - Use definitions folder for modules for your management - e.g. adding new, module, changing versions.
+
+Testing: 
+  - If you do not want to wait for Node to react on your changes you can make it faster by running: 
+  ```PowerShell
+    - Get-Process wmiprvse|Stop-Process -Force
+    - Start-Process wmiprvse 
+  ```
+  - Commands above will restart service responsible for DSC. 
+
+  - After that you can run command below to simulate what exactly is being done, when configuration is taken over from AutomatioAccount and executed locally. 
+  ```PowerShell
+  Invoke-CimMethod -Namespace root/Microsoft/Windows/DesiredStateConfiguration -Cl MSFT_DSCLocalConfigurationManager -Method PerformRequiredConfigurationChecks -Arguments @{Flags = [System.UInt32]1} -Verbose
+  ```
+  
   
   Example when worker is compliant 
   ``` json
