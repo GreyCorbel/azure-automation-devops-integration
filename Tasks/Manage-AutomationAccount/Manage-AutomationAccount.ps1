@@ -32,10 +32,18 @@ if($helperHybridWorkerModuleSync)
 }
 #load VstsTaskSdk module
 Write-Host "Installing dependencies..."
-Install-Module -Name VstsTaskSdk -Force -Scope CurrentUser -AllowClobber
+if($null -eq (Get-Module -Name VstsTaskSdk -ListAvailable))
+{
+    Write-Host "VstsTaskSdk module not found, installing..."
+    Install-Module -Name VstsTaskSdk -Force -Scope CurrentUser -AllowClobber
+}
 
 #load AadAuthentiacationFactory
-Install-Module AadAuthenticationFactory -Force -Scope CurrentUser
+if($null -eq (Get-Module -Name AadAuthenticationFactory -ListAvailable))
+{
+    Write-Host "AadAuthenticationFactory module not found, installing..."
+    Install-Module -Name AadAuthenticationFactory -Force -Scope CurrentUser
+}
 Write-Host "Installation succeeded!"
 
 Write-Host "Importing internal PS modules..."
@@ -518,7 +526,8 @@ if (Check-Scope -Scope $scope -RequiredScope 'Runbooks') {
                     -Type  $runbook.Type `
                     -Content (Get-Content -Path $ImplementationFile -Raw) `
                     -Description $runbook.Description `
-                    -AutoPublish:$runbook.AutoPublish
+                    -AutoPublish:$runbook.AutoPublish `
+                    -Location $runbook.Location
                 break;
             }
             '7.2' {
@@ -526,7 +535,8 @@ if (Check-Scope -Scope $scope -RequiredScope 'Runbooks') {
                     -Name $runbook.Name `
                     -Content (Get-Content -Path $ImplementationFile -Raw) `
                     -Description $runbook.Description `
-                    -AutoPublish:$runbook.AutoPublish
+                    -AutoPublish:$runbook.AutoPublish `
+                    -Location $runbook.Location
                 break;
             }
         }

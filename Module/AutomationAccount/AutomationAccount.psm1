@@ -1,15 +1,36 @@
 function Initialize-AadAuthenticationFactory 
 {
+    [CmdletBinding()]
     param
     (
+        [Parameter(Mandatory, ParameterSetName = 'ServicePrincipal')]
         [string]$servicePrincipalId,
+        [Parameter(Mandatory, ParameterSetName = 'ServicePrincipal')]
         [string]$servicePrincipalKey,
-        [string]$tenantId
+        [Parameter(Mandatory)]
+        [string]$tenantId,
+        [Parameter(Mandatory, ParameterSetName = 'Interactive')]
+        [string]$AuthMode
     )
     process
     {
         #create authnetication factory and store it into the script variable
-        $script:aadAuthenticationFactory = New-AadAuthenticationFactory -TenantId $tenantId -ClientId $servicePrincipalId -ClientSecret $servicePrincipalKey
+        switch($PSCmdlet.ParameterSetName)
+        {
+            'ServicePrincipal' {
+                $script:aadAuthenticationFactory = New-AadAuthenticationFactory `
+                    -TenantId $tenantId `
+                    -ClientId $servicePrincipalId `
+                    -ClientSecret $servicePrincipalKey
+                break;
+            }
+            'Interactive' {
+                $script:aadAuthenticationFactory = New-AadAuthenticationFactory `
+                    -TenantId $tenantId `
+                    -AuthMode $AuthMode
+                break;
+            }
+        }
     }
 }
 
@@ -354,9 +375,21 @@ Function Add-AutoSchedule
     {
         try {
             write-verbose "Sending content to $Uri"
-            $start = [DateTime]::UtcNow.Date + $startTime
+            switch($Frequency)
+            {
+                {$_ -in @('Hour','Minute')} {
+                    $ts = [DateTime]::UtcNow
+                    $start = $ts.Date.AddHours($ts.Hour).AddHours(1) + $startTime
+                    break;
+                }
+                default {
+                    $start = [DateTime]::UtcNow.Date + $startTime
+                    if($start -lt [DateTime]::UtcNow.AddMinutes(6)) {$start = $start.AddDays(1)}
+                    break;
+                }
+            }
             
-            if($start -lt [DateTime]::UtcNow.AddMinutes(6)) {$start = $start.AddDays(1)}
+            
             $payload = @{
                 name = $Name
                 properties = @{
@@ -626,7 +659,7 @@ Function Add-AutoPowershell7Runbook
         [switch]
         $WaitForCompletion,
         [Parameter()]
-        [string]$Location = "westeurope",
+        [string]$Location,
         [Parameter()]
         [string]$AutomationAccountResourceId = $script:AutomationAccountResourceId
     )
@@ -641,6 +674,7 @@ Function Add-AutoPowershell7Runbook
     process
     {
         try {
+            if([string]::IsNullOrEmpty($location)) {$location = $script:accountLocation}
             write-verbose "Modifying runbook on $runbookUri"
             $payload = @{
                 name = $Name

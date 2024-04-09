@@ -1,9 +1,17 @@
 #load VstsTaskSdk module
 Write-Host "Installing dependencies..."
-Install-Module -Name VstsTaskSdk -Force -Scope CurrentUser -AllowClobber
+if($null -eq (Get-Module -Name VstsTaskSdk -ListAvailable))
+{
+    Write-Host "VstsTaskSdk module not found, installing..."
+    Install-Module -Name VstsTaskSdk -Force -Scope CurrentUser -AllowClobber
+}
 
 #load AadAuthentiacationFactory
-Install-Module AadAuthenticationFactory -Force -Scope CurrentUser
+if($null -eq (Get-Module -Name AadAuthenticationFactory -ListAvailable))
+{
+    Write-Host "AadAuthenticationFactory module not found, installing..."
+    Install-Module -Name AadAuthenticationFactory -Force -Scope CurrentUser
+}
 Write-Host "Installation succeeded!"
 
 #load Automation account REST wrapper
@@ -121,13 +129,16 @@ foreach($def in $definitions)
         }
 
         $Expires = [DateTime]::UtcNow + [Timespan]::Parse($def.Expiration)
-        Write-Host "Adding new webhook for runbook $($def.RunbookName)"
+        $SupportedRequestTypes = $def.SupportedRequestTypes
+        $webhookName = "$($def.NamePrefix)-$ts"
+        Write-Host "Adding new webhook for runbook $($def.RunbookName) with name $webhookName"
         $webhook = Add-AutoWebhook `
             -Name "$($def.NamePrefix)-$ts" `
             -RunbookName $def.RunbookName `
             -RunOn $runOn `
             -ExpiresOn $Expires `
             -Parameters $params
+        $webhook | Add-Member -MemberType NoteProperty -Name SupportedRequestTypes -Value $SupportedRequestTypes
         $managedWebhooks+=$webhook
         $newWebhooks += $webhook
         continue; 

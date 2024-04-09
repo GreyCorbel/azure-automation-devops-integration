@@ -15,9 +15,6 @@ function New-RunbookDefinition
         [string]
             #Type of the runbook
         $Location = 'westeurope',
-        [string[]]
-            #reserved for future use
-        $SupportedRequestTypes,
         [switch]
             #where runbook runs
             #for running on Azure, enter 'Azure' or empty string.
@@ -39,7 +36,6 @@ function New-RunbookDefinition
             Implementation = $Implementation
             Type = $Type
             Location = $Location
-            SupportedRequestTypes = $SupportedRequestTypes
             AutoPublish = (-not $DoNotPublish.IsPresent)
             RequiredModules = $RequiredModules
         }
@@ -215,7 +211,10 @@ function New-WebhookDefinition
         $Disabled,
         [switch]
             #returns formatted JSON rather than object
-        $AsJson
+        $AsJson,
+        [string[]]
+            #reserved for future use
+        $SupportedRequestTypes
     )
 
     process
@@ -229,6 +228,7 @@ function New-WebhookDefinition
             Overlap = $Overlap.ToString()
             Disabled = $Disabled.IsPresent
             Parameters = $Parameters
+            SupportedRequestTypes = $SupportedRequestTypes
         }
         if($AsJson)
         {
