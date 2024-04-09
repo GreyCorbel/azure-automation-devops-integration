@@ -8,13 +8,20 @@ On top of these two main actions, you can add as many other actions as you need 
 
 Configuration ManageModulesConfig {
     param(
-        $script:blobNameModulesJson = 'required-modules.json',
-        $script:storageAccount = 'STORAGE_ACCOUNT',
-        $script:storageAccountContainer = 'STORAGE_CONTAINER',
-        $script:runTimeVersion = 'Both', # "5", "7", "both"
-        $script:workerLocalPath = "C:\ManageModules",
-        $script:manageModulesScriptName = "Manage-Modules.ps1",
-        $script:machineType = "arc" # "arc" or "vm"
+        [string]
+        $blobNameModulesJson,
+        [string]
+        $storageAccount ,
+        [string]
+        $storageAccountContainer ,
+        [string]
+        $runTimeVersion , 
+        [string]
+        $workerLocalPath ,
+        [string]
+        $manageModulesScriptName ,
+        [string]
+        $machineType 
     )
 
     $script:scriptPath = "$($workerLocalPath)\$($manageModulesScriptName)"

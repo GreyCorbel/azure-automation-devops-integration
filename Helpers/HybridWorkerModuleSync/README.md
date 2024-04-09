@@ -1,5 +1,5 @@
-# Helper: Sync PowershellModules between AutomationAccount and HybridWorkers
-Use this helper you if you would like to sync PowerShell modules from your AutomationAccount with modules to your hybrid worker(s). Any changes you make to your Automation Account modules will be replicated to workers.
+# Helper: PowerShell Module Management for Hybrid Worker (Automation Account).
+Use this helper you if you would like to manage PowerShell modules on all your hybrid workers in an automated way.
 
 - Prerequisites:
   - Automation Account
@@ -61,27 +61,30 @@ Note: Arc Connect machine do not provide an option to use system assigned manage
   - Find worker you want to assign role to
   - Finalize the role assignment by clicking on Next or directly click on Review + assign on the bottom of the
 ## Config preparation
-1) Prepare Config Script
-  - Under Helpers folder - find HybridWorkerModulesSync folder and open the script Prepare-ManageModulesConfig.ps1
-  - Update lines below with your storage account and container details.
-  - You can also update other variables like where the script will be stored locally on your hybrid worker. 
-  - Script also supports usage of Azure VM instead of Arc Connected machine (e.g. for testing purposes)
-  - Make sure that $manageModulesScriptName is same as name of the script inside folder HybridWorkerModuleSync 
-  ``` PowerShell
-  param(
-        $script:blobNameModulesJson = 'required-modules.json',
-        $script:storageAccount = 'pjstorageaccountpj',
-        $script:storageAccountContainer = 'temp',
-        $script:runTimeVersion = 'Both',
-        $script:workerLocalPath = "C:\ManageModules",
-        $script:manageModulesScriptName = "Manage-Modules.ps1",
-        $script:machineType = "arc" # "arc" or "VM"
-    )
+1) Prepare Definition file ManageModules.json
+  - Under Helpers folder - find HybridWorkerModulesSync folder and open ManageModules.json file.
+  - Update lines below with your storage account ($storageAccount) and container ($storageAccountContainer) details.
+  - You can also (optionally) update other variables like: 
+    -  "$workerLocalPath" --> place where the script will be stored locally on your hybrid worker. 
+    -  "$machineType" --> on top of default "arc" option, there is an option to user "vm" - in case Azure VM is used as DSC node.
+    -  "$runTimeVersion" --> runtime under which script will be executed - options "5", "7", "Both".
+    -  "$blobNameModulesjson" --> name of json file in your storage account that defines which modules should be installed (Note: if you change the name, make sure name is the same as in Manage-AutomationAccount.ps1 - see step #4 for more details).
+    -  "$manageModulesScriptName" --> Name of the script that is deployed to worker (Note: if you change the name, make sure name is the same as in Manage-AutomationAccount.ps1 - see step #4 for more details).
+  ``` json
+   "ParameterValues": {
+        "storageAccount": "STORAGE_ACCOUNT_NAME",
+        "storageAccountContainer": "STORAGE_ACCOUNT_CONTAINER",
+        "workerLocalPath": "C:\\ManageModules",
+        "runTimeVersion": "Both", 
+        "blobNameModulesJson": "required-modules.json",
+        "manageModulesScriptName": "Manage-Modules.ps1",
+        "machineType": "arc" 
+    }
 
   ```
 
 2) Move the script Prepare-ManageModulesConfig.ps1 to YOUR_PROJECT_FOLDER\Source\Common\Configurations
-3) Under Helpers Folder - find ManageModules.json file and move file to YOUR_PROJECT_FOLDER\Definitions\Configurations
+3) Move definition file ManageModules.json file to YOUR_PROJECT_FOLDER\Definitions\Configurations
 ```json
 {
     "Name":  "ManageModulesConfig",
@@ -90,7 +93,7 @@ Note: Arc Connect machine do not provide an option to use system assigned manage
     "AutoCompile":  true
 }
 ```
-4) Switch task parameter 'helperHybridWorkerModuleSync' of your Automation Account to true and set path to Manage-Modules.ps1 script if you move it outside of Helpers\HybridWorkerModulesSync folder. All others related variables are these: 
+4) Switch task parameter 'helperHybridWorkerModuleSync' of your Automation Account to true. All related variables inside Manage-AutomationAccount.ps1 are these: 
 
 ```POwershell
 if($helperHybridWorkerModuleSync)
@@ -101,21 +104,33 @@ if($helperHybridWorkerModuleSync)
 }
 ```
 
-5) Deploy your code
-6) You are done and good to go
+5) Define all modules you would like to install under YOUR_PROJECT_FOLDER\Definitions\Configurations (json file pre module) e.g.
+```json
+{
+    "Name": "AadAuthenticationFactory",
+    "RuntimeVersion": "5.1",
+    "Version": "3.0.5",
+    "VersionIndependentLink": "https://www.powershellgallery.com/api/v2/package/AadAuthenticationFactory",
+    "Order": 1
+}
+```
+
+6) Deploy your solutin (by running Manage-AutomationAccount.ps1)
+7) You are done !
  
  ### What will happen now ? 
 
  As soon as you trigger deployement of your code to automation account, these steps are done: 
-  - Configuration from YOUR_PROJECT_FOLDER\Source\Common\Configurations - will be compiled and uploaded to your DSC
-  - Configuration will be assigned to each Node (HybridWorker) you have registered to your automation account
-  - Json file with all the modules from your automation account will be created and stored to your Storage Account
-  - Manage-Modules.ps1 will be copied to your Storage Account
+  - Configuration from YOUR_PROJECT_FOLDER\Source\Common\Configurations - will be compiled and uploaded to your DSC.
+  - Configuration will be assigned to each Node (HybridWorker) you have. registered to your automation account.
+  - Json file ManageModules.json with all the modules from your definition folder will be created and stored to your Storage Account.
+  - Manage-Modules.ps1 will be copied to your Storage Account.
 
 After that: 
 
-  - Hybrid Worker will regularly check if there any changes to modules and perform them
+  - Hybrid Worker will regularly check if there any changes to modules and will perform them (e.g. version upgrade/downgrade, new module).
   - You can track the status of your module installation on each worker in your storage account container or directly under DSC blade in AutomationAccount.
+  - Use definitions folder for modules for your management - e.g. adding new, module, changing versions.
   
   Example when worker is compliant 
   ``` json

@@ -569,6 +569,11 @@ function Manage-GalleryModule
             } 
             "Reinstall"
             {
+                switch($runTimeVersion)
+                {
+                    "7"{ $modulePath = "*\Powershell\*"}
+                    "5"{ $modulePath = "*\WindowsPowershell\*"}
+                }
                 foreach($repo in $repos)
                 {
                     # if required version > current version we use update-module
@@ -588,6 +593,7 @@ function Manage-GalleryModule
                         }
                         #remove old versions
                         $modulesToRemove = Get-module -ListAvailable $module.Name|Where-Object{$_.Version -ne $module.requiredVersion}
+                        $modulesToRemove = ($modulesToRemove|Where-Object{$_.path -like $modulePath})
                         if($modulesToRemove.count -gt 0)
                         {
                             foreach($moduleToRemove in $modulesToRemove)
@@ -613,6 +619,7 @@ function Manage-GalleryModule
                     {
                         Write-Log "Re-installing (downgrading) $($module.Name) from $($repo.Name) - overwriting version $($module.currentVersion), with: $($module.requiredVersion)"
                         $modulesToRemove = Get-module -ListAvailable $module.Name|Where-Object{$_.Version -ne $module.requiredVersion}
+                        $modulesToRemove = ($modulesToRemove|Where-Object{$_.path -like $modulePath})
                         if($modulesToRemove.count -gt 0)
                         {
                             foreach($moduleToRemove in $modulesToRemove)

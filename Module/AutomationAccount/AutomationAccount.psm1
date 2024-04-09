@@ -793,9 +793,9 @@ Function Add-AutoConfiguration
         [Parameter()]
         [string]$Description,
         [Parameter()]
-        [hashTable]$Parameters,
+        [System.Object]$Parameters,
         [Parameter()]
-        [hashTable]$ParameterValues,
+        [System.Object]$ParameterValues,
         [switch]
         $AutoCompile,
         [switch]
