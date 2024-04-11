@@ -377,9 +377,18 @@ Function Add-AutoSchedule
             write-verbose "Sending content to $Uri"
             switch($Frequency)
             {
-                {$_ -in @('Hour','Minute')} {
+                'Minute' {
                     $ts = [DateTime]::UtcNow
-                    $start = $ts.Date.AddHours($ts.Hour).AddHours(1) + $startTime
+                    $start = $ts.Date + $startTime
+                    while($start -lt [DateTime]::UtcNow.AddMinutes(6)) {$start = $start.AddMinutes($Interval)}
+
+                    break;
+                }
+                'Hour' {
+                    $ts = [DateTime]::UtcNow
+                    $start = $ts.Date + $startTime
+                    while($start -lt [DateTime]::UtcNow.AddMinutes(6)) {$start = $start.AddHours($Interval)}
+                    
                     break;
                 }
                 default {
