@@ -89,7 +89,7 @@ Note: Arc Connect machine do not provide an option to use system assigned manage
   ```
 2) Move the script Prepare-HybridWorkerModuleManagement.ps1 to YOUR_PROJECT_FOLDER\Source\Common\Configurations
 3) Move definition file HybridWorkerModuleManagement.json file to YOUR_PROJECT_FOLDER\Definitions\Configurations
-4) Switch task parameter 'helperHybridWorkerModuleManagement' of your deployment pipeline to true. All related variables inside Manage-AutomationAccount.ps1 are these: 
+4) Switch task parameter 'helperHybridWorkerModuleManagement' of your deployment pipeline to true. Make sure that $manageModulesPs1Path matches an actual path of ManageModule script, otherwise script will not be copied to StorageAccount - by default path to Helpers folder is set. All related variables inside Manage-AutomationAccount.ps1 are these:
 
 ```PowerShell
 
