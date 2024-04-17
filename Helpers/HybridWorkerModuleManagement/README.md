@@ -1,7 +1,7 @@
 # Helper: PowerShell Module Management for Hybrid Worker (Automation Account).
 Use this helper you if you would like to manage PowerShell modules on all your hybrid workers in an automated way directly from your project folder without need to go to your servers ! 
 
-Note: Motivation behind creation of this helper is that native DSC PackageManagement module do not work with additional parameters like -AllowClobber or -Force. This leads to multiple issues if there is a need to upgrade or downgrade module. 
+Note: Motivation behind creation of this helper is that native DSC PackageManagement module do not work with additional parameters like -AllowClobber or -Force. This leads to multiple issues if there is a need to upgrade module. 
 
 - Prerequisites:
   - Automation Account
