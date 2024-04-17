@@ -25,6 +25,7 @@ if($null -eq (Get-Module -Name VstsTaskSdk -ListAvailable))
     Write-Host "VstsTaskSdk module not found, installing..."
     Install-Module -Name VstsTaskSdk -Force -Scope CurrentUser -AllowClobber
 }
+Write-Host "Installation succeeded!"
 
 #load AadAuthentiacationFactory
 if($null -eq (Get-Module -Name AadAuthenticationFactory -ListAvailable))
@@ -50,16 +51,74 @@ Write-Host "Import succeeded!"
 
 Write-Host "Starting process..."
 # retrieve service connection object
-$serviceConnection = Get-VstsEndpoint -Name $azureSubscription -Require
+$serviceConnectionObject = Get-VstsEndpoint -Name $azureSubscription -Require
+$serviceConnection = ConvertTo-Json $serviceConnectionObject
 
-# get service connection object properties
-$servicePrincipalId = $serviceConnection.auth.parameters.serviceprincipalid
-$servicePrincipalkey = $serviceConnection.auth.parameters.serviceprincipalkey
-$tenantId = $serviceConnection.auth.parameters.tenantid
+# define type od service connection
+switch ($serviceConnection.auth.scheme) {
+    'ServicePrincipal' { 
+        # get service connection object properties
+        $servicePrincipalId = $serviceConnection.auth.parameters.serviceprincipalid
+        $servicePrincipalkey = $serviceConnection.auth.parameters.serviceprincipalkey
+        $tenantId = $serviceConnection.auth.parameters.tenantid
 
-#initialize aadAuthenticationFactory
-Write-Verbose "Initialize AadAuthenticationFactory object..."
-Initialize-AadAuthenticationFactory -servicePrincipalId $servicePrincipalId -servicePrincipalKey $servicePrincipalkey -tenantId $tenantId
+        # SPNcertificate
+        if ($serviceConnection.auth.parameters.authenticationType -eq 'SPNCertificate') {
+            $certData = $serviceConnection.Auth.parameters.servicePrincipalCertificate
+            $cert= [System.Security.Cryptography.X509Certificates.X509Certificate2]::CreateFromPem($certData,$certData)
+
+            Initialize-AadAuthenticationFactory `
+            -servicePrincipalId $servicePrincipalId `
+            -servicePrincipalKey $servicePrincipalkey `
+            -tenantId $tenantId `
+            -cert $cert
+        }
+        #Service Principal
+        else {
+            Initialize-AadAuthenticationFactory `
+            -servicePrincipalId $servicePrincipalId `
+            -servicePrincipalKey $servicePrincipalkey `
+            -tenantId $tenantId
+        }
+     }
+
+     'ManagedServiceIdentity' {
+        Initialize-AadAuthenticationFactory `
+            -serviceConnection $serviceConnection
+     }
+
+     'WorkloadIdentityFederation' {
+
+        # get service connection properties
+        $planId = Get-VstsTaskVariable -Name 'System.PlanId' -Require
+        $jobId = Get-VstsTaskVariable -Name 'System.JobId' -Require
+        $hub = Get-VstsTaskVariable -Name 'System.HostType' -Require
+        $projectId = Get-VstsTaskVariable -Name 'System.TeamProjectId' -Require
+        $uri = Get-VstsTaskVariable -Name 'System.CollectionUri' -Require
+        $serviceConnectionId = $azureSubscription
+
+        $vstsEndpoint = Get-VstsEndpoint -Name SystemVssConnection -Require
+        $vstsAccessToken = $vstsEndpoint.auth.parameters.AccessToken
+        $servicePrincipalId = $vstsEndpoint.auth.parameters.serviceprincipalid
+        $tenantId = $vstsEndpoint.auth.parameters.tenantid
+        
+        $url = "$uri/$projectId/_apis/distributedtask/hubs/$hub/plans/$planId/jobs/$jobId/oidctoken?serviceConnectionId=$serviceConnectionId`&api-version=7.2-preview.1"
+
+        $username = "username"
+        $password = $vstsAccessToken
+        $base64AuthInfo = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(("{0}:{1}" -f $username, $password)))
+
+        $response = Invoke-RestMethod -Uri $url -Method Post -Headers @{ "Authorization" = ("Basic {0}" -f $base64AuthInfo) } -ContentType "application/json"
+
+        $oidcToken = $response.oidcToken
+        $assertion = $oidcToken
+
+        Initialize-AadAuthenticationFactory `
+            -servicePrincipalId $servicePrincipalId `
+            -assertion $assertion `
+            -tenantId $tenantId
+     }
+}
 
 #initialize runtime according to environment environment
 Init-Environment -ProjectDir $ProjectDir -Environment $EnvironmentName
