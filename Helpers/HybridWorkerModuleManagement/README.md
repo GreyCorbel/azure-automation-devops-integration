@@ -88,11 +88,11 @@ Note: Arc Connect machine do not provide an option to use system assigned manage
   }
 
   ```
-2) Move DSC configuration SOURCE file (Prepare-HybridWorkerModuleManagement.ps1) to YOUR_PROJECT_FOLDER\Source\ENVIRONMENT_NAME\Configurations
-3) Move DSC CONFIGURATION file (Prepare-HybridWorkerModuleManagement.json) file to YOUR_PROJECT_FOLDER\Definitions\Configurations
+2) Move 'dsc' SOURCE file (Prepare-HybridWorkerModuleManagement.ps1) to YOUR_PROJECT_FOLDER\Source\ENVIRONMENT_NAME\Configurations
+3) Move 'dsc' DEFINITION file (Prepare-HybridWorkerModuleManagement.json) file to YOUR_PROJECT_FOLDER\Definitions\Configurations
 
-4) Move parameter values SOURCE file (Prepare-HybridWorkerModuleManagementParamValuesSource.json) to YOUR_PROJECT_FOLDER\Source\ENVIRONMENT_NAME\ConfigurationParameterValues --> this allows you so set parameters per environment (e.g. UAT,PROD,etc.)
-5) Move parameter values CONFIGURATION file (Prepare-HybridWorkerModuleManagementParamValuesDef.json) to YOUR_PROJECT_FOLDER\Definitions\ConfigurationParameterValues
+4) Move 'parameter values' SOURCE file (Prepare-HybridWorkerModuleManagementParamValuesSource.json) to YOUR_PROJECT_FOLDER\Source\ENVIRONMENT_NAME\ConfigurationParameterValues --> this allows you so set parameters per environment (e.g. UAT,PROD,etc.)
+5) Move 'parameter values' DEFINITION file (Prepare-HybridWorkerModuleManagementParamValuesDef.json) to YOUR_PROJECT_FOLDER\Definitions\ConfigurationParameterValues
 
 6) Switch task parameter 'helperHybridWorkerModuleManagement' of your deployment pipeline to true. Make sure that $manageModulesPs1Path matches an actual path of ManageModule script, otherwise script will not be copied to StorageAccount - by default path to Helpers folder is set. All related variables inside Manage-AutomationAccount.ps1 are these:
 
@@ -105,7 +105,7 @@ if($helperHybridWorkerModuleManagement)
     $manageModulesPs1Path = "$($grandparentDirectory)\Helpers\HybridWorkerModuleManagement\$($manageModulesPS1)"
 }
 ```
-7) Define all modules you would like to install under YOUR_PROJECT_FOLDER\Definitions\Configurations (json file per module) e.g.
+7) Define all modules you would like to install under YOUR_PROJECT_FOLDER\Definitions\Modules (json file per module) e.g.
 
 ```json
 {
