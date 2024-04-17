@@ -1,7 +1,7 @@
 # Helper: PowerShell Module Management for Hybrid Worker (Automation Account).
 Use this helper you if you would like to manage PowerShell modules on all your hybrid workers in an automated way directly from your project folder without need to go to your servers ! 
 
-Note: Motivation behind creation of this helper is that native DSC PackageManagement module do not work with additional parameters like -AllowClobber or -Force. This leads to multiple issues when there is a need to upgrade or downgrade module. 
+Note: Motivation behind creation of this helper is that native DSC PackageManagement module do not work with additional parameters like -AllowClobber or -Force. This leads to multiple issues if there is a need to upgrade or downgrade module. 
 
 - Prerequisites:
   - Automation Account
@@ -25,7 +25,7 @@ Note: If you use Azure VM this step is not required.
   - Run the script in elevated prompt on your server - make sure you allow all outbound URLs or you use proxy 
 
 
-2) To register Server to DSC: Run .\Register-HybridWorkerToDsc.ps1 script in elevated prompt on your HybridWorker, that will register your server into Dsc. Before you do that update lines below. You can get your URL and key from AutomationAccount\Keys. 
+2) To register Server to DSC: Run .\Register-HybridWorkerToDsc.ps1 script in an elevated prompt on your HybridWorker, that will register your server into Dsc. Before you do that update lines below. You can get your URL and key from AutomationAccount\Keys. 
 ```Powershell
      RegistrationUrl = 'REGISTRATION_URL';
      RegistrationKey = 'REGISTRATION_KEY';
@@ -64,15 +64,17 @@ Note: Arc Connect machine do not provide an option to use system assigned manage
   - Finalize the role assignment by clicking on Next or directly click on Review + assign on the bottom of the
 
 ## Config preparation
-1) Prepare Definition file HybridWorkerModuleManagement.json
-  - Under Helpers folder - find HybridWorkerModulesSync folder and open HybridWorkerModuleManagement.json file.
-  - Update lines below with your storage account ($storageAccount) and container ($storageAccountContainer) details.
-  - You can also (optionally) update other variables like: 
-    -  "$workerLocalPath" --> place where the script will be stored locally on your hybrid worker. 
-    -  "$machineType" --> on top of default "arc" option, there is an option to user "vm" - in case Azure VM is used as DSC node.
-    -  "$runTimeVersion" --> runtime under which script will be executed - options "5", "7", "Both".
-    -  "$blobNameModulesjson" --> name of json file in your storage account that defines which modules should be installed (Note: if you change the name, make sure name is the same as in Manage-AutomationAccount.ps1 - see step #4 for more details).
-    -  "$manageModulesScriptName" --> Name of the script that is deployed to worker (Note: if you change the name, make sure name is the same as in Manage-AutomationAccount.ps1 - see step #4 for more details).
+1) Prepare definition file (that is used for creation of DSC .MOF file) HybridWorkerModuleManagement.json
+  - Under Helpers folder - find HybridWorkerModulesSync folder and open HybridWorkerModuleManagement.json.
+  - Mandatory: Update your storage account and container details.
+
+  - You can (optionally) update other variables: 
+    -  "workerLocalPath" --> folder where the script will be stored locally on your hybrid worker. 
+    -  "runTimeVersion" --> runtime under which script will be executed - availables options: ["5", "7", "Both"].
+    -  "blobNameModulesjson" --> name of the json file in your storage account that defines which modules should be installed (Note: if you change the name, make sure name is the same as in Manage-AutomationAccount.ps1 - see step #4 for more details).
+    -  "manageModulesScriptName" --> Script that is used for actual module management on hybrid workers. Script is deployed from your project folder to Storage Account from where its later downloaded by each worker and called by DSC configuration that was defined as part of this step. (Note: if you change the name, make sure name is the same as in Manage-AutomationAccount.ps1 - see step #4 for more details).
+    -  "machineType" --> on top of default "arc" option, there is an option to use "vm"  (in case Azure VM is used as DSC node - e.g. testing)
+
   ``` json
    "ParameterValues": {
         "storageAccount": "STORAGE_ACCOUNT_NAME",
@@ -85,10 +87,9 @@ Note: Arc Connect machine do not provide an option to use system assigned manage
     }
 
   ```
-
 2) Move the script Prepare-HybridWorkerModuleManagement.ps1 to YOUR_PROJECT_FOLDER\Source\Common\Configurations
 3) Move definition file HybridWorkerModuleManagement.json file to YOUR_PROJECT_FOLDER\Definitions\Configurations
-4) Switch task parameter 'helperHybridWorkerModuleManagement' of your Automation Account to true. All related variables inside Manage-AutomationAccount.ps1 are these: 
+4) Switch task parameter 'helperHybridWorkerModuleManagement' of your deployment pipeline to true. All related variables inside Manage-AutomationAccount.ps1 are these: 
 
 ```PowerShell
 
@@ -99,7 +100,8 @@ if($helperHybridWorkerModuleManagement)
     $manageModulesPs1Path = "$($grandparentDirectory)\Helpers\HybridWorkerModuleManagement\$($manageModulesPS1)"
 }
 ```
-5) Define all modules you would like to install under YOUR_PROJECT_FOLDER\Definitions\Configurations (json file pre module) e.g.
+5) Define all modules you would like to install under YOUR_PROJECT_FOLDER\Definitions\Configurations (json file per module) e.g.
+
 ```json
 {
     "Name": "AadAuthenticationFactory",
@@ -139,7 +141,6 @@ Testing:
   ```PowerShell
   Invoke-CimMethod -Namespace root/Microsoft/Windows/DesiredStateConfiguration -Cl MSFT_DSCLocalConfigurationManager -Method PerformRequiredConfigurationChecks -Arguments @{Flags = [System.UInt32]1} -Verbose
   ```
-  
   
   Example when worker is compliant 
   ``` json
