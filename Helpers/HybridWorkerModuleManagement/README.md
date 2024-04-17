@@ -137,7 +137,7 @@ Testing:
   ```
   - Commands above will restart service responsible for DSC. 
 
-  - After that you can run command below to simulate what exactly is being done, when configuration is taken over from AutomatioAccount and executed locally. 
+  - After that you can run command below to simulate what exactly is being done, when configuration is taken over from AutomationAccount and executed locally. 
   ```PowerShell
   Invoke-CimMethod -Namespace root/Microsoft/Windows/DesiredStateConfiguration -Cl MSFT_DSCLocalConfigurationManager -Method PerformRequiredConfigurationChecks -Arguments @{Flags = [System.UInt32]1} -Verbose
   ```
