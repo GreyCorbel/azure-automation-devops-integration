@@ -1,0 +1,38 @@
+{
+    "Name": "HybridWorkerModuleManagement",
+    "Description": "Dsc configuration for Hybrid Worker Module Management",
+    "Implementation": "Prepare-HybridWorkerModuleManagement.ps1",
+    "AutoCompile": true,
+    "Parameters": {
+        "runTimeVersion": {
+            "type": "String"
+        },
+        "manageModulesScriptName": {
+            "type": "String"
+        },
+        "storageAccountContainer": {
+            "type": "String"
+        },
+        "storageAccount": {
+            "type": "String"
+        },
+        "workerLocalPath": {
+            "type": "String"
+        },
+        "blobNameModulesJson": {
+            "type": "String"
+        },
+        "machineType": {
+            "type": "String"
+        }
+    },
+    "ParameterValues": {
+        "storageAccount": "STORAGE_ACCOUNT_NAME",
+        "storageAccountContainer": "STORAGE_ACCOUNT_CONTAINER",
+        "workerLocalPath": "C:\\ManageModules",
+        "runTimeVersion": "Both", 
+        "blobNameModulesJson": "required-modules.json",
+        "manageModulesScriptName": "HybridWorkerModuleManagement.ps1",
+        "machineType": "arc" 
+    }
+}

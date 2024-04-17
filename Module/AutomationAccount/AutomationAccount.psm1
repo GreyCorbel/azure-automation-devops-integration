@@ -826,9 +826,9 @@ Function Add-AutoConfiguration
         [Parameter()]
         [string]$Description,
         [Parameter()]
-        [hashTable]$Parameters,
+        [System.Object]$Parameters,
         [Parameter()]
-        [hashTable]$ParameterValues,
+        [System.Object]$ParameterValues,
         [switch]
         $AutoCompile,
         [switch]
@@ -1223,3 +1223,50 @@ function GetSasSignature
         }
     }
 }
+Function Get-DscNodes
+{
+    param(
+        $Subscription,
+        $ResourceGroup,
+        $AutomationAccount
+    )
+    $baseUri ="https://management.azure.com/subscriptions/$($Subscription)/resourceGroups/$($ResourceGroup)/providers/Microsoft.Automation/automationAccounts/$($AutomationAccount)/nodes?api-version=2023-11-01"
+    $h = Get-AutoAccessToken -AsHashTable
+    return (Invoke-RestMethod -Method Get -Uri $baseUri -Headers $h).value
+}
+
+Function Get-DscNodeConfiguration
+{
+    param(
+        $Subscription,
+        $ResourceGroup,
+        $AutomationAccount
+    )
+    $baseUri ="https://management.azure.com/subscriptions/$($Subscription)/resourceGroups/$($ResourceGroup)/providers/Microsoft.Automation/automationAccounts/$($AutomationAccount)/nodeConfigurations?api-version=2023-11-01"
+    $h = Get-AutoAccessToken -AsHashTable
+    return (Invoke-RestMethod -Method Get -Uri $baseUri -Headers $h).value
+}
+
+
+Function Assign-DscNodeConfig
+{
+    param(
+        $Subscription,
+        $ResourceGroup,
+        $AutomationAccount,
+        $NodeConfigId,
+        $NodeName
+    )
+    $baseUri ="https://management.azure.com/subscriptions/$($Subscription)/resourceGroups/$($ResourceGroup)/providers/Microsoft.Automation/automationAccounts/$($AutomationAccount)/nodes/$($nodeName)?api-version=2019-06-01"
+    $h = Get-AutoAccessToken -AsHashTable
+    $body = @{
+        nodeId= $NodeName
+        properties = @{
+            nodeConfiguration = @{
+                name = $NodeConfigId
+            }
+        }
+    }|ConvertTo-Json 
+    return Invoke-RestMethod -Method Patch -Uri $baseUri -Headers $h -ContentType "application/json" -Body $body
+}
+

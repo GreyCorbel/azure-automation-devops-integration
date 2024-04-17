@@ -1,7 +1,7 @@
 #read pipeline variables
 Write-Host "Reading task parameters"
-[char[]]$delimiters = @(',',' ')
-$scope = (Get-VstsInput -Name 'scope' -Require).Split($delimiters,[StringSplitOptions]::RemoveEmptyEntries)
+[char[]]$delimiters = @(',', ' ')
+$scope = (Get-VstsInput -Name 'scope' -Require).Split($delimiters, [StringSplitOptions]::RemoveEmptyEntries)
 $environmentName = Get-VstsInput -Name 'environmentName' -Require
 $projectDir = Get-VstsInput -Name 'projectDir' -Require
 $subscription = Get-VstsInput -Name 'subscription' -Require
@@ -13,33 +13,38 @@ $storageAccountContainer = Get-VstsInput -Name 'storageAccountContainer'
 $fullSync = Get-VstsInput -Name 'fullSync'
 $reportMissingImplementation = Get-VstsInput -Name 'reportMissingImplementation'
 $verboseLog = Get-VstsInput -Name 'verbose'
+$helperHybridWorkerModuleManagement = Get-VstsInput -Name 'helperHybridWorkerModuleManagement'
 
-if($verboseLog)
-{
+#load Automation account REST wrapper
+$parentDirectory = Split-Path -Path $PSScriptRoot -Parent
+$grandparentDirectory = Split-Path -Path $parentDirectory -Parent
+
+if ($verboseLog) {
     $VerbosePreference = 'Continue'
+}
+
+if ($helperHybridWorkerModuleManagement) {
+    $blobNameModulesJson = "required-modules.json"
+    $manageModulesPs1 = "HybridWorkerModuleManagement.ps1"
+    $manageModulesPs1Path = "$($grandparentDirectory)\Helpers\HybridWorkerModuleManagement\$($manageModulesPS1)"
 }
 #load VstsTaskSdk module
 Write-Host "Installing dependencies..."
-if($null -eq (Get-Module -Name VstsTaskSdk -ListAvailable))
-{
+if ($null -eq (Get-Module -Name VstsTaskSdk -ListAvailable)) {
     Write-Host "VstsTaskSdk module not found, installing..."
     Install-Module -Name VstsTaskSdk -Force -Scope CurrentUser -AllowClobber
 }
 Write-Host "Installation succeeded!"
 
 #load AadAuthentiacationFactory
-if($null -eq (Get-Module -Name AadAuthenticationFactory -ListAvailable))
-{
+if ($null -eq (Get-Module -Name AadAuthenticationFactory -ListAvailable)) {
     Write-Host "AadAuthenticationFactory module not found, installing..."
     Install-Module -Name AadAuthenticationFactory -Force -Scope CurrentUser
 }
 Write-Host "Installation succeeded!"
 
-#load Automation account REST wrapper
-#$parentDirectory = Split-Path -Path $PSScriptRoot -Parent
-#$grandparentDirectory = Split-Path -Path $parentDirectory -Parent
 Write-Host "Importing internal PS modules..."
-$modulePath = [System.IO.Path]::Combine($PSScriptRoot,'Module','AutomationAccount')
+$modulePath = [System.IO.Path]::Combine($PSScriptRoot, 'Module', 'AutomationAccount')
 Write-Host "module path: $modulePath"
 Import-Module $modulePath -Force
 #load runtime support
@@ -158,13 +163,11 @@ if (Check-Scope -Scope $scope -RequiredScope 'Variables') {
         }
     }
 
-    if($FullSync)
-    {
+    if ($FullSync) {
         "Removing unmanaged variables"
         foreach ($variable in $currentVariables) {
-            if($variable.Name -in $definitions.Name)
-            {
-                continue;   #variable is managged
+            if ($variable.Name -in $definitions.Name) {
+                continue; #variable is managged
             }
             "$($variable.name) not managed -> removing"
             Remove-AutoObject -Name $variable.Name -objectType Variables | Out-Null
@@ -174,38 +177,60 @@ if (Check-Scope -Scope $scope -RequiredScope 'Variables') {
 #endregion Variables
 
 #region Modules
-function Upload-ModulesForHybridWorker
-{
+function Upload-FileToBlob {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$storageAccount,
+        [Parameter(Mandatory = $true)]
+        [string]$storageContainerName,
+        [Parameter(Mandatory = $true)]
+        [string]$filePath,
+        [Parameter(Mandatory = $true)]
+        [string]$storageBlobName
+    )
+    
+    begin {
+        $h = Get-AutoAccessToken -ResourceUri 'https://storage.azure.com/.default' -AsHashTable
+        $h['x-ms-version'] = '2023-11-03'
+        $h['x-ms-date'] = [DateTime]::UtcNow.ToString('R')
+        $h['x-ms-blob-type'] = 'BlockBlob'
+    }
+    process {
+        $rsp = Invoke-RestMethod `
+            -Uri "https://$($storageAccount).blob.core.windows.net/$($storageContainerName)/$($storageBlobName)" `
+            -Headers $h `
+            -InFile $filePath `
+            -Method Put
+    }
+}
+function Upload-ModulesForHybridWorker {
     param(
         [Parameter(Mandatory = $true)]
         [string]$storageAccount,
         [Parameter(Mandatory = $true)]
         [string]$storageContainerName,
         [Parameter(Mandatory = $false)]
-        [string]$storageBlobName = "required-modules.json",
+        [string]$storageBlobName,
         [Parameter(Mandatory = $true)]
         [Array]$body
     )
-    begin
-    {
+    begin {
         $h = Get-AutoAccessToken -ResourceUri 'https://storage.azure.com/.default' -AsHashTable
         $h['x-ms-version'] = '2023-11-03'
         $h['x-ms-date'] = [DateTime]::UtcNow.ToString('R')
         $h['x-ms-blob-type'] = 'BlockBlob'
     }
-    process
-    {
+    process {
 
-    $rsp = Invoke-RestMethod `
-        -Uri "https://$($storageAccount).blob.core.windows.net/$($storageContainerName)/$($storageBlobName)" `
-        -Headers $h `
-        -body ($body|ConvertTo-Json)`
-        -Method PUT
+        $rsp = Invoke-RestMethod `
+            -Uri "https://$($storageAccount).blob.core.windows.net/$($storageContainerName)/$($storageBlobName)" `
+            -Headers $h `
+            -body ($body | ConvertTo-Json)`
+            -Method PUT
     }
 }
 
-function Check-CustomModule
-{
+function Check-CustomModule {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
@@ -215,96 +240,82 @@ function Check-CustomModule
         [Parameter(Mandatory = $true)]
         [string]$moduleName
     )
-    begin
-    {
+    begin {
         $h = Get-AutoAccessToken -ResourceUri 'https://storage.azure.com/.default' -AsHashTable
         $h['x-ms-version'] = '2023-11-03'
         $h['x-ms-date'] = [DateTime]::UtcNow.ToString('R')
         $h['x-ms-blob-type'] = 'BlockBlob'
     }
-    process
-    {
-        try
-        {
+    process {
+        try {
             $rsp = Invoke-RestMethod `
-            -Uri "https://$($storageAccount).blob.core.windows.net/$($storageContainerName)/$($moduleName).zip" `
-            -Headers $h `
-            -ErrorAction Stop
+                -Uri "https://$($storageAccount).blob.core.windows.net/$($storageContainerName)/$($moduleName).zip" `
+                -Headers $h `
+                -ErrorAction Stop
         }
         catch
         {}
          
-        if($rsp)
-        {
+        if ($rsp) {
             return [bool]$true 
         }
-        else
-        {
+        else {
             return [bool]$false
         }
     }
 }
 
-function Get-ModulesForHybridWorker
-{
+function Get-ModulesForHybridWorker {
     param(
         $definitions,
         $storageAccount,
         $storageAccountContainer
     )
 
-    begin
-    {
+    begin {
         $requiredModules = @()        
         
         # these modules will be excluded from sync by default always
-        $builtInModules = @("Microsoft.PowerShell.Diagnostics","Microsoft.WSMan.Management", "Microsoft.PowerShell.Utility", "Microsoft.PowerShell.Security","Microsoft.PowerShell.Core")
+        $builtInModules = @("Microsoft.PowerShell.Diagnostics", "Microsoft.WSMan.Management", "Microsoft.PowerShell.Utility", "Microsoft.PowerShell.Security", "Microsoft.PowerShell.Core")
         $builtInModules += @("Microsoft.PowerShell.Management", "GPRegistryPolicyParser", "Orchestrator.AssetManagement.Cmdlets")
-        $dscModules = @("AuditPolicyDsc","ComputerManagementDsc","PSDscResources", "SecurityPolicyDsc", "StateConfigCompositeResources", "xDSCDomainjoin", "xPowerShellExecutionPolicy", "xRemoteDesktopAdmin","AutomationPSModuleResource")
+        $dscModules = @("AuditPolicyDsc", "ComputerManagementDsc", "PSDscResources", "SecurityPolicyDsc", "StateConfigCompositeResources", "xDSCDomainjoin", "xPowerShellExecutionPolicy", "xRemoteDesktopAdmin", "AutomationPSModuleResource")
 
         $ModuleToIgnore += $builtInModules
         $ModuleToIgnore += $dscModules
     }
 
-    process
-    {
+    process {
         # process definition files only
-        foreach($module in $definitions)
-        {
+        foreach ($module in $definitions) {
             # we check if its custom module --> meaning there is no source URL from PS gallery defined
-            if($module.VersionIndependentLink -eq "")
-            {
-                    # make sure we dont import one module twice
-                    [bool]$check = Check-CustomModule -storageAccount $storageAccount -storageContainerName $storageAccountContainer -moduleName $module.name 
+            if ($module.VersionIndependentLink -eq "") {
+                # make sure we dont import one module twice
+                [bool]$check = Check-CustomModule -storageAccount $storageAccount -storageContainerName $storageAccountContainer -moduleName $module.name 
                     
-                    # if exists in storage account --> get sas url only
-                    if($check)
-                    {
-                        $source = Get-BlobSasUrl -Permissions "r" -storageAccount $storageaccount -blobPath "$($storageAccountContainer)/$($module.name).zip"
-                    }
-                    else # if does not exist --> upload module and get SaS URL
-                    {
-                        $source = GetModuleContentLink -moduleDefinition $module -storageAccount $storageAccount -storageAccountContainer $storageAccountContainer
-                    }
+                # if exists in storage account --> get sas url only
+                if ($check) {
+                    $source = Get-BlobSasUrl -Permissions "r" -storageAccount $storageaccount -blobPath "$($storageAccountContainer)/$($module.name).zip"
+                }
+                else { # if does not exist --> upload module and get SaS URL
+                    $source = GetModuleContentLink -moduleDefinition $module -storageAccount $storageAccount -storageAccountContainer $storageAccountContainer
+                }
             }
             # get powershell gallery URL 
-            else
-            {
+            else {
                 $source = GetModuleContentLink -moduleDefinition $module -storageAccount $storageAccount -storageAccountContainer $storageAccountContainer
             }
             $requiredModules += [PSCustomObject]@{
-                Name = $module.name
-                Version = $module.version
-                Source = $source
+                Name           = $module.name
+                Version        = $module.version
+                Source         = $source
                 RuntimeVersion = $module.RuntimeVersion
             }
         }
-       return $requiredModules    
+        return $requiredModules    
     }
 }
 
-function GetModuleContentLink
-{
+function GetModuleContentLink {
     param
     (
         $moduleDefinition,
@@ -312,22 +323,17 @@ function GetModuleContentLink
         $storageAccountContainer
     )
 
-    process
-    {
-        if(-not [string]::IsNullOrEmpty($moduleDefinition.VersionIndependentLink))
-        {
+    process {
+        if (-not [string]::IsNullOrEmpty($moduleDefinition.VersionIndependentLink)) {
             return "$($moduleDefinition.VersionIndependentLink)/$($moduleDefinition.Version)"
         }
-        else
-        {
+        else {
             $moduleFolder = Get-ModuleToProcess -ModuleName $moduleDefinition.Name
-            if([string]::IsnullOrEmpty($moduleFolder))
-            {
+            if ([string]::IsnullOrEmpty($moduleFolder)) {
                 write-Warning "Module $($moduleDefinition.Name) does not have content link and implementation not found"
                 return
             }
-            if([string]::IsnullOrEmpty($storageAccount) -or [string]::IsnullOrEmpty($storageAccountContainer) )
-            {
+            if ([string]::IsnullOrEmpty($storageAccount) -or [string]::IsnullOrEmpty($storageAccountContainer) ) {
                 write-Warning "Storage account and/or storage container not specified, but needed --> cannot process module $($moduleDefinition.Name)"
                 return
             }
@@ -345,56 +351,47 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
 
     $desktopModules = Get-AutoObject -objectType Modules
     $coreModules = Get-AutoPowershell7Module
-    foreach($priority in $priorities)
-    {
+    foreach ($priority in $priorities) {
         "Batching modules processing for priority $priority"
-        $modulesBatch = $definitions | Where-Object{$_.Order -eq $priority}
+        $modulesBatch = $definitions | Where-Object { $_.Order -eq $priority }
         $importingDesktopModules = @()
         $importingCoreModules = @()
-        foreach($module in $modulesBatch)
-        {
+        foreach ($module in $modulesBatch) {
             "Processing module $($module.Name) for runtime $($module.RuntimeVersion)"
-            switch($module.RuntimeVersion)
-            {
+            switch ($module.RuntimeVersion) {
                 '5.1' {
-                    $existingModule = $desktopModules | Where-Object{$_.Name -eq $module.Name}
-                    if($existingModule.Count -eq 0 -or $existingModule[0].properties.Version -ne $module.version)
-                    {
+                    $existingModule = $desktopModules | Where-Object { $_.Name -eq $module.Name }
+                    if ($existingModule.Count -eq 0 -or $existingModule[0].properties.Version -ne $module.version) {
                         "Module version does not match --> importing"
                         $contentLink = GetModuleContentLink -moduleDefinition $module -storageAccount $storageAccount -storageAccountContainer $storageAccountContainer
                         "ContentLink: $contentLink"
-                        if(-not [string]::IsnullOrEmpty($contentLink))
-                        {
-                            $importingDesktopModules+=Add-AutoModule `
+                        if (-not [string]::IsnullOrEmpty($contentLink)) {
+                            $importingDesktopModules += Add-AutoModule `
                                 -Name $module.Name `
                                 -ContentLink $contentLink `
                                 -Version $module.Version
                         }
                     }
-                    else
-                    {
+                    else {
                         "Module up to date"
                     }
                     break;
                 }
                 '7.2' {
-                    $existingModule = $coreModules | Where-Object{$_.Name -eq $module.Name}
+                    $existingModule = $coreModules | Where-Object { $_.Name -eq $module.Name }
                     #currently, API returns "Unknown" for module version --> we always re-import
-                    if($existingModule.Count -eq 0 -or $existingModule[0].properties.Version -ne $module.version)
-                    {
+                    if ($existingModule.Count -eq 0 -or $existingModule[0].properties.Version -ne $module.version) {
                         "Module version does not match --> importing"
                         $contentLink = GetModuleContentLink -moduleDefinition $module -storageAccount $storageAccount -storageAccountContainer $storageAccountContainer
                         "ContentLink: $contentLink"
-                        if(-not [string]::IsnullOrEmpty($contentLink))
-                        {
-                            $importingCoreModules+=Add-AutoPowershell7Module `
+                        if (-not [string]::IsnullOrEmpty($contentLink)) {
+                            $importingCoreModules += Add-AutoPowershell7Module `
                                 -Name $module.Name `
                                 -ContentLink  $contentLink `
                                 -Version $module.Version
                         }
                     }
-                    else
-                    {
+                    else {
                         "Module up to date"
                     }
                     break;
@@ -403,54 +400,58 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
         }
         #wait for modules import completion
         $results = @()
-        if($importingDesktopModules.count -gt 0)
-        {
+        if ($importingDesktopModules.count -gt 0) {
             'Waiting for import of modules for 5.1 runtime'
-            $results+= Wait-AutoObjectProcessing -Name $importingDesktopModules.Name -objectType Modules
+            $results += Wait-AutoObjectProcessing -Name $importingDesktopModules.Name -objectType Modules
         }
-        if($importingCoreModules.count -gt 0)
-        {
+        if ($importingCoreModules.count -gt 0) {
             'Waiting for import of modules for 7.x runtime'
-            $results+= Wait-AutoObjectProcessing -Name $importingCoreModules.Name -objectType Powershell7Modules
+            $results += Wait-AutoObjectProcessing -Name $importingCoreModules.Name -objectType Powershell7Modules
         }
         #report provisioning results
-        $results  | select-object name, type, @{N='provisioningState'; E={$_.properties.provisioningState}} | Out-String
-        $failed = $results | Where-Object{$_.properties.provisioningState -ne 'Succeeded'}
-        if($failed.Count -gt 0)
-        {
+        $results  | select-object name, type, @{N = 'provisioningState'; E = { $_.properties.provisioningState } } | Out-String
+        $failed = $results | Where-Object { $_.properties.provisioningState -ne 'Succeeded' }
+        if ($failed.Count -gt 0) {
             Write-Error "Some modules failed to import"
         }
         #shall we wait for some time before importing next batch?
 
-        if([string]::IsNullOrEmpty($StorageAccount) -or [string]::IsNullOrEmpty($storageAccountContainer))
-        {
+        if ([string]::IsNullOrEmpty($StorageAccount) -or [string]::IsNullOrEmpty($storageAccountContainer)) {
             continue
         }
-        # process modules for hybrid workers
-        $requiredModules = Get-ModulesForHybridWorker -definitions $definitions `
-            -storageAccount $storageAccount `
-            -storageAccountContainer $storageAccountContainer
+        # using solution for sync of powershell modules between automation account and hybrid workers - if you wish to not use the solution set $helperHybridWorkerModuleManagement = $false
+        if ($helperHybridWorkerModuleManagement) {
+            # process modules for hybrid workers
+            $requiredModules = Get-ModulesForHybridWorker -definitions $definitions `
+                -storageAccount $storageAccount `
+                -storageAccountContainer $storageAccountContainer
 
-        # upload definition file for hybrid workers
-        Upload-ModulesForHybridWorker `
-            -storageAccount $storageAccount `
-            -storageContainerName $storageAccountContainer `
-            -body $requiredModules
+            # upload definition file for hybrid workers to storage Account
+            Upload-ModulesForHybridWorker `
+                -storageAccount $storageAccount `
+                -storageContainerName $storageAccountContainer `
+                -body $requiredModules `
+                -storageBlobName $blobNameModulesJson
+            
+            # upload HybridWorkerModuleManagement.ps1 to storage account
+            Upload-FileToBlob `
+                -storageAccount $storageAccount `
+                -storageContainerName $storageAccountContainer `
+                -filePath $manageModulesPS1Path `
+                -storageBlobName $manageModulesPS1
+        }
 
     }
-    if($FullSync)
-    {
+    if ($FullSync) {
         $runtime = '5.1'
         "Removing unmanaged modules for runtime $runtime"
-        $managedModules = $definitions | Where-Object{$_.RuntimeVersion -eq $runtime}
+        $managedModules = $definitions | Where-Object { $_.RuntimeVersion -eq $runtime }
         foreach ($module in $desktopModules) {
-            if($module.Name -in $managedModules.Name)
-            {
-                continue;   #module is managged
+            if ($module.Name -in $managedModules.Name) {
+                continue; #module is managged
             }
-            if($module.properties.IsGlobal)
-            {
-                continue;   # we do not remove global modules
+            if ($module.properties.IsGlobal) {
+                continue; # we do not remove global modules
             }
 
             "$($module.name) for runtime $runtime not managed and not global -> removing"
@@ -458,15 +459,13 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
         }
         $runtime = '7.2'
         "Removing unmanaged modules for runtime $runtime"
-        $managedModules = $definitions | Where-Object{$_.RuntimeVersion -eq $runtime}
+        $managedModules = $definitions | Where-Object { $_.RuntimeVersion -eq $runtime }
         foreach ($module in $coreModules) {
-            if($module.Name -in $managedModules.Name)
-            {
-                continue;   #module is managged
+            if ($module.Name -in $managedModules.Name) {
+                continue; #module is managged
             }
-            if($module.properties.IsGlobal)
-            {
-                continue;   # we do not remove global modules
+            if ($module.properties.IsGlobal) {
+                continue; # we do not remove global modules
             }
             "$($module.name) for runtime $runtime not managed and not global -> removing"
             Remove-AutoPowershell7Module -Name $module.Name | Out-Null
@@ -483,8 +482,7 @@ if (Check-Scope -Scope $scope -RequiredScope 'Schedules') {
 
     $existingSchedules = Get-AutoObject -objectType Schedules
 
-    foreach($schedule in  $definitions)
-    {
+    foreach ($schedule in  $definitions) {
         "Processing $($schedule.Name)"
         Add-AutoSchedule `
             -Name $schedule.Name `
@@ -496,12 +494,10 @@ if (Check-Scope -Scope $scope -RequiredScope 'Schedules') {
             -Description $schedule.Description `
             -Disabled:$schedule.Disabled | Out-Null
     }
-    if($fullSync)
-    {
+    if ($fullSync) {
         "Removing unmanaged schedules"
-        $schedulesToRemove = $existingSchedules | Where-Object{$_.Name -notin $definitions.Name}
-        foreach($schedule in $schedulesToRemove)
-        {
+        $schedulesToRemove = $existingSchedules | Where-Object { $_.Name -notin $definitions.Name }
+        foreach ($schedule in $schedulesToRemove) {
             "Removing $($schedule.Name)"
             Remove-AutoObject -Name $schedule.Name -objectType Schedules | Out-Null
         }
@@ -517,20 +513,17 @@ if (Check-Scope -Scope $scope -RequiredScope 'Runbooks') {
 
     $existingRunbooks = Get-AutoObject -objectType Runbooks
 
-    $importingRunbooks=@()
-    foreach($runbook in $definitions)
-    {
+    $importingRunbooks = @()
+    foreach ($runbook in $definitions) {
         "Processing runbook $($runbook.Name) for runtime $($runbook.RuntimeVersion)"
         $implementationFile = Get-FileToProcess -FileType Runbooks -FileName $runbook.Implementation
-        if([string]::IsnullOrEmpty($ImplementationFile))
-        {
+        if ([string]::IsnullOrEmpty($ImplementationFile)) {
             write-warning "Missing implementation file --> skipping"
             continue
         }
-        switch($runbook.RuntimeVersion)
-        {
+        switch ($runbook.RuntimeVersion) {
             '5.1' {
-                $importingRunbooks+=Add-AutoRunbook `
+                $importingRunbooks += Add-AutoRunbook `
                     -Name $runbook.Name `
                     -Type  $runbook.Type `
                     -Content (Get-Content -Path $ImplementationFile -Raw) `
@@ -540,7 +533,7 @@ if (Check-Scope -Scope $scope -RequiredScope 'Runbooks') {
                 break;
             }
             '7.2' {
-                $importingRunbooks+=Add-AutoPowershell7Runbook `
+                $importingRunbooks += Add-AutoPowershell7Runbook `
                     -Name $runbook.Name `
                     -Content (Get-Content -Path $ImplementationFile -Raw) `
                     -Description $runbook.Description `
@@ -551,25 +544,20 @@ if (Check-Scope -Scope $scope -RequiredScope 'Runbooks') {
         }
     }
     #wait for runbook import completion
-    if($importingRunbooks.Count -gt 0)
-    {
+    if ($importingRunbooks.Count -gt 0) {
         'Waiting for import of runbooks'
         $results = Wait-AutoObjectProcessing -Name $importingRunbooks.Name -objectType Runbooks
         #report provisioning results
-        $results | select-object name, @{N='provisioningState'; E={$_.properties.provisioningState}} | Out-String
-        $failed = $results | Where-Object{$_.properties.provisioningState -ne 'Succeeded'}
-        if($failed.Count -gt 0)
-        {
+        $results | select-object name, @{N = 'provisioningState'; E = { $_.properties.provisioningState } } | Out-String
+        $failed = $results | Where-Object { $_.properties.provisioningState -ne 'Succeeded' }
+        if ($failed.Count -gt 0) {
             Write-Error "Some runbooks failed to import"
         }
     }
-    if($fullSync)
-    {
+    if ($fullSync) {
         "Removing unmanaged runbooks"
-        foreach($runbook in $existingRunbooks)
-        {
-            if($runbook.Name -in $definitions.Name)
-            {
+        foreach ($runbook in $existingRunbooks) {
+            if ($runbook.Name -in $definitions.Name) {
                 continue
             }
             "Removing $($runbook.Name)"
@@ -585,61 +573,52 @@ if (Check-Scope -Scope $scope -RequiredScope 'JobSchedules') {
     #process linked schedules
     $definitions = @(Get-DefinitionFiles -FileType JobSchedules)
 
-    $alljobSchedules =  Get-AutoObject -objectType JobSchedules
+    $alljobSchedules = Get-AutoObject -objectType JobSchedules
     $allSchedules = Get-AutoObject -objectType Schedules
     $existingRunbooks = Get-AutoObject -objectType Runbooks
 
     $managedSchedules = @()
-    foreach($def in $definitions)
-    {
+    foreach ($def in $definitions) {
         "Checking runbook existence: $($def.runbookName)"
-        if(-not ($existingRunbooks.Name -contains $def.runbookName))
-        {
+        if (-not ($existingRunbooks.Name -contains $def.runbookName)) {
             Write-Warning "Runbook $($def.runbookName) does not exist --> skipping job schedule"
             continue
         }
         "Checking schedule existence: $($def.scheduleName)"
-        if(-not ($allSchedules.Name -contains $def.scheduleName))
-        {
+        if (-not ($allSchedules.Name -contains $def.scheduleName)) {
             Write-Warning "Schedule $($def.scheduleName) does not exist --> skipping job schedule"
             continue
         }
         $params = [PSCustomObject]@{}
-        if(-not [string]::IsNullOrEmpty($def.Settings))
-        {
+        if (-not [string]::IsNullOrEmpty($def.Settings)) {
             $settingsFile = Get-FileToProcess -FileType JobSchedules -FileName $def.Settings
-            if([string]::IsnullOrEmpty($settingsFile))
-            {
+            if ([string]::IsnullOrEmpty($settingsFile)) {
                 write-warning "Missing setting file $($def.Settings) --> skipping"
                 continue
             }
             $setting = get-content $settingsFile -Encoding utf8 | ConvertFrom-Json
-            if(-not [string]::IsNullOrEmpty($setting.Parameters)) {$params = $setting.Parameters}
+            if (-not [string]::IsNullOrEmpty($setting.Parameters)) { $params = $setting.Parameters }
         }
         "Updating schedule $($def.scheduleName) on $($def.runbookName)"
         $jobSchedule = Add-AutoJobSchedule -RunbookName $def.runbookName `
             -ScheduleName $def.scheduleName `
-            -RunOn $(if($setting.runOn -eq 'Azure' -or [string]::IsnullOrEmpty($setting.runOn)) {''} else {$setting.runOn}) `
+            -RunOn $(if ($setting.runOn -eq 'Azure' -or [string]::IsnullOrEmpty($setting.runOn)) { '' } else { $setting.runOn }) `
             -Parameters $Params
         
         $managedSchedules += $jobSchedule
     }
-    if($fullSync)
-    {
+    if ($fullSync) {
         "Removing unmanaged job schedules"
-        foreach($jobSchedule in $alljobSchedules)
-        {
+        foreach ($jobSchedule in $alljobSchedules) {
             $result = $managedSchedules `
-            | Where-Object{$_.properties.runbook.name -eq $jobSchedule.properties.runbook.name} `
-            | Where-Object{$_.properties.schedule.name -eq $jobSchedule.properties.schedule.name}
+            | Where-Object { $_.properties.runbook.name -eq $jobSchedule.properties.runbook.name } `
+            | Where-Object { $_.properties.schedule.name -eq $jobSchedule.properties.schedule.name }
 
-            if($null -ne $result)
-            {
+            if ($null -ne $result) {
                 #schedule is managed
                 continue;
             }
-            else
-            {
+            else {
                 "Unlinking schedule $($jobSchedule.properties.schedule.name) from runbook $($jobSchedule.properties.runbook.name)"
                 Remove-AutoObject -Name $jobSchedule.properties.jobScheduleId -objectType JobSchedules
             }
@@ -675,24 +654,33 @@ if (Check-Scope -Scope $scope -RequiredScope 'Configurations') {
             -Description $def.Description `
             -AutoCompile:$def.AutoCompile `
             -Parameters $def.Parameters `
-            -ParameterValues $def.$ParameterValues
-        if($def.autoCompile)
-        {
+            -ParameterValues $def.ParameterValues
+        if ($def.autoCompile) {
             #we received compilation job here
-            $CompilationJobs+=$rslt
+            $CompilationJobs += $rslt
         }
     }
-    if($CompilationJobs.Count -gt 0)
-    {
-        Wait-AutoObjectProcessing -Name $compilationJobs.Name -objectType Compilationjobs | select-object name, @{N='provisioningState'; E={$_.properties.provisioningState}} | Out-String
+    if ($CompilationJobs.Count -gt 0) {
+        Wait-AutoObjectProcessing -Name $compilationJobs.Name -objectType Compilationjobs | select-object name, @{N = 'provisioningState'; E = { $_.properties.provisioningState } } | Out-String
+        # get config to assign
+        $configToAssign = Get-DscNodeConfiguration -Subscription $subscription -ResourceGroup $resourceGroup -AutomationAccount $automationAccount |`
+            Where-object { $_.properties.configuration.name -eq $CompilationJobs.properties.configuration.name }
+    
+        # get nodes 
+        $nodes = Get-DscNodes -Subscription $subscription -ResourceGroup $resourceGroup -AutomationAccount $automationAccount
+
+        # assign compiled config to node
+        foreach ($node in $nodes) {
+            Write-Verbose "Assigning $($configToassign.name) to $($node.name)"
+            $rslt = Assign-DscNodeConfig -Subscription $subscription -ResourceGroup $resourceGroup -AutomationAccount $automationAccount -NodeConfigId $configToAssign.name -NodeName $node.properties.nodeId
+            Write-Verbose "Configuration assigned"
+            $rslt | fl
+        }
     }
-    if($fullSync)
-    {
+    if ($fullSync) {
         "Removing unmanaged configurations"
-        foreach($configuration in $existingConfigurations)
-        {
-            if($configuration.Name -in $definitions.Name)
-            {
+        foreach ($configuration in $existingConfigurations) {
+            if ($configuration.Name -in $definitions.Name) {
                 continue
             }
             "Removing $($configuration.Name)"
@@ -702,7 +690,6 @@ if (Check-Scope -Scope $scope -RequiredScope 'Configurations') {
 }
 #endregion Dsc
 
-if($verboseLog)
-{
+if ($verboseLog) {
     $VerbosePreference = 'SilentlyContinue'
 }
