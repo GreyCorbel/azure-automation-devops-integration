@@ -302,7 +302,7 @@ function New-ScheduleDefinition
             #Frequency of recurrence
             #Note: We do not support one-time schedules here
             $Frequency,
-        [uint[]]
+        [uint32[]]
             #on which days in month it triggers
             #works together with Month frequency, otherwise ignored
             #Example: 2,15 --> every 2nd and 15th in month
