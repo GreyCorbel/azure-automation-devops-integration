@@ -578,6 +578,12 @@ if (Check-Scope -Scope $scope -RequiredScope 'Configurations') {
     $definitions = @(Get-DefinitionFiles -FileType Configurations)
 
     foreach ($def in $definitions) {
+        
+        # take definition file for parameter values for current environment
+        $configParamValuesDef = Get-DefinitionFiles -FileType "ConfigurationParameterValues"|Where-Object{$_.ConfigurationName -eq $def.Name}
+        $filePath = Get-FileToProcess -FileType ConfigurationParameterValues -FileName $configParamValuesDef.Content
+        $paramValues = (Get-Content -Path $filePath)|ConvertFrom-Json
+        
         "Processing configuration $($def.Name)"
         $implementationFile = Get-FileToProcess -FileType Configurations -FileName $def.Implementation
 
@@ -589,13 +595,14 @@ if (Check-Scope -Scope $scope -RequiredScope 'Configurations') {
         #import logic of DSC config
         
         "Importing Dsc: Source: $implementationFile; Compile: $($def.AutoCompile)"
+       
         $rslt = Add-AutoConfiguration `
             -Name $def.Name `
             -Content (Get-Content -Path $implementationFile -Encoding utf8 -Raw) `
             -Description $def.Description `
             -AutoCompile:$def.AutoCompile `
             -Parameters $def.Parameters `
-            -ParameterValues $def.ParameterValues
+            -ParameterValues $paramValues
         if ($def.autoCompile) {
             #we received compilation job here
             $CompilationJobs += $rslt
@@ -609,13 +616,17 @@ if (Check-Scope -Scope $scope -RequiredScope 'Configurations') {
     
         # get nodes 
         $nodes = Get-DscNodes -Subscription $subscription -ResourceGroup $resourceGroup -AutomationAccount $automationAccount
-
-        # assign compiled config to node
-        foreach ($node in $nodes) {
-            Write-Verbose "Assigning $($configToassign.name) to $($node.name)"
-            $rslt = Assign-DscNodeConfig -Subscription $subscription -ResourceGroup $resourceGroup -AutomationAccount $automationAccount -NodeConfigId $configToAssign.name -NodeName $node.properties.nodeId
-            Write-Verbose "Configuration assigned"
-            $rslt | fl
+        if($nodes.id.count -gt 0)
+        {
+            # assign compiled config to nodes
+            foreach ($node in $nodes) {
+                "Assigning $($configToassign.name) to $($node.name)"
+                $rslt = Assign-DscNodeConfig -Subscription $subscription -ResourceGroup $resourceGroup -AutomationAccount $automationAccount -NodeConfigId $configToAssign.name -NodeName $node.properties.nodeId
+                "Configuration assigned"
+                $rslt | fl
+            }
+        }else{
+            "No DSC nodes are registered, therefore skipping assignment."
         }
     }
     if ($fullSync) {

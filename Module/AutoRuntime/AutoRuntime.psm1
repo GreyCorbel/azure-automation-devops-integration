@@ -23,7 +23,7 @@ Function Validate-FileType
     )
     begin
     {
-        $AllowedFileTypes = 'Runbooks','Variables','Configurations','Schedules','Modules','JobSchedules','Webhooks'
+        $AllowedFileTypes = 'Runbooks','Variables','Configurations','Schedules','Modules','JobSchedules','Webhooks','ConfigurationParameterValues'
     }
     process
     {

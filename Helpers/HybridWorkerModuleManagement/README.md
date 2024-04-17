@@ -64,32 +64,37 @@ Note: Arc Connect machine do not provide an option to use system assigned manage
   - Finalize the role assignment by clicking on Next or directly click on Review + assign on the bottom of the
 
 ## Config preparation
-1) Prepare definition file (that is used for creation of DSC .MOF file) HybridWorkerModuleManagement.json
-  - Under Helpers folder - find HybridWorkerModulesSync folder and open HybridWorkerModuleManagement.json.
+1) Prepare definition file for parameter values (used for creation of DSC .MOF file - per environment) Prepare-HybridWorkerModuleManagementParamValuesSource.json
+  - Under Helpers folder - find HybridWorkerModulesManagement folder and open Prepare-HybridWorkerModuleManagementParamValuesSource.json.
   - Mandatory: Update your storage account and container details.
 
   - You can (optionally) update other variables: 
     -  "workerLocalPath" --> folder where the script will be stored locally on your hybrid worker. 
     -  "runTimeVersion" --> runtime under which script will be executed - availables options: ["5", "7", "Both"].
-    -  "blobNameModulesjson" --> name of the json file in your storage account that defines which modules should be installed (Note: if you change the name, make sure name is the same as in Manage-AutomationAccount.ps1 - see step #4 for more details).
-    -  "manageModulesScriptName" --> Script that is used for actual module management on hybrid workers. Script is deployed from your project folder to Storage Account from where its later downloaded by each worker and called by DSC configuration that was defined as part of this step. (Note: if you change the name, make sure name is the same as in Manage-AutomationAccount.ps1 - see step #4 for more details).
+    -  "blobNameModulesjson" --> name of the json file in your storage account that defines which modules should be installed (Note: if you change the name, make sure name is the same as in Manage-AutomationAccount.ps1 - see step #6 for more details).
+    -  "manageModulesScriptName" --> Script that is used for actual module management on hybrid workers. Script is deployed from your project folder to Storage Account from where its later downloaded by each worker and called by DSC configuration that was defined as part of this step. (Note: if you change the name, make sure name is the same as in Manage-AutomationAccount.ps1 - see step #6 for more details).
     -  "machineType" --> on top of default "arc" option, there is an option to use "vm"  (in case Azure VM is used as DSC node - e.g. testing)
 
   ``` json
-   "ParameterValues": {
-        "storageAccount": "STORAGE_ACCOUNT_NAME",
-        "storageAccountContainer": "STORAGE_ACCOUNT_CONTAINER",
-        "workerLocalPath": "C:\\ManageModules",
-        "runTimeVersion": "Both", 
-        "blobNameModulesJson": "required-modules.json",
-        "manageModulesScriptName": "HybridWorkerModuleManagement.ps1",
-        "machineType": "arc" 
-    }
+
+  {
+    "storageAccount": "YOUR_STORAGE_ACCOUNT",
+    "storageAccountContainer": "YOUR_STORAGE_CONTAINER",
+    "workerLocalPath": "C:\\ManageModules",
+    "runTimeVersion": "Both", 
+    "blobNameModulesJson": "required-modules.json",
+    "manageModulesScriptName": "HybridWorkerModuleManagement.ps1",
+    "machineType": "arc" 
+  }
 
   ```
-2) Move the script Prepare-HybridWorkerModuleManagement.ps1 to YOUR_PROJECT_FOLDER\Source\Common\Configurations
-3) Move definition file HybridWorkerModuleManagement.json file to YOUR_PROJECT_FOLDER\Definitions\Configurations
-4) Switch task parameter 'helperHybridWorkerModuleManagement' of your deployment pipeline to true. Make sure that $manageModulesPs1Path matches an actual path of ManageModule script, otherwise script will not be copied to StorageAccount - by default path to Helpers folder is set. All related variables inside Manage-AutomationAccount.ps1 are these:
+2) Move DSC configuration SOURCE file (Prepare-HybridWorkerModuleManagement.ps1) to YOUR_PROJECT_FOLDER\Source\ENVIRONMENT_NAME\Configurations
+3) Move DSC CONFIGURATION file (Prepare-HybridWorkerModuleManagement.json) file to YOUR_PROJECT_FOLDER\Definitions\Configurations
+
+4) Move parameter values SOURCE file (Prepare-HybridWorkerModuleManagementParamValuesSource.json) to YOUR_PROJECT_FOLDER\Source\ENVIRONMENT_NAME\ConfigurationParameterValues --> this allows you so set parameters per environment (e.g. UAT,PROD,etc.)
+5) Move parameter values CONFIGURATION file (Prepare-HybridWorkerModuleManagementParamValuesDef.json) to YOUR_PROJECT_FOLDER\Definitions\ConfigurationParameterValues
+
+6) Switch task parameter 'helperHybridWorkerModuleManagement' of your deployment pipeline to true. Make sure that $manageModulesPs1Path matches an actual path of ManageModule script, otherwise script will not be copied to StorageAccount - by default path to Helpers folder is set. All related variables inside Manage-AutomationAccount.ps1 are these:
 
 ```PowerShell
 
@@ -100,7 +105,7 @@ if($helperHybridWorkerModuleManagement)
     $manageModulesPs1Path = "$($grandparentDirectory)\Helpers\HybridWorkerModuleManagement\$($manageModulesPS1)"
 }
 ```
-5) Define all modules you would like to install under YOUR_PROJECT_FOLDER\Definitions\Configurations (json file per module) e.g.
+7) Define all modules you would like to install under YOUR_PROJECT_FOLDER\Definitions\Configurations (json file per module) e.g.
 
 ```json
 {
@@ -112,8 +117,8 @@ if($helperHybridWorkerModuleManagement)
 }
 ```
 
-6) Deploy your solution (by running Manage-AutomationAccount.ps1)
-7) You are done !
+8) Deploy your solution (by running Manage-AutomationAccount.ps1)
+9) You are done !
  
  ### What will happen now ? 
 
