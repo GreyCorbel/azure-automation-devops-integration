@@ -132,8 +132,8 @@ After that:
 Testing: 
   - If you do not want to wait for Node to react on your changes you can make it faster by running: 
   ```PowerShell
-    - Get-Process wmiprvse|Stop-Process -Force
-    - Start-Process wmiprvse 
+    Get-Process wmiprvse|Stop-Process -Force
+    Start-Process wmiprvse 
   ```
   - Commands above will restart service responsible for DSC. 
 
