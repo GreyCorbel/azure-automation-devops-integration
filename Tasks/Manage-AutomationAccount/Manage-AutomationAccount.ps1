@@ -367,7 +367,7 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
         $importingDesktopModules = @()
         $importingCoreModules = @()
         foreach ($module in $modulesBatch) {
-            "Processing module $($module.Name) for runtime $($module.RuntimeVersion)"
+            "Processing module $($module.Name) $($module.Version) for runtime $($module.RuntimeVersion)"
             switch ($module.RuntimeVersion) {
                 '5.1' {
                     $existingModule = $desktopModules | Where-Object { $_.Name -eq $module.Name }
