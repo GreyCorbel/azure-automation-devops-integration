@@ -93,7 +93,7 @@ foreach($def in $definitions)
             $managedWebhooks+=$wh
             continue
         }
-        if($existingWebhooks -gt [DateTime]::Now)
+        if($expiration -gt [DateTime]::Now)
         {
             #about to expire, but not expired yet
             $managedWebhooks+=$wh
