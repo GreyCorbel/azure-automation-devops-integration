@@ -56,8 +56,8 @@ Write-Host "Import succeeded!"
 
 Write-Host "Starting process..."
 # retrieve service connection object
-$serviceConnectionObject = Get-VstsEndpoint -Name $azureSubscription -Require
-$serviceConnection = ConvertTo-Json $serviceConnectionObject
+$serviceConnection = Get-VstsEndpoint -Name $azureSubscription -Require
+$serviceConnectionSerialized = ConvertTo-Json $serviceConnection
 
 # define type od service connection
 switch ($serviceConnection.auth.scheme) {
@@ -69,6 +69,8 @@ switch ($serviceConnection.auth.scheme) {
 
         # SPNcertificate
         if ($serviceConnection.auth.parameters.authenticationType -eq 'SPNCertificate') {
+            Write-Host "ServicePrincipal with Certificate auth"
+
             $certData = $serviceConnection.Auth.parameters.servicePrincipalCertificate
             $cert= [System.Security.Cryptography.X509Certificates.X509Certificate2]::CreateFromPem($certData,$certData)
 
@@ -80,19 +82,26 @@ switch ($serviceConnection.auth.scheme) {
         }
         #Service Principal
         else {
+            Write-Host "ServicePrincipal with ClientSecret auth"
+
             Initialize-AadAuthenticationFactory `
             -servicePrincipalId $servicePrincipalId `
             -servicePrincipalKey $servicePrincipalkey `
             -tenantId $tenantId
         }
+        break;
      }
 
      'ManagedServiceIdentity' {
+        Write-Host "ManagedIdentitx auth"
+
         Initialize-AadAuthenticationFactory `
             -serviceConnection $serviceConnection
+        break;
      }
 
      'WorkloadIdentityFederation' {
+        Write-Host "Workload identity auth"
 
         # get service connection properties
         $planId = Get-VstsTaskVariable -Name 'System.PlanId' -Require
@@ -122,6 +131,7 @@ switch ($serviceConnection.auth.scheme) {
             -servicePrincipalId $servicePrincipalId `
             -assertion $assertion `
             -tenantId $tenantId
+        break;
      }
 }
 
