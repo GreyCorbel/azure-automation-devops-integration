@@ -3,14 +3,19 @@ function Initialize-AadAuthenticationFactory
     [CmdletBinding()]
     param
     (
-        [Parameter(Mandatory, ParameterSetName = 'ServicePrincipal')]
-        [string]$servicePrincipalId,
-        [Parameter(Mandatory, ParameterSetName = 'ServicePrincipal')]
+        [Parameter(ParameterSetName = 'ServicePrincipal')]
         [string]$servicePrincipalKey,
-        [Parameter(Mandatory)]
-        [string]$tenantId,
-        [Parameter(Mandatory, ParameterSetName = 'Interactive')]
-        [string]$AuthMode
+        [Parameter(ParameterSetName = 'ServicePrincipal')]
+        [string]$cert,
+        [Parameter(ParameterSetName = 'ServicePrincipal')]
+        [Parameter(ParameterSetName = 'WorkloadIdentityFederation')]
+        [string]$servicePrincipalId,
+        [Parameter(ParameterSetName = 'WorkloadIdentityFederation')]
+        [string]$Assertion,
+        [Parameter(ParameterSetName = 'ManagedServiceIdentity')]
+        [string]$ServiceConnection,
+        [Parameter()]
+        [string]$tenantId
     )
     process
     {
@@ -18,17 +23,36 @@ function Initialize-AadAuthenticationFactory
         switch($PSCmdlet.ParameterSetName)
         {
             'ServicePrincipal' {
-                $script:aadAuthenticationFactory = New-AadAuthenticationFactory `
+                if ($cert) {
+                    $script:aadAuthenticationFactory = New-AadAuthenticationFactory `
+                    -TenantId $tenantId `
+                    -ClientId $servicePrincipalId `
+                    -X509Certificate $cert
+                }
+                else {
+                    $script:aadAuthenticationFactory = New-AadAuthenticationFactory `
                     -TenantId $tenantId `
                     -ClientId $servicePrincipalId `
                     -ClientSecret $servicePrincipalKey
-                break;
+                }
             }
-            'Interactive' {
+            'ManagedServiceIdentity' {
+                $msiClientId = $serviceConnection.Data.msiClientId
+                if ($msiClientId) {
+                    $script:aadAuthenticationFactory = New-AadAuthenticationFactory `
+                    -ClientId $msiClientId `
+                    -UseManagedIdentity
+                }
+                else {
+                    $script:aadAuthenticationFactory = New-AadAuthenticationFactory `
+                    -UseManagedIdentity
+                }
+            }
+            'WorkloadIdentityFederation' {
                 $script:aadAuthenticationFactory = New-AadAuthenticationFactory `
                     -TenantId $tenantId `
-                    -AuthMode $AuthMode
-                break;
+                    -ClientId $servicePrincipalId `
+                    -Assertion $assertion
             }
         }
     }
