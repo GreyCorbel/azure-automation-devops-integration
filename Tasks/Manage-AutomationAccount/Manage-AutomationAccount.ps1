@@ -15,20 +15,20 @@ $reportMissingImplementation = Get-VstsInput -Name 'reportMissingImplementation'
 $verboseLog = Get-VstsInput -Name 'verbose'
 $helperHybridWorkerModuleManagement = Get-VstsInput -Name 'helperHybridWorkerModuleManagement'
 
-#load Automation account REST wrapper
+<# #load Automation account REST wrapper
 $parentDirectory = Split-Path -Path $PSScriptRoot -Parent
 $grandparentDirectory = Split-Path -Path $parentDirectory -Parent
-
+ #>
 if ($verboseLog) {
     $VerbosePreference = 'Continue'
 }
 
-if ($helperHybridWorkerModuleManagement) {
+<# if ($helperHybridWorkerModuleManagement) {
     $blobNameModulesJson = "required-modules.json"
     $manageModulesPs1 = "HybridWorkerModuleManagement.ps1"
     $manageModulesPs1Path = "$($grandparentDirectory)\Helpers\HybridWorkerModuleManagement\$($manageModulesPS1)"
 }
-#load VstsTaskSdk module
+ #>#load VstsTaskSdk module
 Write-Host "Installing dependencies..."
 if ($null -eq (Get-Module -Name VstsTaskSdk -ListAvailable)) {
     Write-Host "VstsTaskSdk module not found, installing..."
@@ -429,7 +429,7 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
         if ([string]::IsNullOrEmpty($StorageAccount) -or [string]::IsNullOrEmpty($storageAccountContainer)) {
             continue
         }
-        # using solution for sync of powershell modules between automation account and hybrid workers - if you wish to not use the solution set $helperHybridWorkerModuleManagement = $false
+<#         # using solution for sync of powershell modules between automation account and hybrid workers - if you wish to not use the solution set $helperHybridWorkerModuleManagement = $false
         if ($helperHybridWorkerModuleManagement) {
             # process modules for hybrid workers
             $requiredModules = Get-ModulesForHybridWorker -definitions $definitions `
@@ -450,7 +450,7 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
                 -filePath $manageModulesPS1Path `
                 -storageBlobName $manageModulesPS1
         }
-
+ #>
     }
     if ($FullSync) {
         $runtime = '5.1'
