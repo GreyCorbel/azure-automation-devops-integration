@@ -1038,7 +1038,7 @@ Function Add-AutoWebhook
                 -ErrorAction Stop
             
             Write-Host "Webhook response properties: "
-            $response.properties
+            $response
         }
         catch {
             write-error $_
