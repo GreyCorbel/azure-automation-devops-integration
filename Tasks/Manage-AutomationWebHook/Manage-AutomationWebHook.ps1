@@ -122,8 +122,19 @@ foreach($def in $definitions)
                 continue
             }
             Write-Host "Settings file found: $settingsFile"
-
             $setting = get-content $settingsFile -Encoding utf8 | ConvertFrom-Json
+
+            Write-Host "get setting value as json object: "
+            $settingAsJson = get-content $settingsFile -Encoding utf8
+            $settingAsJson
+
+            Write-Host "get properties params setting value as json object: "
+            $settingAsJson = get-content $settingsFile -Encoding utf8
+            $settingAsJson.parameters
+
+            Write-Host "get setting value as PS object: "
+            $setting
+
             if((-not [string]::IsNullOrEmpty($setting.RunOn) -and ($setting.RunOn -ne 'Azure'))) {$runOn = $setting.RunOn}
             if(-not [string]::IsNullOrEmpty($setting.Parameters)) {$params = $setting.Parameters}
         }
