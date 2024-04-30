@@ -1038,7 +1038,8 @@ Function Add-AutoWebhook
                 -ErrorAction Stop
             
             Write-Host "Webhook response properties: "
-            $response
+            $response2json = ConvertTo-Json $response 
+            $response2json
         }
         catch {
             write-error $_
