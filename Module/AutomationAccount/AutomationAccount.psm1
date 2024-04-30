@@ -1030,16 +1030,12 @@ Function Add-AutoWebhook
             } |  ConvertTo-Json
             write-verbose $payload
     
-            $response = Invoke-RestMethod -Method Put `
+            Invoke-RestMethod -Method Put `
                 -Uri $Uri `
                 -Body $payload `
                 -ContentType 'application/json' `
                 -Headers $headers `
                 -ErrorAction Stop
-            
-            Write-Host "Webhook response properties: "
-            $response2json = ConvertTo-Json $response 
-            $response2json
         }
         catch {
             write-error $_

@@ -139,6 +139,9 @@ foreach($def in $definitions)
             -ExpiresOn $Expires `
             -Parameters $params
 
+        Write-Host "tohle to co me zajima:"
+        $webhook
+
         $webhook | Add-Member -MemberType NoteProperty -Name SupportedRequestTypes -Value $SupportedRequestTypes
         $managedWebhooks+=$webhook
         $newWebhooks += $webhook
