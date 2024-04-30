@@ -137,7 +137,7 @@ foreach($def in $definitions)
             -RunbookName $def.RunbookName `
             -RunOn $runOn `
             -ExpiresOn $Expires `
-            -Parameters $params
+            -Parameters @params
 
         Write-Host "tohle to co me zajima:"
         $webhook2json = $webhook | ConvertTo-Json
