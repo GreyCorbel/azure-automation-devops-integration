@@ -112,7 +112,8 @@ foreach($def in $definitions)
             continue
         }
         $runOn = ''
-        $params = [PSCustomObject]@{}
+        $params = @{}
+
         if(-not [string]::IsNullOrEmpty($def.Settings))
         {
             $settingsFile = Get-FileToProcess -FileType Webhooks -FileName $def.Settings
@@ -124,13 +125,9 @@ foreach($def in $definitions)
             Write-Host "Settings file found: $settingsFile"
             $setting = get-content $settingsFile -Encoding utf8 | ConvertFrom-Json
 
-            Write-Host "get setting value as json object: "
-            $settingAsJson = get-content $settingsFile -Encoding utf8
-            $settingAsJson
-
-            Write-Host "get properties params setting value as json object: "
-            $settingAsJson = get-content $settingsFile -Encoding utf8
-            $settingAsJson.parameters
+            foreach($prop in $setting.parameters.psobject.properties) {
+                $params[$prop.name] = $prop.value
+            }
 
             Write-Host "get setting value as PS object: "
             $setting
@@ -138,6 +135,9 @@ foreach($def in $definitions)
             if((-not [string]::IsNullOrEmpty($setting.RunOn) -and ($setting.RunOn -ne 'Azure'))) {$runOn = $setting.RunOn}
             if(-not [string]::IsNullOrEmpty($setting.Parameters)) {$params = $setting.Parameters}
         }
+
+        Write-Host "Checking params :"
+        $params
 
         $Expires = [DateTime]::UtcNow + [Timespan]::Parse($def.Expiration)
         $SupportedRequestTypes = $def.SupportedRequestTypes
@@ -150,14 +150,8 @@ foreach($def in $definitions)
             -ExpiresOn $Expires `
             -Parameters $params
         
-        Write-Host "checking params :"
-        $params
 
-        Write-Host "checking params in json :"
-        $params2json = $params | ConvertTo-Json
-        $params2json
-
-        Write-Host "tohle to co me zajima:"
+        Write-Host "API response: "
         $webhook2json = $webhook | ConvertTo-Json
         $webhook2json
 
