@@ -140,7 +140,8 @@ foreach($def in $definitions)
             -Parameters $params
 
         Write-Host "tohle to co me zajima:"
-        $webhook
+        $webhook2json = $webhook | ConvertTo-Json
+        $webhook2json
 
         $webhook | Add-Member -MemberType NoteProperty -Name SupportedRequestTypes -Value $SupportedRequestTypes
         $managedWebhooks+=$webhook
