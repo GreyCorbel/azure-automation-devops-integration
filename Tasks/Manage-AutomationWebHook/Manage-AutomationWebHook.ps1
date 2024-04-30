@@ -138,6 +138,13 @@ foreach($def in $definitions)
             -RunOn $runOn `
             -ExpiresOn $Expires `
             -Parameters $params
+        
+        Write-Host "checking params :"
+        $params
+
+        Write-Host "checking params in json :"
+        $params2json = $params | ConvertTo-Json
+        $params2json
 
         Write-Host "tohle to co me zajima:"
         $webhook2json = $webhook | ConvertTo-Json
