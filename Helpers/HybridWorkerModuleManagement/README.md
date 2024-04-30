@@ -52,7 +52,7 @@ Note: Arc Connect machine do not provide an option to use system assigned manage
 - Click Create
 
 
-4) Assign Storage Blob Data Contributor Role to your worker (that belongs to your user assigned managed identity). 
+4) Assign Storage Blob Data Contributor Role to your worker (that belongs to your user assigned managed identity) as well as to your Service Connection (in case you are deploying with pipeline). 
 
   Open the Storage Account Container where you will store necessary files. 
   - From the left side navigation menu, select Access Control (IAM).
@@ -88,13 +88,11 @@ Note: Arc Connect machine do not provide an option to use system assigned manage
   }
 
   ```
-2) Move 'dsc' SOURCE file (Prepare-HybridWorkerModuleManagement.ps1) to YOUR_PROJECT_FOLDER\Source\ENVIRONMENT_NAME\Configurations
-3) Move 'dsc' DEFINITION file (Prepare-HybridWorkerModuleManagement.json) file to YOUR_PROJECT_FOLDER\Definitions\Configurations
-
-4) Move 'parameter values' SOURCE file (Prepare-HybridWorkerModuleManagementParamValuesSource.json) to YOUR_PROJECT_FOLDER\Source\ENVIRONMENT_NAME\ConfigurationParameterValues --> this allows you so set parameters per environment (e.g. UAT,PROD,etc.)
-5) Move 'parameter values' DEFINITION file (Prepare-HybridWorkerModuleManagementParamValuesDef.json) to YOUR_PROJECT_FOLDER\Definitions\ConfigurationParameterValues
-
-6) Switch task parameter 'helperHybridWorkerModuleManagement' of your deployment pipeline to true. Make sure that $manageModulesPs1Path matches an actual path of ManageModule script, otherwise script will not be copied to StorageAccount - by default path to Helpers folder is set. All related variables inside Manage-AutomationAccount.ps1 are these:
+2) Move json  (Source file) (Prepare-HybridWorkerModuleManagementParamValuesSource.json) to YOUR_PROJECT_FOLDER\Source\ENVIRONMENT_NAME\ConfigurationParameterValues --> this allows you so set parameters per environment (e.g. UAT,PROD,etc.)
+3) Move script (Source file)  (Prepare-HybridWorkerModuleManagement.ps1) to YOUR_PROJECT_FOLDER\Source\ENVIRONMENT_NAME\Configurations --> make sure you do this per environment
+4) Move json (Definition file) (Prepare-HybridWorkerModuleManagement.json) file to YOUR_PROJECT_FOLDER\Definitions\Configurations
+5) Move json (Definition file) (Prepare-HybridWorkerModuleManagementParamValuesDef.json) to YOUR_PROJECT_FOLDER\Definitions\ConfigurationParameterValues
+6) Add and/or switch task parameter 'helperHybridWorkerModuleManagement' of your deployment pipeline (or script) to true. Make sure that $manageModulesPs1Path matches an actual path of ManageModule script, otherwise script will not be copied to StorageAccount - by default path to Helpers folder is set. All related variables inside Manage-AutomationAccount.ps1 are these:
 
 ```PowerShell
 
