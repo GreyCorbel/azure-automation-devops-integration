@@ -138,10 +138,6 @@ foreach($def in $definitions)
             -RunOn $runOn `
             -ExpiresOn $Expires `
             -Parameters $params
-        
-        #write webhook properties parameters
-        Write-Host "Webhook response properties: "
-        $webhook.properties.parameters
 
         $webhook | Add-Member -MemberType NoteProperty -Name SupportedRequestTypes -Value $SupportedRequestTypes
         $managedWebhooks+=$webhook
