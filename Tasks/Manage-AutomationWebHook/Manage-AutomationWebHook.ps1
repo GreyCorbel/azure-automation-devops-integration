@@ -124,21 +124,6 @@ foreach($def in $definitions)
             }
             Write-Host "Settings file found: $settingsFile"
             $setting = get-content $settingsFile | ConvertFrom-Json
-            #$setting = get-content $settingsFile -Encoding utf8 | ConvertFrom-Json
-
-            # roman check code:
-            Write-Host "vypis settings: "
-            $setting
-
-            Write-Host "vypis def.settings: "
-            $def.Settings
-
-            Write-Host "vypis settings.parameters: "
-            $setting.Parameters
-
-            # foreach($prop in $setting.parameters.psobject.properties) {
-            #     $params[$prop.name] = $prop.value
-            # }
 
             if($setting.Parameters -is [Hashtable]) {
                 $params = $setting.Parameters
@@ -155,7 +140,6 @@ foreach($def in $definitions)
             }
 
             if((-not [string]::IsNullOrEmpty($setting.RunOn) -and ($setting.RunOn -ne 'Azure'))) {$runOn = $setting.RunOn}
-            # if(-not [string]::IsNullOrEmpty($setting.Parameters)) {$params = $setting.Parameters}
         }
 
         Write-Host "Checking params :"
