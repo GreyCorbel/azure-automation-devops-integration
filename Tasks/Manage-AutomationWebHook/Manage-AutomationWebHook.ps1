@@ -136,12 +136,24 @@ foreach($def in $definitions)
             Write-Host "vypis settings.parameters: "
             $setting.Parameters
 
-            foreach($prop in $setting.parameters.psobject.properties) {
-                $params[$prop.name] = $prop.value
+            # foreach($prop in $setting.parameters.psobject.properties) {
+            #     $params[$prop.name] = $prop.value
+            # }
+
+            if($setting.Parameters -is [Hashtable]) {
+                $params = $setting.Parameters
+            } else {
+                Write-Host "Converting parameters to Hashtable..."
+                $params = @{}
+                foreach ($param in $setting.Parameters) {
+                    $param.GetEnumerator() | ForEach-Object {
+                        $params[$_.Key] = $_.Value
+                    }
+                }
             }
 
             if((-not [string]::IsNullOrEmpty($setting.RunOn) -and ($setting.RunOn -ne 'Azure'))) {$runOn = $setting.RunOn}
-            if(-not [string]::IsNullOrEmpty($setting.Parameters)) {$params = $setting.Parameters}
+            # if(-not [string]::IsNullOrEmpty($setting.Parameters)) {$params = $setting.Parameters}
         }
 
         Write-Host "Checking params :"
