@@ -27,7 +27,9 @@ Note: If you use Azure VM this step is not required.
 
 ## 2) Register Server to DSC
 
+
  Run .\Register-HybridWorkerToDsc.ps1 script in an elevated prompt on your HybridWorker, that will register your server into Dsc. Before you do that update lines below. You can get your URL and key from AutomationAccount\Keys. 
+
 ```Powershell
      RegistrationUrl = 'REGISTRATION_URL';
      RegistrationKey = 'REGISTRATION_KEY';
@@ -131,7 +133,7 @@ YOUR_PROJECT_FOLDER
 
 -  If you are using deployment pipeline update your pipeline input variable "helperHybridWorkerModuleManagement to true"
 ```yml
-- task: Manage-AutomationAccount1@1
+- task: Manage-AutomationAccount@1
   inputs:
     scope: 'SCOPE'
     environmentName: 'ENV'
