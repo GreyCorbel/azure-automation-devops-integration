@@ -108,25 +108,30 @@ You have to assign role to your worker (that belongs to your user assigned manag
 -  Move json (Definition file) (Prepare-HybridWorkerModuleManagement.json) file to YOUR_PROJECT_FOLDER\Definitions\Configurations
 
 -  Move json (Definition file) (Prepare-HybridWorkerModuleManagementParamValuesDef.json) to YOUR_PROJECT_FOLDER\Definitions\ConfigurationParameterValues
+-  Move script HybridWorkerModuleManagement.ps1 to YOUR_PROJECT_FOLDER\Helpers\HybridWorkerModuleManagement\HybridWorkerModuleManagement.ps1 (you have to create missing folder structure based on hrierarchy below. Note: if you decide to place this script no different folder - please make sure you update path to it - please see section "Important" in this chapter).
 ```
-YOUR_PROJECT_FOLDER
+YOUR_PROJECT_FOLDER/
 │
 ├── Source
-│   ├── ENVIRONMENT_NAME(e.g. DEV,TEST,PROD)
-│   │   └── ConfigurationParameterValues
-│   │       └── Prepare-HybridWorkerModuleManagementParamValuesSource.json 
-│   │       
-│   └── ENVIRONMENT_NAME(e.g. DEV,TEST,PROD)
-│        └── Configurations
-|            └── Prepare-HybridWorkerModuleManagement.ps1  
-│
+│   ├── ENVIRONMENT_NAME (e.g., DEV, TEST, PROD)
+│   │   ├── ConfigurationParameterValues
+│   │   │   └── Prepare-HybridWorkerModuleManagementParamValuesSource.json
+│   │   └── Configurations
+│   │       └── Prepare-HybridWorkerModuleManagement.ps1
+│   │
 ├── Definitions
 │   ├── Configurations
-│   │   └── Prepare-HybridWorkerModuleManagement.json    
+│   │   └── Prepare-HybridWorkerModuleManagement.json
 │   │
 │   └── ConfigurationParameterValues
-│       └── Prepare-HybridWorkerModuleManagementParamValuesDef.json 
+│       └── Prepare-HybridWorkerModuleManagementParamValuesDef.json
 │
+├── Helpers
+│   ├── HybridWorkerModuleManagement
+│   │   └── HybridWorkerModuleManagement.ps1
+│   │
+└── (Other Project Files and Folders)
+
 
 ```
 ## 2) Activate helper
@@ -148,6 +153,8 @@ YOUR_PROJECT_FOLDER
  ```  
  -  If you are not using pipeline, add this variable into your script 
 
+
+### Important
 
 Make sure that $manageModulesPs1Path matches an actual path of ManageModule script, otherwise script will not be copied to StorageAccount - by default path to Helpers folder is set to PROJECT_DIR\Helpers\HybridWorkerModuleManagement\HybridWorkerModuleManagement.ps1. 
 
