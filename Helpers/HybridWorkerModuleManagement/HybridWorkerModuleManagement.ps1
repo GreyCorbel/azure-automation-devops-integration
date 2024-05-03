@@ -330,7 +330,8 @@ function Compare-Modules
     process
     {
 
-        # check which module should be uninstalled 
+        # check which module should be uninstalled for particular runtime
+        $localModules = $localModules|Where-Object{$_.path -like $modulePath} 
         foreach ($module in $localModules)
         {
             if($module.Name -notin $requiredModules.Name)
