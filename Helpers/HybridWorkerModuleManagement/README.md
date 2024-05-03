@@ -11,7 +11,7 @@ Note: Motivation behind creation of this helper is that native DSC PackageManage
   - Azure Storage Account
 
 ## Pre-requites preparation
-1) To register Server to Azure Arc: 
+## 1) To register Server to Azure Arc: 
 
 Note: If you use Azure VM this step is not required. 
 
@@ -63,11 +63,11 @@ Note: Arc Connect machine do not provide an option to use system assigned manage
   - Find worker you want to assign role to
   - Finalize the role assignment by clicking on Next or directly click on Review + assign on the bottom of the
 
-## Config preparation
+# Config preparation
 
 ## 1) Prepare source and definition files
 
-  1a) Under Helpers folder - find HybridWorkerModulesManagement folder and open Prepare-HybridWorkerModuleManagementParamValuesSource.json.
+  ### 1a) Under Helpers folder - find HybridWorkerModulesManagement folder and open Prepare-HybridWorkerModuleManagementParamValuesSource.json.
   ```
  Helpers
    ├── HybridWorkerModulesManagement
@@ -96,13 +96,13 @@ Note: Arc Connect machine do not provide an option to use system assigned manage
   }
 
   ```
--1b) Move json  (Source file) (Prepare-HybridWorkerModuleManagementParamValuesSource.json) to YOUR_PROJECT_FOLDER\Source\ENVIRONMENT_NAME\ConfigurationParameterValues --> make sure you do this per environment
+### 1b) Move json  (Source file) (Prepare-HybridWorkerModuleManagementParamValuesSource.json) to YOUR_PROJECT_FOLDER\Source\ENVIRONMENT_NAME\ConfigurationParameterValues --> make sure you do this per environment
 
-1c) Move script (Source file)  (Prepare-HybridWorkerModuleManagement.ps1) to YOUR_PROJECT_FOLDER\Source\ENVIRONMENT_NAME\Configurations --> make sure you do this per environment
+### 1c) Move script (Source file)  (Prepare-HybridWorkerModuleManagement.ps1) to YOUR_PROJECT_FOLDER\Source\ENVIRONMENT_NAME\Configurations --> make sure you do this per environment
 
-1d) Move json (Definition file) (Prepare-HybridWorkerModuleManagement.json) file to YOUR_PROJECT_FOLDER\Definitions\Configurations
+### 1d) Move json (Definition file) (Prepare-HybridWorkerModuleManagement.json) file to YOUR_PROJECT_FOLDER\Definitions\Configurations
 
-1e) Move json (Definition file) (Prepare-HybridWorkerModuleManagementParamValuesDef.json) to YOUR_PROJECT_FOLDER\Definitions\ConfigurationParameterValues
+### 1e) Move json (Definition file) (Prepare-HybridWorkerModuleManagementParamValuesDef.json) to YOUR_PROJECT_FOLDER\Definitions\ConfigurationParameterValues
 ```
 YOUR_PROJECT_FOLDER
 │
