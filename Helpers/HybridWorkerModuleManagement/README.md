@@ -64,11 +64,19 @@ Note: Arc Connect machine do not provide an option to use system assigned manage
   - Finalize the role assignment by clicking on Next or directly click on Review + assign on the bottom of the
 
 ## Config preparation
-1) Prepare definition file for parameter values (used for creation of DSC .MOF file - per environment) Prepare-HybridWorkerModuleManagementParamValuesSource.json
-  - Under Helpers folder - find HybridWorkerModulesManagement folder and open Prepare-HybridWorkerModuleManagementParamValuesSource.json.
+
+## 1) Prepare source and definition files
+
+  1a) Under Helpers folder - find HybridWorkerModulesManagement folder and open Prepare-HybridWorkerModuleManagementParamValuesSource.json.
+  ```
+ Helpers
+   ├── HybridWorkerModulesManagement
+   │   └── Prepare-HybridWorkerModuleManagementParamValuesSource.json
+
+```
   - Mandatory: Update your storage account and container details.
 
-  - You can (optionally) update other variables: 
+  - Optional: update other variables: 
     -  "workerLocalPath" --> folder where the script will be stored locally on your hybrid worker. 
     -  "runTimeVersion" --> runtime under which script will be executed - availables options: ["5", "7", "Both"].
     -  "blobNameModulesjson" --> name of the json file in your storage account that defines which modules should be installed (Note: if you change the name, make sure name is the same as in Manage-AutomationAccount.ps1 - see step #6 for more details).
@@ -88,41 +96,70 @@ Note: Arc Connect machine do not provide an option to use system assigned manage
   }
 
   ```
-2) Move json  (Source file) (Prepare-HybridWorkerModuleManagementParamValuesSource.json) to YOUR_PROJECT_FOLDER\Source\ENVIRONMENT_NAME\ConfigurationParameterValues --> this allows you so set parameters per environment (e.g. UAT,PROD,etc.)
-3) Move script (Source file)  (Prepare-HybridWorkerModuleManagement.ps1) to YOUR_PROJECT_FOLDER\Source\ENVIRONMENT_NAME\Configurations --> make sure you do this per environment
-4) Move json (Definition file) (Prepare-HybridWorkerModuleManagement.json) file to YOUR_PROJECT_FOLDER\Definitions\Configurations
-5) Move json (Definition file) (Prepare-HybridWorkerModuleManagementParamValuesDef.json) to YOUR_PROJECT_FOLDER\Definitions\ConfigurationParameterValues
+-1b) Move json  (Source file) (Prepare-HybridWorkerModuleManagementParamValuesSource.json) to YOUR_PROJECT_FOLDER\Source\ENVIRONMENT_NAME\ConfigurationParameterValues --> make sure you do this per environment
+
+1c) Move script (Source file)  (Prepare-HybridWorkerModuleManagement.ps1) to YOUR_PROJECT_FOLDER\Source\ENVIRONMENT_NAME\Configurations --> make sure you do this per environment
+
+1d) Move json (Definition file) (Prepare-HybridWorkerModuleManagement.json) file to YOUR_PROJECT_FOLDER\Definitions\Configurations
+
+1e) Move json (Definition file) (Prepare-HybridWorkerModuleManagementParamValuesDef.json) to YOUR_PROJECT_FOLDER\Definitions\ConfigurationParameterValues
 ```
-YOUR_PROJECT_FOLDER/
+YOUR_PROJECT_FOLDER
 │
-├── Source/
-│   ├── ENVIRONMENT_NAME(e.g. DEV,TEST,PROD)/
-│   │   └── Configurations/
-│   │       └── Prepare-HybridWorkerModuleManagement.ps1  # Step 3
+├── Source
+│   ├── ENVIRONMENT_NAME(e.g. DEV,TEST,PROD)
+│   │   └── ConfigurationParameterValues
+│   │       └── Prepare-HybridWorkerModuleManagementParamValuesSource.json # ---> Step 1b
+│   │       
+│   └── ENVIRONMENT_NAME(e.g. DEV,TEST,PROD)
+│        └── Configurations
+|            └── Prepare-HybridWorkerModuleManagement.ps1  # ---> Step 1c
+│
+├── Definitions
+│   ├── Configurations
+│   │   └── Prepare-HybridWorkerModuleManagement.json    # ---> Step 1d
 │   │
-│   └── (Other Source Files and Folders)
+│   └── ConfigurationParameterValues
+│       └── Prepare-HybridWorkerModuleManagementParamValuesDef.json # ---> Step 1e
 │
-├── Definitions/
-│   ├── Configurations/
-│   │   └── Prepare-HybridWorkerModuleManagement.json     # Step 4
-│   │
-│   └── ConfigurationParameterValues/
-│       └── Prepare-HybridWorkerModuleManagementParamValuesDef.json  # Step 5
-│
-└── (Other Project Files and Folders)
+
 ```
-6) Add and/or switch task parameter 'helperHybridWorkerModuleManagement' of your deployment pipeline (or script) to true. Make sure that $manageModulesPs1Path matches an actual path of ManageModule script, otherwise script will not be copied to StorageAccount - by default path to Helpers folder is set. All related variables inside Manage-AutomationAccount.ps1 are these:
+## 2) Activate helper
+
+-2a) If you are using deployment pipeline update your pipeline input variable "helperHybridWorkerModuleManagement to true"
+```yml
+- task: Manage-AutomationAccount1@1
+  inputs:
+    scope: 'SCOPE'
+    environmentName: 'ENV'
+    projectDir: '$(System.DefaultWorkingDirectory)'
+    subscription: 'SUBSCRIPTION'
+    azureSubscription: 'SERVICE_CONNECTION'
+    resourceGroup: 'RG'
+    automationAccount: 'AA'
+    storageAccount: 'SA'
+    storageAccountContainer: 'SC'
+    helperHybridWorkerModuleManagement: true #--> switch to true
+ ```  
+ -2b) If you are not using pipeline, add this variable into your script 
+
+
+Make sure that $manageModulesPs1Path matches an actual path of ManageModule script, otherwise script will not be copied to StorageAccount - by default path to Helpers folder is set to PROJECT_DIR\Helpers\HybridWorkerModuleManagement\HybridWorkerModuleManagement.ps1. 
+
+All related variables inside Manage-AutomationAccount.ps1 are these:
 
 ```PowerShell
 
-if($helperHybridWorkerModuleManagement)
+if($helperHybridWorkerModuleManagement -eq $true)
 {
     $blobNameModulesJson = "required-modules.json"
     $manageModulesPs1 = "HybridWorkerModuleManagement.ps1"
-    $manageModulesPs1Path = "$($grandparentDirectory)\Helpers\HybridWorkerModuleManagement\$($manageModulesPS1)"
+    $manageModulesPs1Path = "$($projectDir)\Helpers\HybridWorkerModuleManagement\$($manageModulesPS1)"
 }
 ```
-7) Define all modules you would like to install under YOUR_PROJECT_FOLDER\Definitions\Modules (json file per module) e.g.
+## 3) Define modules 
+
+Define all modules you would like to install under YOUR_PROJECT_FOLDER\Definitions\Modules (json file per module) e.g.
 
 ```json
 {
@@ -133,14 +170,38 @@ if($helperHybridWorkerModuleManagement)
     "Order": 1
 }
 ```
+Typical structure: 
+```
+YOUR_PROJECT_FOLDER
+│
+├── Definitions
+│   ├── Modules
+│   │   ├── AadAuthenticationFactory_5.1.json
+│   │   ├── AadAuthenticationFactory_7.2.json
+│   │   ├── CosmosLIte_5.1.json
+│   │   ├── CosmosLIte_7.2.json
+│   │   ├── ExchangeOnlineManagement_5.1.json
+│   │   ├── ExoHelper_5.1.json
+│   │   ├── Microsoft.Graph.Applications_5.1.json
+│   │   ├── Microsoft.Graph.Authentication_5.1.json
+│   │   ├── Microsoft.Graph.Authentication_7.2.json
+│   │   ├── MicrosoftTeams_5.1.json
+│   │   ├── PnP.PowerShell_5.1.json
+│   │   ├── S.DS.P_5.1.json
+│   │   └── S.DS.P_7.2.json
+│
+└── (Other Project Files and Folders)
 
-8) Deploy your solution (by running Manage-AutomationAccount.ps1)
-9) You are done !
+``` 
+
+## 4) Deploy your solution 
+## 5) You are done !
+
  
- ### What will happen now ? 
+ ## What will happen now ? 
 
  As soon as you trigger deployement of your code to automation account, these steps are done: 
-  - Configuration from YOUR_PROJECT_FOLDER\Source\Common\Configurations - will be compiled and uploaded to your DSC.
+  - Configuration from YOUR_PROJECT_FOLDER\Source\ENVIRONMENT_NAME\Configurations - will be compiled and uploaded to your DSC.
   - Configuration will be assigned to each Node (HybridWorker) you have. registered to your automation account.
   - Json file HybridWorkerModuleManagement.json with all the modules from your definition folder will be created and stored to your Storage Account.
   - HybridWorkerModuleManagement.ps1 will be copied to your Storage Account.
