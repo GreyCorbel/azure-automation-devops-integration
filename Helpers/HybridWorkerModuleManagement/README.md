@@ -11,7 +11,7 @@ Note: Motivation behind creation of this helper is that native DSC PackageManage
   - Azure Storage Account
 
 # Pre-requites preparation
-## 1) To register Server to Azure Arc: 
+## 1) Register Server to Azure Arc: 
 
 Note: If you use Azure VM this step is not required. 
 
