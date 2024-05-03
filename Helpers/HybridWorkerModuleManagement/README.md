@@ -10,7 +10,7 @@ Note: Motivation behind creation of this helper is that native DSC PackageManage
   - Managed Identity
   - Azure Storage Account
 
-## Pre-requites preparation
+# Pre-requites preparation
 ## 1) To register Server to Azure Arc: 
 
 Note: If you use Azure VM this step is not required. 
@@ -25,7 +25,9 @@ Note: If you use Azure VM this step is not required.
   - Run the script in elevated prompt on your server - make sure you allow all outbound URLs or you use proxy 
 
 
-2) To register Server to DSC: Run .\Register-HybridWorkerToDsc.ps1 script in an elevated prompt on your HybridWorker, that will register your server into Dsc. Before you do that update lines below. You can get your URL and key from AutomationAccount\Keys. 
+## 2) Register Server to DSC
+
+ Run .\Register-HybridWorkerToDsc.ps1 script in an elevated prompt on your HybridWorker, that will register your server into Dsc. Before you do that update lines below. You can get your URL and key from AutomationAccount\Keys. 
 ```Powershell
      RegistrationUrl = 'REGISTRATION_URL';
      RegistrationKey = 'REGISTRATION_KEY';
@@ -42,7 +44,7 @@ Note: If you use Azure VM this step is not required.
 ! Make sure you keep ConfigurationMode set to 'ApplyAndAutoCorrect' !
 Once this step is done, you can see your worker registered in Automation Account under DSC blade. 
 
-3) To create Managed Identity
+## 3) Create Managed Identity
 
 Note: Arc Connect machine do not provide an option to use system assigned managed identity, therefore we have to create user assigned managed identity, by following these steps: 
 - Search for Managed Identities
@@ -52,7 +54,8 @@ Note: Arc Connect machine do not provide an option to use system assigned manage
 - Click Create
 
 
-4) Assign Storage Blob Data Contributor Role to your worker (that belongs to your user assigned managed identity) as well as to your Service Connection (in case you are deploying with pipeline). 
+## 4) Assign Storage Blob Data Contributor Role
+You have to assign role to your worker (that belongs to your user assigned managed identity) as well as to your Service Connection (in case you are deploying with pipeline). 
 
   Open the Storage Account Container where you will store necessary files. 
   - From the left side navigation menu, select Access Control (IAM).
@@ -67,7 +70,7 @@ Note: Arc Connect machine do not provide an option to use system assigned manage
 
 ## 1) Prepare source and definition files
 
-  ### 1a) Under Helpers folder - find HybridWorkerModulesManagement folder and open Prepare-HybridWorkerModuleManagementParamValuesSource.json.
+  -  Under Helpers folder - find HybridWorkerModulesManagement folder and open Prepare-HybridWorkerModuleManagementParamValuesSource.json.
   ```
  Helpers
    ├── HybridWorkerModulesManagement
@@ -96,37 +99,37 @@ Note: Arc Connect machine do not provide an option to use system assigned manage
   }
 
   ```
-### 1b) Move json  (Source file) (Prepare-HybridWorkerModuleManagementParamValuesSource.json) to YOUR_PROJECT_FOLDER\Source\ENVIRONMENT_NAME\ConfigurationParameterValues --> make sure you do this per environment
+-  Move json  (Source file) (Prepare-HybridWorkerModuleManagementParamValuesSource.json) to YOUR_PROJECT_FOLDER\Source\ENVIRONMENT_NAME\ConfigurationParameterValues --> make sure you do this per environment
 
-### 1c) Move script (Source file)  (Prepare-HybridWorkerModuleManagement.ps1) to YOUR_PROJECT_FOLDER\Source\ENVIRONMENT_NAME\Configurations --> make sure you do this per environment
+-  Move script (Source file)  (Prepare-HybridWorkerModuleManagement.ps1) to YOUR_PROJECT_FOLDER\Source\ENVIRONMENT_NAME\Configurations --> make sure you do this per environment
 
-### 1d) Move json (Definition file) (Prepare-HybridWorkerModuleManagement.json) file to YOUR_PROJECT_FOLDER\Definitions\Configurations
+-  Move json (Definition file) (Prepare-HybridWorkerModuleManagement.json) file to YOUR_PROJECT_FOLDER\Definitions\Configurations
 
-### 1e) Move json (Definition file) (Prepare-HybridWorkerModuleManagementParamValuesDef.json) to YOUR_PROJECT_FOLDER\Definitions\ConfigurationParameterValues
+-  Move json (Definition file) (Prepare-HybridWorkerModuleManagementParamValuesDef.json) to YOUR_PROJECT_FOLDER\Definitions\ConfigurationParameterValues
 ```
 YOUR_PROJECT_FOLDER
 │
 ├── Source
 │   ├── ENVIRONMENT_NAME(e.g. DEV,TEST,PROD)
 │   │   └── ConfigurationParameterValues
-│   │       └── Prepare-HybridWorkerModuleManagementParamValuesSource.json # ---> Step 1b
+│   │       └── Prepare-HybridWorkerModuleManagementParamValuesSource.json 
 │   │       
 │   └── ENVIRONMENT_NAME(e.g. DEV,TEST,PROD)
 │        └── Configurations
-|            └── Prepare-HybridWorkerModuleManagement.ps1  # ---> Step 1c
+|            └── Prepare-HybridWorkerModuleManagement.ps1  
 │
 ├── Definitions
 │   ├── Configurations
-│   │   └── Prepare-HybridWorkerModuleManagement.json    # ---> Step 1d
+│   │   └── Prepare-HybridWorkerModuleManagement.json    
 │   │
 │   └── ConfigurationParameterValues
-│       └── Prepare-HybridWorkerModuleManagementParamValuesDef.json # ---> Step 1e
+│       └── Prepare-HybridWorkerModuleManagementParamValuesDef.json 
 │
 
 ```
 ## 2) Activate helper
 
--2a) If you are using deployment pipeline update your pipeline input variable "helperHybridWorkerModuleManagement to true"
+-  If you are using deployment pipeline update your pipeline input variable "helperHybridWorkerModuleManagement to true"
 ```yml
 - task: Manage-AutomationAccount1@1
   inputs:
@@ -141,7 +144,7 @@ YOUR_PROJECT_FOLDER
     storageAccountContainer: 'SC'
     helperHybridWorkerModuleManagement: true #--> switch to true
  ```  
- -2b) If you are not using pipeline, add this variable into your script 
+ -  If you are not using pipeline, add this variable into your script 
 
 
 Make sure that $manageModulesPs1Path matches an actual path of ManageModule script, otherwise script will not be copied to StorageAccount - by default path to Helpers folder is set to PROJECT_DIR\Helpers\HybridWorkerModuleManagement\HybridWorkerModuleManagement.ps1. 
@@ -159,7 +162,7 @@ if($helperHybridWorkerModuleManagement -eq $true)
 ```
 ## 3) Define modules 
 
-Define all modules you would like to install under YOUR_PROJECT_FOLDER\Definitions\Modules (json file per module) e.g.
+- Define all modules you would like to install under YOUR_PROJECT_FOLDER\Definitions\Modules (json file per module) e.g.
 
 ```json
 {
@@ -170,7 +173,7 @@ Define all modules you would like to install under YOUR_PROJECT_FOLDER\Definitio
     "Order": 1
 }
 ```
-Typical structure: 
+- Typical structure: 
 ```
 YOUR_PROJECT_FOLDER
 │
