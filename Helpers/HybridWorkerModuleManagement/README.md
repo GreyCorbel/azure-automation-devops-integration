@@ -108,7 +108,7 @@ You have to assign role to your worker (that belongs to your user assigned manag
 -  Move json (Definition file) (Prepare-HybridWorkerModuleManagement.json) file to YOUR_PROJECT_FOLDER\Definitions\Configurations
 
 -  Move json (Definition file) (Prepare-HybridWorkerModuleManagementParamValuesDef.json) to YOUR_PROJECT_FOLDER\Definitions\ConfigurationParameterValues
--  Move script HybridWorkerModuleManagement.ps1 to YOUR_PROJECT_FOLDER\Helpers\HybridWorkerModuleManagement\HybridWorkerModuleManagement.ps1 (you have to create missing folder structure based on hrierarchy below. Note: if you decide to place this script no different folder - please make sure you update path to it - please see section "Important" in this chapter).
+-  Move script HybridWorkerModuleManagement.ps1 to YOUR_PROJECT_FOLDER\Helpers\HybridWorkerModuleManagement\HybridWorkerModuleManagement.ps1 
 ```
 YOUR_PROJECT_FOLDER
 │
