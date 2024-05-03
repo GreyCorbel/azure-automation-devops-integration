@@ -15,25 +15,23 @@ $reportMissingImplementation = Get-VstsInput -Name 'reportMissingImplementation'
 $verboseLog = Get-VstsInput -Name 'verbose'
 $helperHybridWorkerModuleManagement = Get-VstsInput -Name 'helperHybridWorkerModuleManagement'
 
-#load Automation account REST wrapper
-$parentDirectory = Split-Path -Path $PSScriptRoot -Parent
-$grandparentDirectory = Split-Path -Path $parentDirectory -Parent
-
 if ($verboseLog) {
     $VerbosePreference = 'Continue'
 }
 
-if ($helperHybridWorkerModuleManagement) {
+if ($helperHybridWorkerModuleManagement -eq $true) {
+    Write-host "Helper Hybrid Worker module management is set to: $($helperHybridWorkerModuleManagement)"
     $blobNameModulesJson = "required-modules.json"
     $manageModulesPs1 = "HybridWorkerModuleManagement.ps1"
-    $manageModulesPs1Path = "$($grandparentDirectory)\Helpers\HybridWorkerModuleManagement\$($manageModulesPS1)"
+    $manageModulesPs1Path = "$($projectDir)\Helpers\HybridWorkerModuleManagement\$($manageModulesPS1)"
 }
-#load VstsTaskSdk module
-Write-Host "Installing dependencies..."
-if ($null -eq (Get-Module -Name VstsTaskSdk -ListAvailable)) {
-    Write-Host "VstsTaskSdk module not found, installing..."
-    Install-Module -Name VstsTaskSdk -Force -Scope CurrentUser -AllowClobber
-}
+#  #>#load VstsTaskSdk module
+# Write-Host "Installing dependencies..."
+# if ($null -eq (Get-Module -Name VstsTaskSdk -ListAvailable)) {
+#     Write-Host "VstsTaskSdk module not found, installing..."
+#     Install-Module -Name VstsTaskSdk -Force -Scope CurrentUser -AllowClobber
+# }
+# Write-Host "Installation succeeded!"
 
 #load AadAuthentiacationFactory
 if ($null -eq (Get-Module -Name AadAuthenticationFactory -ListAvailable)) {
@@ -52,19 +50,86 @@ Write-Host "module path: $modulePath"
 Import-Module $modulePath -Force -WarningAction SilentlyContinue
 Write-Host "Import succeeded!"
 
-
 Write-Host "Starting process..."
 # retrieve service connection object
 $serviceConnection = Get-VstsEndpoint -Name $azureSubscription -Require
+$serviceConnectionSerialized = ConvertTo-Json $serviceConnection
 
-# get service connection object properties
-$servicePrincipalId = $serviceConnection.auth.parameters.serviceprincipalid
-$servicePrincipalkey = $serviceConnection.auth.parameters.serviceprincipalkey
-$tenantId = $serviceConnection.auth.parameters.tenantid
+# define type od service connection
+switch ($serviceConnection.auth.scheme) {
+    'ServicePrincipal' { 
+        # get service connection object properties
+        $servicePrincipalId = $serviceConnection.auth.parameters.serviceprincipalid
+        $servicePrincipalkey = $serviceConnection.auth.parameters.serviceprincipalkey
+        $tenantId = $serviceConnection.auth.parameters.tenantid
 
-#initialize aadAuthenticationFactory
-Write-Verbose "Initialize AadAuthenticationFactory object..."
-Initialize-AadAuthenticationFactory -servicePrincipalId $servicePrincipalId -servicePrincipalKey $servicePrincipalkey -tenantId $tenantId
+        # SPNcertificate
+        if ($serviceConnection.auth.parameters.authenticationType -eq 'SPNCertificate') {
+            Write-Host "ServicePrincipal with Certificate auth"
+
+            $certData = $serviceConnection.Auth.parameters.servicePrincipalCertificate
+            $cert= [System.Security.Cryptography.X509Certificates.X509Certificate2]::CreateFromPem($certData,$certData)
+
+            Initialize-AadAuthenticationFactory `
+            -servicePrincipalId $servicePrincipalId `
+            -servicePrincipalKey $servicePrincipalkey `
+            -tenantId $tenantId `
+            -cert $cert
+        }
+        #Service Principal
+        else {
+            Write-Host "ServicePrincipal with ClientSecret auth"
+
+            Initialize-AadAuthenticationFactory `
+            -servicePrincipalId $servicePrincipalId `
+            -servicePrincipalKey $servicePrincipalkey `
+            -tenantId $tenantId
+        }
+        break;
+     }
+
+     'ManagedServiceIdentity' {
+        Write-Host "ManagedIdentitx auth"
+
+        Initialize-AadAuthenticationFactory `
+            -serviceConnection $serviceConnection
+        break;
+     }
+
+     'WorkloadIdentityFederation' {
+        Write-Host "Workload identity auth"
+
+        # get service connection properties
+        $planId = Get-VstsTaskVariable -Name 'System.PlanId' -Require
+        $jobId = Get-VstsTaskVariable -Name 'System.JobId' -Require
+        $hub = Get-VstsTaskVariable -Name 'System.HostType' -Require
+        $projectId = Get-VstsTaskVariable -Name 'System.TeamProjectId' -Require
+        $uri = Get-VstsTaskVariable -Name 'System.CollectionUri' -Require
+        $serviceConnectionId = $azureSubscription
+
+        $vstsEndpoint = Get-VstsEndpoint -Name SystemVssConnection -Require
+        $vstsAccessToken = $vstsEndpoint.auth.parameters.AccessToken
+        $servicePrincipalId = $vstsEndpoint.auth.parameters.serviceprincipalid
+        $tenantId = $vstsEndpoint.auth.parameters.tenantid
+        
+        $url = "$uri/$projectId/_apis/distributedtask/hubs/$hub/plans/$planId/jobs/$jobId/oidctoken?serviceConnectionId=$serviceConnectionId`&api-version=7.2-preview.1"
+
+        $username = "username"
+        $password = $vstsAccessToken
+        $base64AuthInfo = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(("{0}:{1}" -f $username, $password)))
+
+        $response = Invoke-RestMethod -Uri $url -Method Post -Headers @{ "Authorization" = ("Basic {0}" -f $base64AuthInfo) } -ContentType "application/json"
+
+        $oidcToken = $response.oidcToken
+        $assertion = $oidcToken
+       
+        Initialize-AadAuthenticationFactory `
+            -servicePrincipalId $servicePrincipalId `
+            -assertion $assertion `
+            -tenantId $tenantId
+        break;
+     }
+}
 
 #initialize runtime according to environment environment
 Init-Environment -ProjectDir $ProjectDir -Environment $EnvironmentName
@@ -298,7 +363,7 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
         $importingDesktopModules = @()
         $importingCoreModules = @()
         foreach ($module in $modulesBatch) {
-            "Processing module $($module.Name) for runtime $($module.RuntimeVersion)"
+            "Processing module $($module.Name) $($module.Version) for runtime $($module.RuntimeVersion)"
             switch ($module.RuntimeVersion) {
                 '5.1' {
                     $existingModule = $desktopModules | Where-Object { $_.Name -eq $module.Name }
@@ -361,7 +426,7 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
             continue
         }
         # using solution for sync of powershell modules between automation account and hybrid workers - if you wish to not use the solution set $helperHybridWorkerModuleManagement = $false
-        if ($helperHybridWorkerModuleManagement) {
+        if ($helperHybridWorkerModuleManagement -eq $true) {
             # process modules for hybrid workers
             $requiredModules = Get-ModulesForHybridWorker -definitions $definitions `
                 -storageAccount $storageAccount `
@@ -381,7 +446,7 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
                 -filePath $manageModulesPS1Path `
                 -storageBlobName $manageModulesPS1
         }
-
+ 
     }
     if ($FullSync) {
         $runtime = '5.1'
@@ -567,11 +632,9 @@ if (Check-Scope -Scope $scope -RequiredScope 'JobSchedules') {
     }
 }
 #endregion JobSchedules
-
 #region Configurations
 if (Check-Scope -Scope $scope -RequiredScope 'Configurations') {
     "Processing configurations"
-
     $existingConfigurations = Get-AutoObject -objectType Configurations
     $CompilationJobs = @()
 
@@ -611,19 +674,21 @@ if (Check-Scope -Scope $scope -RequiredScope 'Configurations') {
     if ($CompilationJobs.Count -gt 0) {
         Wait-AutoObjectProcessing -Name $compilationJobs.Name -objectType Compilationjobs | select-object name, @{N = 'provisioningState'; E = { $_.properties.provisioningState } } | Out-String
         # get config to assign
-        $configToAssign = Get-DscNodeConfiguration -Subscription $subscription -ResourceGroup $resourceGroup -AutomationAccount $automationAccount |`
+        "Retrieving config to assign"
+        $configToAssign = Get-DscNodeConfiguration -Subscription $Subscription -ResourceGroup $resourceGroup -AutomationAccount $automationAccount |`
             Where-object { $_.properties.configuration.name -eq $CompilationJobs.properties.configuration.name }
     
         # get nodes 
-        $nodes = Get-DscNodes -Subscription $subscription -ResourceGroup $resourceGroup -AutomationAccount $automationAccount
+        "Retrieving nodes"
+        $nodes = Get-DscNodes -Subscription $Subscription -ResourceGroup $resourceGroup -AutomationAccount $automationAccount
         if($nodes.id.count -gt 0)
         {
             # assign compiled config to nodes
             foreach ($node in $nodes) {
                 "Assigning $($configToassign.name) to $($node.name)"
-                $rslt = Assign-DscNodeConfig -Subscription $subscription -ResourceGroup $resourceGroup -AutomationAccount $automationAccount -NodeConfigId $configToAssign.name -NodeName $node.properties.nodeId
+                $rslt = Assign-DscNodeConfig -Subscription $Subscription -ResourceGroup $resourceGroup -AutomationAccount $automationAccount -NodeConfigId $configToAssign.name -NodeName $node.properties.nodeId
                 "Configuration assigned"
-                $rslt | fl
+               
             }
         }else{
             "No DSC nodes are registered, therefore skipping assignment."
@@ -641,6 +706,7 @@ if (Check-Scope -Scope $scope -RequiredScope 'Configurations') {
     }
 }
 #endregion Dsc
+
 
 if ($verboseLog) {
     $VerbosePreference = 'SilentlyContinue'

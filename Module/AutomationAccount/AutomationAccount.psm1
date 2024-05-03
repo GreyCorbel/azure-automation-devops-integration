@@ -1197,7 +1197,9 @@ Function Get-DscNodes
         $ResourceGroup,
         $AutomationAccount
     )
-    $baseUri ="https://management.azure.com/subscriptions/$($Subscription)/resourceGroups/$($ResourceGroup)/providers/Microsoft.Automation/automationAccounts/$($AutomationAccount)/nodes?api-version=2023-11-01"
+   
+    $subscriptionObject = Get-AutoSubscription -Subscription $Subscription
+    $baseUri ="https://management.azure.com$($subscriptionObject.id)/resourceGroups/$($ResourceGroup)/providers/Microsoft.Automation/automationAccounts/$($AutomationAccount)/nodes?api-version=2023-11-01"
     $h = Get-AutoAccessToken -AsHashTable
     return (Invoke-RestMethod -Method Get -Uri $baseUri -Headers $h).value
 }
@@ -1209,7 +1211,8 @@ Function Get-DscNodeConfiguration
         $ResourceGroup,
         $AutomationAccount
     )
-    $baseUri ="https://management.azure.com/subscriptions/$($Subscription)/resourceGroups/$($ResourceGroup)/providers/Microsoft.Automation/automationAccounts/$($AutomationAccount)/nodeConfigurations?api-version=2023-11-01"
+    $subscriptionObject = Get-AutoSubscription -Subscription $Subscription
+    $baseUri ="https://management.azure.com$($subscriptionObject.id)/resourceGroups/$($ResourceGroup)/providers/Microsoft.Automation/automationAccounts/$($AutomationAccount)/nodeConfigurations?api-version=2023-11-01"
     $h = Get-AutoAccessToken -AsHashTable
     return (Invoke-RestMethod -Method Get -Uri $baseUri -Headers $h).value
 }
@@ -1224,7 +1227,8 @@ Function Assign-DscNodeConfig
         $NodeConfigId,
         $NodeName
     )
-    $baseUri ="https://management.azure.com/subscriptions/$($Subscription)/resourceGroups/$($ResourceGroup)/providers/Microsoft.Automation/automationAccounts/$($AutomationAccount)/nodes/$($nodeName)?api-version=2019-06-01"
+    $subscriptionObject = Get-AutoSubscription -Subscription $Subscription
+    $baseUri ="https://management.azure.com$($subscriptionObject.id)/resourceGroups/$($ResourceGroup)/providers/Microsoft.Automation/automationAccounts/$($AutomationAccount)/nodes/$($nodeName)?api-version=2019-06-01"
     $h = Get-AutoAccessToken -AsHashTable
     $body = @{
         nodeId= $NodeName
