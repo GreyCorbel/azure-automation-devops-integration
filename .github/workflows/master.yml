@@ -83,10 +83,16 @@ jobs:
             Write-Host "Generating development non-public VSIX package..."
             # Add "Preview" to "galleryFlags"
             $extensionInfo.galleryFlags = @("Preview")
+            $extensionInfo.id = "Dev-Manage-AutomationAccount"
+            $extensionInfo.name = "Dev-Manage-AutomationAccount"
+
+
         } else {
             Write-Host "Generating public VSIX package..."
             # Add "Public" to "galleryFlags"
             $extensionInfo.galleryFlags = @("Public")
+            $extensionInfo.id = "Manage-AutomationAccount"
+            $extensionInfo.name = "Manage-AutomationAccount"
         }
 
         # Save new data to json file
