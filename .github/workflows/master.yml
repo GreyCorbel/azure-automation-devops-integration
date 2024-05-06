@@ -74,6 +74,24 @@ jobs:
             $taskInfo | ConvertTo-Json -Depth 99 | Out-File -Path ([System.IO.Path]::Combine($tasksFolder,$task,'task.json')) -Force
         }
 
+        # Add galleryFlags property
+        if (-not $extensionInfo.galleryFlags) {
+            $extensionInfo | Add-Member -MemberType NoteProperty -Name "galleryFlags" -Value @()
+        }
+
+        if ($extensionInfo.isDevelopment -eq "true") {
+            Write-Host "Generating development non-public VSIX package..."
+            # Add "Preview" to "galleryFlags"
+            $extensionInfo.galleryFlags = @("Preview")
+        } else {
+            Write-Host "Generating public VSIX package..."
+            # Add "Public" to "galleryFlags"
+            $extensionInfo.galleryFlags = @("Public")
+        }
+
+        # Save new data to json file
+        $extensionInfo | ConvertTo-Json -Depth 99 | Set-Content -Path ([System.IO.Path]::Combine($env:GITHUB_WORKSPACE, 'vss-extension.json'))
+
     - name: Generate and Upload VSIX file
       env:
         NODE_AUTH_TOKEN: ${{ secrets.PAT_ROMAN_MANAGE_AUTOMATION_ACCOUNT }}
