@@ -92,6 +92,9 @@ jobs:
         # Save new data to json file
         $extensionInfo | ConvertTo-Json -Depth 99 | Set-Content -Path ([System.IO.Path]::Combine($env:GITHUB_WORKSPACE, 'vss-extension.json'))
 
+        Write-Host "Show vss-extension.json file content"
+        $extensionInfo
+
     - name: Generate and Upload VSIX file
       env:
         NODE_AUTH_TOKEN: ${{ secrets.PAT_ROMAN_MANAGE_AUTOMATION_ACCOUNT }}
