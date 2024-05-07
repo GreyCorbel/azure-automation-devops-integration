@@ -22,6 +22,7 @@ For example, in the Definitions in directory Runbooks, a test.json file can be c
         "CosmosLite"
     ]
 }
+```
 
 ...this means that the Manage-AutomationAccount devOps task will look for a file called test.ps1 in the Source directory (according to the defined environment, note: Common is the default) and upload it to the appropriate storage account.
 
