@@ -9,7 +9,7 @@
             "id": "Microsoft.VisualStudio.Services"
         }
     ],    
-    "isDevelopment": "true",
+    "isDevelopment": "false",
     "description": "Set of tasks that allows management of automation account (runbooks, modules, variables, schedules and their links to runbooks, webhooks for runbooks and Dsc configurations from Azure DevOps pipeline.",
     "categories": [
         "Azure Pipelines"
