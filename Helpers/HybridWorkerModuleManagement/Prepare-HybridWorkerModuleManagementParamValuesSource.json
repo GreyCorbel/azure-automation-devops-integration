@@ -1,0 +1,9 @@
+{
+  "storageAccount": "YOUR_STORAGE_ACCOUNT",
+  "storageAccountContainer": "YOUR_STORAGE_CONTAINER",
+  "workerLocalPath": "C:\\ManageModules",
+  "runTimeVersion": "Both", 
+  "blobNameModulesJson": "required-modules.json",
+  "manageModulesScriptName": "HybridWorkerModuleManagement.ps1",
+  "machineType": "arc" 
+}

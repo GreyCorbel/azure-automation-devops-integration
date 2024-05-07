@@ -68,6 +68,7 @@ $script:builtinModulesToIgnore = @(
 
 #################
 ## Functions   
+
 #################
 
 #logging functions
@@ -190,7 +191,7 @@ function Manage-ModuleComplianceJson
             "PUT"
             {
                 $h['x-ms-blob-type'] = 'BlockBlob'
-                $rsp = Invoke-RestMethod -Uri "https://$($storageAccount).blob.core.windows.net/$($blobPathCompliance)"  -Headers $h  -body $body  -Method PUT
+                $rsp = Invoke-RestMethod -Uri "https://$($storageAccount).blob.core.windows.net/$($blobPathCompliance)"  -Headers $h  -body $body  -Method PUT -ContentType 'application/json'
             }
         }
         $rsp
@@ -308,7 +309,8 @@ function Compare-Modules
     param(
     
         $localModules,
-        $requiredModules
+        $requiredModules,
+        $runTimeVersion
     )
 
     begin
@@ -318,12 +320,18 @@ function Compare-Modules
             install = @()
             diffVersion = @()
         }
+        switch($runTimeVersion)
+        {
+            "7"{ $modulePath = "*\Powershell\*"}
+            "5"{ $modulePath = "*\WindowsPowershell\*"}
+        }
     }
 
     process
     {
 
-        # check which module should be uninstalled 
+        # check which module should be uninstalled for particular runtime
+        $localModules = $localModules|Where-Object{$_.path -like $modulePath} 
         foreach ($module in $localModules)
         {
             if($module.Name -notin $requiredModules.Name)
@@ -743,7 +751,7 @@ catch
 }
 
 # Compare modules
-$modules = Compare-Modules -localModules $(Get-Module -ListAvailable|Where-Object{$_.Name -notin $builtInModulesToIgnore} |Select-Object -Unique) -requiredModules ($requiredModules|Where-Object{$_.RunTimeVersion -like "$($runTimeVersion)*"})
+$modules = Compare-Modules -localModules $(Get-Module -ListAvailable|Where-Object{$_.Name -notin $builtInModulesToIgnore} |Select-Object -Unique) -requiredModules ($requiredModules|Where-Object{$_.RunTimeVersion -like "$($runTimeVersion)*"}) -runTimeVersion $runTimeVersion
 Write-Log "Overview after comparison  -- $($modules.install.count) to be installed, $($modules.diffversion.count) to be reinstalled"
 
 # Install modules that are required

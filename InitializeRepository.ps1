@@ -36,7 +36,7 @@ if(-not (Test-Path -Path "$ProjectDir/Source/$EnvironmentName"))
     New-Item -ItemType Directory -Path "$ProjectDir/Source/$EnvironmentName" -Force | Out-Null
 }
 
-$supportedEntities = 'Configurations','Runbooks','Variables','Modules','Schedules','JobSchedules','Webhooks'
+$supportedEntities = 'Configurations','Runbooks','Variables','Modules','Schedules','JobSchedules','Webhooks','ConfigurationParameterValues'
 foreach($entity in $supportedEntities)
 {
     switch($entity)
@@ -119,6 +119,14 @@ foreach($entity in $supportedEntities)
             $def = New-WebhookDefinition -NamePrefix "Sample" -RunbookName "Sample Runbook" -RunOn MyHybridWorkerGroup -Overlap '14.00:00:00' -SupportedRequestTypes CosmosLite -AsJson
             $DefContent = $defContent.Replace('{}', $def)
             New-Item -Path "$ProjectDir/Definitions/$entity" -Name 'readme.md' -ItemType File -Value $DefContent -Force | Out-Null
+            break;
+        }
+        'ConfigurationParameterValues' {
+            $def = New-ConfigurationParameterValues -Name "ConfigurationValue_sample" -ConfigurationName "SampleConfigName" -Content "sample_configurationvalues.json" -Description "Sample description" -AsJson
+            $DefContent = $defContent.Replace('{}', $def)
+            New-Item -Path "$ProjectDir/Definitions/$entity" -Name 'readme.md' -ItemType File -Value $DefContent -Force | Out-Null
+            $SrcContent += "__Note__: Currently, only string variables are supported. However variable may contain JSOn string to provide runbook with structured data.  `n"
+            New-Item -Path "$ProjectDir/Source/$EnvironmentName/$entity" -Name 'readme.md' -ItemType File -Value $SrcContent -Force | Out-Null
             break;
         }
     }

@@ -15,18 +15,16 @@ $reportMissingImplementation = Get-VstsInput -Name 'reportMissingImplementation'
 $verboseLog = Get-VstsInput -Name 'verbose'
 $helperHybridWorkerModuleManagement = Get-VstsInput -Name 'helperHybridWorkerModuleManagement'
 
-<# #load Automation account REST wrapper
-$parentDirectory = Split-Path -Path $PSScriptRoot -Parent
-$grandparentDirectory = Split-Path -Path $parentDirectory -Parent
- #>
 if ($verboseLog) {
     $VerbosePreference = 'Continue'
 }
 
-<# if ($helperHybridWorkerModuleManagement) {
+if ($helperHybridWorkerModuleManagement -eq $true) {
+    Write-host "Helper Hybrid Worker module management is set to: $($helperHybridWorkerModuleManagement)"
+
     $blobNameModulesJson = "required-modules.json"
     $manageModulesPs1 = "HybridWorkerModuleManagement.ps1"
-    $manageModulesPs1Path = "$($grandparentDirectory)\Helpers\HybridWorkerModuleManagement\$($manageModulesPS1)"
+    $manageModulesPs1Path = "$($projectDir)\Helpers\HybridWorkerModuleManagement\$($manageModulesPS1)"
 }
  #>#load VstsTaskSdk module
 Write-Host "Installing dependencies..."
@@ -52,7 +50,6 @@ $modulePath = [System.IO.Path]::Combine($PSScriptRoot, 'Module', 'AutoRuntime')
 Write-Host "module path: $modulePath"
 Import-Module $modulePath -Force -WarningAction SilentlyContinue
 Write-Host "Import succeeded!"
-
 
 Write-Host "Starting process..."
 # retrieve service connection object
@@ -429,8 +426,10 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
         if ([string]::IsNullOrEmpty($StorageAccount) -or [string]::IsNullOrEmpty($storageAccountContainer)) {
             continue
         }
-<#         # using solution for sync of powershell modules between automation account and hybrid workers - if you wish to not use the solution set $helperHybridWorkerModuleManagement = $false
-        if ($helperHybridWorkerModuleManagement) {
+
+        # using solution for sync of powershell modules between automation account and hybrid workers - if you wish to not use the solution set $helperHybridWorkerModuleManagement = $false
+        if ($helperHybridWorkerModuleManagement -eq $true) {
+
             # process modules for hybrid workers
             $requiredModules = Get-ModulesForHybridWorker -definitions $definitions `
                 -storageAccount $storageAccount `
@@ -450,7 +449,7 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
                 -filePath $manageModulesPS1Path `
                 -storageBlobName $manageModulesPS1
         }
- #>
+
     }
     if ($FullSync) {
         $runtime = '5.1'
@@ -636,17 +635,21 @@ if (Check-Scope -Scope $scope -RequiredScope 'JobSchedules') {
     }
 }
 #endregion JobSchedules
-
 #region Configurations
 if (Check-Scope -Scope $scope -RequiredScope 'Configurations') {
     "Processing configurations"
-
     $existingConfigurations = Get-AutoObject -objectType Configurations
     $CompilationJobs = @()
 
     $definitions = @(Get-DefinitionFiles -FileType Configurations)
 
     foreach ($def in $definitions) {
+        
+        # take definition file for parameter values for current environment
+        $configParamValuesDef = Get-DefinitionFiles -FileType "ConfigurationParameterValues"|Where-Object{$_.ConfigurationName -eq $def.Name}
+        $filePath = Get-FileToProcess -FileType ConfigurationParameterValues -FileName $configParamValuesDef.Content
+        $paramValues = (Get-Content -Path $filePath)|ConvertFrom-Json
+        
         "Processing configuration $($def.Name)"
         $implementationFile = Get-FileToProcess -FileType Configurations -FileName $def.Implementation
 
@@ -658,13 +661,14 @@ if (Check-Scope -Scope $scope -RequiredScope 'Configurations') {
         #import logic of DSC config
         
         "Importing Dsc: Source: $implementationFile; Compile: $($def.AutoCompile)"
+       
         $rslt = Add-AutoConfiguration `
             -Name $def.Name `
             -Content (Get-Content -Path $implementationFile -Encoding utf8 -Raw) `
             -Description $def.Description `
             -AutoCompile:$def.AutoCompile `
             -Parameters $def.Parameters `
-            -ParameterValues $def.ParameterValues
+            -ParameterValues $paramValues
         if ($def.autoCompile) {
             #we received compilation job here
             $CompilationJobs += $rslt
@@ -673,18 +677,24 @@ if (Check-Scope -Scope $scope -RequiredScope 'Configurations') {
     if ($CompilationJobs.Count -gt 0) {
         Wait-AutoObjectProcessing -Name $compilationJobs.Name -objectType Compilationjobs | select-object name, @{N = 'provisioningState'; E = { $_.properties.provisioningState } } | Out-String
         # get config to assign
-        $configToAssign = Get-DscNodeConfiguration -Subscription $subscription -ResourceGroup $resourceGroup -AutomationAccount $automationAccount |`
+        "Retrieving config to assign"
+        $configToAssign = Get-DscNodeConfiguration -Subscription $Subscription -ResourceGroup $resourceGroup -AutomationAccount $automationAccount |`
             Where-object { $_.properties.configuration.name -eq $CompilationJobs.properties.configuration.name }
     
         # get nodes 
-        $nodes = Get-DscNodes -Subscription $subscription -ResourceGroup $resourceGroup -AutomationAccount $automationAccount
-
-        # assign compiled config to node
-        foreach ($node in $nodes) {
-            Write-Verbose "Assigning $($configToassign.name) to $($node.name)"
-            $rslt = Assign-DscNodeConfig -Subscription $subscription -ResourceGroup $resourceGroup -AutomationAccount $automationAccount -NodeConfigId $configToAssign.name -NodeName $node.properties.nodeId
-            Write-Verbose "Configuration assigned"
-            $rslt | fl
+        "Retrieving nodes"
+        $nodes = Get-DscNodes -Subscription $Subscription -ResourceGroup $resourceGroup -AutomationAccount $automationAccount
+        if($nodes.id.count -gt 0)
+        {
+            # assign compiled config to nodes
+            foreach ($node in $nodes) {
+                "Assigning $($configToassign.name) to $($node.name)"
+                $rslt = Assign-DscNodeConfig -Subscription $Subscription -ResourceGroup $resourceGroup -AutomationAccount $automationAccount -NodeConfigId $configToAssign.name -NodeName $node.properties.nodeId
+                "Configuration assigned"
+               
+            }
+        }else{
+            "No DSC nodes are registered, therefore skipping assignment."
         }
     }
     if ($fullSync) {
@@ -699,6 +709,7 @@ if (Check-Scope -Scope $scope -RequiredScope 'Configurations') {
     }
 }
 #endregion Dsc
+
 
 if ($verboseLog) {
     $VerbosePreference = 'SilentlyContinue'

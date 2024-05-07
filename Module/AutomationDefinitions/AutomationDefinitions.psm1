@@ -69,10 +69,6 @@ function New-ConfigurationDefinition
         [hashtable]
             #specification of configuration parameters, if any
         $Parameters,
-        [hashtable]
-            #values of parameters
-            #used when compiling the configuration
-        $ParameterValues,
         [switch]
             #returns formatted JSON rather than object
         $AsJson
@@ -84,6 +80,7 @@ function New-ConfigurationDefinition
             Name = $Name
             Description = $Description
             Implementation = $Implementation
+            Parameters = $Parameters
             AutoCompile = $AutoCompile.IsPresent
         }
         if($AsJson)
@@ -96,6 +93,48 @@ function New-ConfigurationDefinition
         }
     }
 }
+
+
+function New-ConfigurationParameterValues
+{
+    param
+    (
+        [string]
+            #Name of the parameter values as it appears in automation account
+        $Name,
+        [string]
+            #Description 
+        $Description,
+        [string]
+            #content 
+        $Content,
+        [string]
+            #Configuration name
+        $ConfigurationName,
+        [switch]
+            #returns formatted JSON rather than object
+        $AsJson
+    )
+
+    process
+    {
+        $retVal = [PSCustomObject][ordered]@{
+            Name = $Name
+            Description = $Description
+            ConfigurationName = $ConfigurationName
+            Content = $Content
+        }
+        if($AsJson)
+        {
+            $retVal | ConvertTo-Json
+        }
+        else
+        {
+            $retVal
+        }
+    }
+}
+
 
 function New-VariableDefinition
 {
@@ -263,7 +302,7 @@ function New-ScheduleDefinition
             #Frequency of recurrence
             #Note: We do not support one-time schedules here
             $Frequency,
-        [uint[]]
+        [uint32[]]
             #on which days in month it triggers
             #works together with Month frequency, otherwise ignored
             #Example: 2,15 --> every 2nd and 15th in month

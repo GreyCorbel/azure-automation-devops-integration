@@ -1,0 +1,6 @@
+{
+    "Name":  "Prepare-HybridWorkerModuleManagementParamValues",
+    "Description":  "Parameter values definition file for hybrid worker module management.",
+    "Content":  "Prepare-HybridWorkerModuleManagementParamValuesSource.json",
+    "ConfigurationName": "HybridWorkerModuleManagement"
+}
