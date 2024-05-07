@@ -71,8 +71,64 @@ jobs:
             Write-Host "Setting version of task $task to $extensionVersion"
             $taskInfo = get-content ([System.IO.Path]::Combine($tasksFolder,$task,'task.json')) | ConvertFrom-Json -Depth 99
             $taskInfo.version = $versionInfo
+
+            switch ($task) {
+              "Manage-AutomationAccount" {
+                  # update task name based on developlment flag
+                  if ($extensionInfo.isDevelopment -eq "true") {
+                    $taskInfo.id = "89d6f3bb-b859-4c17-9a62-aa087baf6f57"
+                    $taskInfo.name = "Dev-Manage-AutomationAccount"
+                    $taskInfo.friendlyName = "Dev-Manage-AutomationAccount"
+                  }
+                  else {
+                    $taskInfo.id = "c3e84ba0-be86-11ee-aff3-5d686ed5c05d"
+                    $taskInfo.name = "Manage-AutomationAccount"
+                    $taskInfo.friendlyName = "Manage-AutomationAccount"
+                  }
+              }
+              "Manage-AutomationWebHook" {
+                  if ($extensionInfo.isDevelopment -eq "true") {
+                    $taskInfo.id = "d9e1b487-6a6f-47b5-8105-b8efc07c8d7e"
+                    $taskInfo.name = "Dev-Manage-AutomationWebHook"
+                    $taskInfo.friendlyName = "Dev-Manage-AutomationWebHook"
+                  }
+                  else {
+                    $taskInfo.id = "c3e84ba0-be86-11ee-aff3-5d686ed5c05f"
+                    $taskInfo.name = "Manage-AutomationWebHook"
+                    $taskInfo.friendlyName = "Manage-AutomationWebHook"
+                  }
+              }
+            }
+
             $taskInfo | ConvertTo-Json -Depth 99 | Out-File -Path ([System.IO.Path]::Combine($tasksFolder,$task,'task.json')) -Force
         }
+
+        # Add galleryFlags property
+        if (-not $extensionInfo.galleryFlags) {
+            $extensionInfo | Add-Member -MemberType NoteProperty -Name "galleryFlags" -Value @()
+        }
+
+        if ($extensionInfo.isDevelopment -eq "true") {
+            Write-Host "Generating development non-public VSIX package..."
+            # Add "Preview" to "galleryFlags"
+            $extensionInfo.galleryFlags = @("Preview")
+            $extensionInfo.id = "Dev-Manage-AutomationAccount"
+            $extensionInfo.name = "Dev-Manage-AutomationAccount"
+
+
+        } else {
+            Write-Host "Generating public VSIX package..."
+            # Add "Public" to "galleryFlags"
+            $extensionInfo.galleryFlags = @("Public")
+            $extensionInfo.id = "Manage-AutomationAccount"
+            $extensionInfo.name = "Manage-AutomationAccount"
+        }
+
+        # Save new data to json file
+        $extensionInfo | ConvertTo-Json -Depth 99 | Set-Content -Path ([System.IO.Path]::Combine($env:GITHUB_WORKSPACE, 'vss-extension.json'))
+
+        Write-Host "Show vss-extension.json file content"
+        $extensionInfo
 
     - name: Generate and Upload VSIX file
       env:

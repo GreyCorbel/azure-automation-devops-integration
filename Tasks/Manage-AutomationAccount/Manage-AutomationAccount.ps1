@@ -21,6 +21,7 @@ if ($verboseLog) {
 
 if ($helperHybridWorkerModuleManagement -eq $true) {
     Write-host "Helper Hybrid Worker module management is set to: $($helperHybridWorkerModuleManagement)"
+
     $blobNameModulesJson = "required-modules.json"
     $manageModulesPs1 = "HybridWorkerModuleManagement.ps1"
     $manageModulesPs1Path = "$($projectDir)\Helpers\HybridWorkerModuleManagement\$($manageModulesPS1)"
@@ -122,7 +123,7 @@ switch ($serviceConnection.auth.scheme) {
 
         $oidcToken = $response.oidcToken
         $assertion = $oidcToken
-       
+
         Initialize-AadAuthenticationFactory `
             -servicePrincipalId $servicePrincipalId `
             -assertion $assertion `
@@ -425,8 +426,10 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
         if ([string]::IsNullOrEmpty($StorageAccount) -or [string]::IsNullOrEmpty($storageAccountContainer)) {
             continue
         }
+
         # using solution for sync of powershell modules between automation account and hybrid workers - if you wish to not use the solution set $helperHybridWorkerModuleManagement = $false
         if ($helperHybridWorkerModuleManagement -eq $true) {
+
             # process modules for hybrid workers
             $requiredModules = Get-ModulesForHybridWorker -definitions $definitions `
                 -storageAccount $storageAccount `
@@ -446,7 +449,7 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
                 -filePath $manageModulesPS1Path `
                 -storageBlobName $manageModulesPS1
         }
- 
+
     }
     if ($FullSync) {
         $runtime = '5.1'

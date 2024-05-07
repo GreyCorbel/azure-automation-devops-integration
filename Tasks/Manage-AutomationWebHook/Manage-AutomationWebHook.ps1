@@ -93,7 +93,7 @@ foreach($def in $definitions)
             $managedWebhooks+=$wh
             continue
         }
-        if($existingWebhooks -gt [DateTime]::Now)
+        if($expiration -gt [DateTime]::Now)
         {
             #about to expire, but not expired yet
             $managedWebhooks+=$wh
@@ -112,7 +112,8 @@ foreach($def in $definitions)
             continue
         }
         $runOn = ''
-        $params = [PSCustomObject]@{}
+        $params = @{}
+
         if(-not [string]::IsNullOrEmpty($def.Settings))
         {
             $settingsFile = Get-FileToProcess -FileType Webhooks -FileName $def.Settings
@@ -122,11 +123,27 @@ foreach($def in $definitions)
                 continue
             }
             Write-Host "Settings file found: $settingsFile"
+            $setting = get-content $settingsFile | ConvertFrom-Json
 
-            $setting = get-content $settingsFile -Encoding utf8 | ConvertFrom-Json
+            if($setting.Parameters -is [Hashtable]) {
+                $params = $setting.Parameters
+            } else {
+                Write-Host "Converting parameters to Hashtable..."
+                $params = @{}
+                $setting.Parameters | ForEach-Object {
+                    $params += $_.psobject.properties | ForEach-Object {
+                        @{
+                            $_.Name = $_.Value
+                        }
+                    }
+                }
+            }
+
             if((-not [string]::IsNullOrEmpty($setting.RunOn) -and ($setting.RunOn -ne 'Azure'))) {$runOn = $setting.RunOn}
-            if(-not [string]::IsNullOrEmpty($setting.Parameters)) {$params = $setting.Parameters}
         }
+
+        Write-Host "Checking params :"
+        $params
 
         $Expires = [DateTime]::UtcNow + [Timespan]::Parse($def.Expiration)
         $SupportedRequestTypes = $def.SupportedRequestTypes
@@ -138,6 +155,12 @@ foreach($def in $definitions)
             -RunOn $runOn `
             -ExpiresOn $Expires `
             -Parameters $params
+        
+
+        Write-Host "API response: "
+        $webhook2json = $webhook | ConvertTo-Json
+        $webhook2json
+
         $webhook | Add-Member -MemberType NoteProperty -Name SupportedRequestTypes -Value $SupportedRequestTypes
         $managedWebhooks+=$webhook
         $newWebhooks += $webhook

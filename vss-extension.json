@@ -2,17 +2,14 @@
     "manifestVersion": 1,
     "id": "Manage-AutomationAccount",
     "name": "Manage-AutomationAccount",
-    "version": "1.9.59",
+    "version": "1.9.89",
     "publisher": "GreyCorbelSolutions",
     "targets": [
         {
             "id": "Microsoft.VisualStudio.Services"
         }
     ],    
-    "galleryFlags": [
-        "Preview",
-        "Public"
-    ],
+    "isDevelopment": "true",
     "description": "Set of tasks that allows management of automation account (runbooks, modules, variables, schedules and their links to runbooks, webhooks for runbooks and Dsc configurations from Azure DevOps pipeline.",
     "categories": [
         "Azure Pipelines"
