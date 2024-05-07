@@ -76,12 +76,12 @@ jobs:
               "Manage-AutomationAccount" {
                   # update task name based on developlment flag
                   if ($extensionInfo.isDevelopment -eq "true") {
-                    $task.id = "89d6f3bb-b859-4c17-9a62-aa087baf6f57"
+                    $taskInfo.id = "89d6f3bb-b859-4c17-9a62-aa087baf6f57"
                     $taskInfo.name = "Dev-Manage-AutomationAccount"
                     $taskInfo.friendlyName = "Dev-Manage-AutomationAccount"
                   }
                   else {
-                    $task.id = "c3e84ba0-be86-11ee-aff3-5d686ed5c05d"
+                    $taskInfo.id = "c3e84ba0-be86-11ee-aff3-5d686ed5c05d"
                     $taskInfo.name = "Manage-AutomationAccount"
                     $taskInfo.friendlyName = "Manage-AutomationAccount"
                   }
