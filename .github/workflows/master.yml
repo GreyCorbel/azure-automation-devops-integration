@@ -88,12 +88,12 @@ jobs:
               }
               "Manage-AutomationWebHook" {
                   if ($extensionInfo.isDevelopment -eq "true") {
-                    $task.id = "d9e1b487-6a6f-47b5-8105-b8efc07c8d7e"
+                    $taskInfo.id = "d9e1b487-6a6f-47b5-8105-b8efc07c8d7e"
                     $taskInfo.name = "Dev-Manage-AutomationWebHook"
                     $taskInfo.friendlyName = "Dev-Manage-AutomationWebHook"
                   }
                   else {
-                    $task.id = "c3e84ba0-be86-11ee-aff3-5d686ed5c05f"
+                    $taskInfo.id = "c3e84ba0-be86-11ee-aff3-5d686ed5c05f"
                     $taskInfo.name = "Manage-AutomationWebHook"
                     $taskInfo.friendlyName = "Manage-AutomationWebHook"
                   }
