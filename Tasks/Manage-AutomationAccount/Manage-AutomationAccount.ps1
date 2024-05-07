@@ -25,13 +25,13 @@ if ($helperHybridWorkerModuleManagement -eq $true) {
     $manageModulesPs1 = "HybridWorkerModuleManagement.ps1"
     $manageModulesPs1Path = "$($projectDir)\Helpers\HybridWorkerModuleManagement\$($manageModulesPS1)"
 }
-#  #>#load VstsTaskSdk module
-# Write-Host "Installing dependencies..."
-# if ($null -eq (Get-Module -Name VstsTaskSdk -ListAvailable)) {
-#     Write-Host "VstsTaskSdk module not found, installing..."
-#     Install-Module -Name VstsTaskSdk -Force -Scope CurrentUser -AllowClobber
-# }
-# Write-Host "Installation succeeded!"
+ #>#load VstsTaskSdk module
+Write-Host "Installing dependencies..."
+if ($null -eq (Get-Module -Name VstsTaskSdk -ListAvailable)) {
+    Write-Host "VstsTaskSdk module not found, installing..."
+    Install-Module -Name VstsTaskSdk -Force -Scope CurrentUser -AllowClobber
+}
+Write-Host "Installation succeeded!"
 
 #load AadAuthentiacationFactory
 if ($null -eq (Get-Module -Name AadAuthenticationFactory -ListAvailable)) {
