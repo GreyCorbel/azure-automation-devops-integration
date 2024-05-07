@@ -71,6 +71,31 @@ jobs:
             Write-Host "Setting version of task $task to $extensionVersion"
             $taskInfo = get-content ([System.IO.Path]::Combine($tasksFolder,$task,'task.json')) | ConvertFrom-Json -Depth 99
             $taskInfo.version = $versionInfo
+
+            switch ($task) {
+              "Manage-AutomationAccount" {
+                  # update task name based on developlment flag
+                  if ($extensionInfo.isDevelopment -eq "true") {
+                    $taskInfo.name = "Dev-Manage-AutomationAccount"
+                    $taskInfo.friendlyName = "Dev-Manage-AutomationAccount"
+                  }
+                  else {
+                    $taskInfo.name = "Manage-AutomationAccount"
+                    $taskInfo.friendlyName = "Manage-AutomationAccount"
+                  }
+              }
+              "Manage-AutomationWebHook" {
+                  if ($extensionInfo.isDevelopment -eq "true") {
+                    $taskInfo.name = "Dev-Manage-AutomationWebHook"
+                    $taskInfo.friendlyName = "Dev-Manage-AutomationWebHook"
+                  }
+                  else {
+                    $taskInfo.name = "Manage-AutomationWebHook"
+                    $taskInfo.friendlyName = "Manage-AutomationWebHook"
+                  }
+              }
+            }
+
             $taskInfo | ConvertTo-Json -Depth 99 | Out-File -Path ([System.IO.Path]::Combine($tasksFolder,$task,'task.json')) -Force
         }
 
