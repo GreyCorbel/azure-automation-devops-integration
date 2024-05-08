@@ -6,13 +6,13 @@ Script to create DSC configuration for module management and upload HybridWorker
 Configuration HybridWorkerModuleManagement {
     param(
         [string]
-        $blobNameModulesJson,
+        $blobNameModulesJson ,
         [string]
-        $storageAccount ,
+        $storageAccount  ,
         [string]
         $storageAccountContainer ,
         [string]
-        $runTimeVersion , 
+        $runTimeVersion  , 
         [string]
         $workerLocalPath ,
         [string]
@@ -123,8 +123,15 @@ Configuration HybridWorkerModuleManagement {
                                 }
                             }
                             $ps5Path = Test-PSInstallation -executable powershell
-                            Write-Verbose "Executing $($ps5path) -File $using:scriptPath -blobNameModulesJson $using:blobNameModulesJson -storageAccountContainer $using:storageAccountContainer -storageAccount $using:storageAccount -machineType $using:machineType"
-                            &"$($ps5path)" -File $using:scriptPath -blobNameModulesJson $using:blobNameModulesJson -storageAccountContainer $using:storageAccountContainer -storageAccount $using:storageAccount -machineType $using:machineType 
+                            if([string]::IsNullOrEmpty($ps5Path) -eq $true)
+                            {
+                                throw "PS 5 Path not found, skipping execution for PS5"
+                                
+                            }
+                            else {
+                                Write-Verbose "Executing $($ps5path) -File $using:scriptPath -blobNameModulesJson $using:blobNameModulesJson -storageAccountContainer $using:storageAccountContainer -storageAccount $using:storageAccount -machineType $using:machineType"
+                                &"$($ps5path)" -File $using:scriptPath -blobNameModulesJson $using:blobNameModulesJson -storageAccountContainer $using:storageAccountContainer -storageAccount $using:storageAccount -machineType $using:machineType 
+                            }
                         }
                     TestScript = { $false } 
                     GetScript = {"" }
@@ -150,6 +157,7 @@ Configuration HybridWorkerModuleManagement {
                                                     
                                     foreach($path in $envPaths)
                                     {
+                                         Write-Verbose "Testing path $($path)"
                                         $executablePath = Join-Path $path $executable 
                                         if (Test-Path $executablePath) {
                                             return $executablePath
@@ -159,8 +167,15 @@ Configuration HybridWorkerModuleManagement {
                                 }
                             }
                             $ps7Path = Test-PSInstallation -executable pwsh
-                            Write-Verbose "Executing $($ps7path) -File $using:scriptPath -blobNameModulesJson $using:blobNameModulesJson -storageAccountContainer $using:storageAccountContainer -storageAccount $using:storageAccount -machineType $using:machineType"
-                            &"$($ps7path)" -File $using:scriptPath -blobNameModulesJson $using:blobNameModulesJson -storageAccountContainer $using:storageAccountContainer -storageAccount $using:storageAccount -machineType $using:machineType 
+                            if([string]::IsNullOrEmpty($ps7Path) -eq $true)
+                            {
+                                throw "PS 7 Path not found, skipping execution for PS7"
+                                
+                            }
+                            else {
+                                Write-Verbose "Executing $($ps7path) -File $using:scriptPath -blobNameModulesJson $using:blobNameModulesJson -storageAccountContainer $using:storageAccountContainer -storageAccount $using:storageAccount -machineType $using:machineType"
+                                &"$($ps7path)" -File $using:scriptPath -blobNameModulesJson $using:blobNameModulesJson -storageAccountContainer $using:storageAccountContainer -storageAccount $using:storageAccount -machineType $using:machineType 
+                            }
                         }
                     TestScript = { $false }  
                     GetScript = {"" }
@@ -198,9 +213,15 @@ Configuration HybridWorkerModuleManagement {
                                 }
                             }
                             $ps5Path = Test-PSInstallation -executable powershell
-                            Write-Verbose "Executing $($ps5path) -File $using:scriptPath -blobNameModulesJson $using:blobNameModulesJson -storageAccountContainer $using:storageAccountContainer -storageAccount $using:storageAccount -machineType $using:machineType"
-                            &"$($ps5path)" -File $using:scriptPath -blobNameModulesJson $using:blobNameModulesJson -storageAccountContainer $using:storageAccountContainer -storageAccount $using:storageAccount -machineType $using:machineType 
-
+                            if([string]::IsNullOrEmpty($ps5Path) -eq $true)
+                            {
+                                throw "PS 5 Path not found, skipping execution for PS5"
+                                
+                            }
+                            else {
+                                Write-Verbose "Executing $($ps5path) -File $using:scriptPath -blobNameModulesJson $using:blobNameModulesJson -storageAccountContainer $using:storageAccountContainer -storageAccount $using:storageAccount -machineType $using:machineType"
+                                &"$($ps5path)" -File $using:scriptPath -blobNameModulesJson $using:blobNameModulesJson -storageAccountContainer $using:storageAccountContainer -storageAccount $using:storageAccount -machineType $using:machineType 
+                            }
             
                         }
                     TestScript = { $false } 
@@ -229,6 +250,7 @@ Configuration HybridWorkerModuleManagement {
                                                     
                                     foreach($path in $envPaths)
                                     {
+                                       
                                         $executablePath = Join-Path $path $executable 
                                         if (Test-Path $executablePath) {
                                             return $executablePath
@@ -238,9 +260,15 @@ Configuration HybridWorkerModuleManagement {
                                 }
                             }
                             $ps7Path = Test-PSInstallation -executable pwsh
-                            Write-Verbose "Executing $($ps7path) -File $using:scriptPath -blobNameModulesJson $using:blobNameModulesJson -storageAccountContainer $using:storageAccountContainer -storageAccount $using:storageAccount -machineType $using:machineType"
-                            &"$($ps7path)" -File $using:scriptPath -blobNameModulesJson $using:blobNameModulesJson -storageAccountContainer $using:storageAccountContainer -storageAccount $using:storageAccount -machineType $using:machineType 
-
+                            if([string]::IsNullOrEmpty($ps7Path) -eq $true)
+                            {
+                                throw "PS 7 Path not found, skipping execution for PS7"
+                                
+                            }
+                            else {
+                                Write-Verbose "Executing $($ps7path) -File $using:scriptPath -blobNameModulesJson $using:blobNameModulesJson -storageAccountContainer $using:storageAccountContainer -storageAccount $using:storageAccount -machineType $using:machineType"
+                                &"$($ps7path)" -File $using:scriptPath -blobNameModulesJson $using:blobNameModulesJson -storageAccountContainer $using:storageAccountContainer -storageAccount $using:storageAccount -machineType $using:machineType 
+                            }
                         }
                     TestScript = { $false } 
                     GetScript = {"" }
