@@ -273,7 +273,7 @@ function Compare-Modules {
             }
         }
         # check which module should be installed
-        foreach ($module in $requiredModules | Where-Object { $_.Name -notin @('Az') }) {
+        foreach ($module in $requiredModules) {
             if ($module.Name -notin $localModules.Name) {
                 $overview.install += @{"name" = "$($module.Name)"; "version" = $($module.Version); "Source" = $($module.source) }
             }
