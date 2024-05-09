@@ -157,7 +157,6 @@ Configuration HybridWorkerModuleManagement {
                                                     
                                     foreach($path in $envPaths)
                                     {
-                                         Write-Verbose "Testing path $($path)"
                                         $executablePath = Join-Path $path $executable 
                                         if (Test-Path $executablePath) {
                                             return $executablePath
