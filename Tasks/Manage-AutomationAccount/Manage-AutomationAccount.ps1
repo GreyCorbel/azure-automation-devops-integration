@@ -443,11 +443,17 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
                 -storageBlobName $blobNameModulesJson
             
             # upload HybridWorkerModuleManagement.ps1 to storage account
-            Upload-FileToBlob `
-                -storageAccount $storageAccount `
-                -storageContainerName $storageAccountContainer `
-                -filePath $manageModulesPS1Path `
-                -storageBlobName $manageModulesPS1
+            if((Test-path -Path $manageModulesPS1Path) -eq $true)
+            {
+                Upload-FileToBlob `
+                    -storageAccount $storageAccount `
+                    -storageContainerName $storageAccountContainer `
+                    -filePath $manageModulesPS1Path `
+                    -storageBlobName $manageModulesPS1
+            }
+            else{
+                "$($manageModulesPS1Path) do not exist --> skipping copy to storage account - ensure that script is available in storage account."
+            }
         }
 
     }
