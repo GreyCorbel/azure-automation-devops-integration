@@ -604,7 +604,7 @@ if (Check-Scope -Scope $scope -RequiredScope 'JobSchedules') {
             Write-Warning "Schedule $($def.scheduleName) does not exist --> skipping job schedule"
             continue
         }
-        $params = [PSCustomObject]@{}
+        $params = @{}
         if (-not [string]::IsNullOrEmpty($def.Settings)) {
             $settingsFile = Get-FileToProcess -FileType JobSchedules -FileName $def.Settings
             if ([string]::IsnullOrEmpty($settingsFile)) {
@@ -612,7 +612,12 @@ if (Check-Scope -Scope $scope -RequiredScope 'JobSchedules') {
                 continue
             }
             $setting = get-content $settingsFile -Encoding utf8 | ConvertFrom-Json
-            if (-not [string]::IsNullOrEmpty($setting.Parameters)) { $params = $setting.Parameters }
+            if (-not [string]::IsNullOrEmpty($setting.Parameters)) { 
+                #converting pamaters object to hashtable
+                foreach($param in $setting.Parameters.PSObject.Properties) {
+                    $params[$param.Name] = $param.Value
+                }
+            }
         }
         "Updating schedule $($def.scheduleName) on $($def.runbookName)"
         $jobSchedule = Add-AutoJobSchedule -RunbookName $def.runbookName `
