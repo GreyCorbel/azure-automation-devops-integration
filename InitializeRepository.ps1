@@ -110,7 +110,7 @@ foreach($entity in $supportedEntities)
             break;
         }
         'JobSchedules' {
-            $def = New-JobScheduleDefinition -RunbookName "Sample runbook" -ScheduleName "Sample schedule" -RunOn Azure -Parameters @{SampleParameter = 'Sample Parameter value'} -AsJson
+            $def = New-JobScheduleDefinition -RunbookName "Sample runbook" -ScheduleName "Sample schedule" -Settings "Settings.json" -AsJson
             $DefContent = $defContent.Replace('{}', $def)
             New-Item -Path "$ProjectDir/Definitions/$entity" -Name 'readme.md' -ItemType File -Value $DefContent -Force | Out-Null
             break;

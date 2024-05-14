@@ -188,12 +188,8 @@ function New-JobScheduleDefinition
             #Name of the schedule that triggers the runbook
         $ScheduleName,
         [string]
-            #where runbook runs
-            #use 'Azure' or null to run on Azure, otherwise use worker group name
-        $RunOn,
-        [hashtable]
-            #Parameters to pass when triggering the runbook by the schedule
-        $Parameters,
+            #Name of settings file
+        $Settings,
         [switch]
             #returns formatted JSON rather than object
         $AsJson
@@ -205,8 +201,7 @@ function New-JobScheduleDefinition
         $retVal = [PSCustomObject][ordered]@{
             RunbookName = $RunbookName
             ScheduleName = $ScheduleName
-            RunOn = $RunOn
-            Parameters = $Parameters
+            Settings = $Settings
         }
         if($AsJson)
         {
