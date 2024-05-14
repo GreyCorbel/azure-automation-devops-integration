@@ -110,15 +110,19 @@ foreach($entity in $supportedEntities)
             break;
         }
         'JobSchedules' {
-            $def = New-JobScheduleDefinition -RunbookName "Sample runbook" -ScheduleName "Sample schedule" -Settings "Settings.json" -AsJson
+            $def = New-JobScheduleDefinition -RunbookName "Sample_runbook" -ScheduleName "Sample_schedule" -Settings "Sample_settings.json" -AsJson
             $DefContent = $defContent.Replace('{}', $def)
             New-Item -Path "$ProjectDir/Definitions/$entity" -Name 'readme.md' -ItemType File -Value $DefContent -Force | Out-Null
+            $SrcContent += "__Example of JobSchedule Sample_settings.json file__:  { `"RunOn`": `"azure`", `"Parameters`": {`"parameterTest`":`"test`"} }`n"
+            New-Item -Path "$ProjectDir/Source/$EnvironmentName/$entity" -Name 'readme.md' -ItemType File -Value $SrcContent -Force | Out-Null
             break;
         }
         'Webhooks' {
-            $def = New-WebhookDefinition -NamePrefix "Sample" -RunbookName "Sample Runbook" -RunOn MyHybridWorkerGroup -Overlap '14.00:00:00' -SupportedRequestTypes CosmosLite -AsJson
+            $def = New-WebhookDefinition -NamePrefix "Sample" -RunbookName "Sample Runbook" -Settings "Sample_settings.json" -Overlap '14.00:00:00' -SupportedRequestTypes CosmosLite -AsJson
             $DefContent = $defContent.Replace('{}', $def)
             New-Item -Path "$ProjectDir/Definitions/$entity" -Name 'readme.md' -ItemType File -Value $DefContent -Force | Out-Null
+            $SrcContent += "__Example of Webhook Sample_settings.json file__:  { `"RunOn`": `"azure`", `"Parameters`": {`"parameterTest1`":`"test1`", `"parameterTest2`":`"test2`"} }`n"
+            New-Item -Path "$ProjectDir/Source/$EnvironmentName/$entity" -Name 'readme.md' -ItemType File -Value $SrcContent -Force | Out-Null
             break;
         }
         'ConfigurationParameterValues' {

@@ -225,9 +225,8 @@ function New-WebhookDefinition
             #Name of the runbook triggered by webhook
         $RunbookName,
         [string]
-            #where runbook runs
-            #use 'Azure' or null to run on Azure, otherwise use worker group name
-        $RunOn,
+            #Name of webhook settings file
+        $Settings,
         [Timespan]
             #how long till expire
             #default: 365.0:0:0 (1 year)
@@ -237,9 +236,6 @@ function New-WebhookDefinition
             #must be parsable as timespan
             #default: 7.0:0:0 (1 week)
         $Overlap = ([Timespan]::FromDays(7)),
-        [hashtable]
-            #Parameters to pass when triggering the runbook by the schedule
-        $Parameters,
         [switch]
             #whether created as disabled
         $Disabled,
@@ -257,11 +253,10 @@ function New-WebhookDefinition
         $retVal = [PSCustomObject][ordered]@{
             NamePrefix = $NamePrefix
             RunbookName = $RunbookName
-            RunOn = $RunOn
+            Settings = $Settings
             Expiration = $Expiration.ToString()
             Overlap = $Overlap.ToString()
             Disabled = $Disabled.IsPresent
-            Parameters = $Parameters
             SupportedRequestTypes = $SupportedRequestTypes
         }
         if($AsJson)
