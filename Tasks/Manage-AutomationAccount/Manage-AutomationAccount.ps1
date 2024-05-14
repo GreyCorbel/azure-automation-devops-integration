@@ -618,12 +618,14 @@ if (Check-Scope -Scope $scope -RequiredScope 'JobSchedules') {
                     $params[$param.Name] = $param.Value
                 }
             }
+            Write-Host "Checking JobSchedules params :"
+            $params
         }
         "Updating schedule $($def.scheduleName) on $($def.runbookName)"
         $jobSchedule = Add-AutoJobSchedule -RunbookName $def.runbookName `
             -ScheduleName $def.scheduleName `
             -RunOn $(if ($setting.runOn -eq 'Azure' -or [string]::IsnullOrEmpty($setting.runOn)) { '' } else { $setting.runOn }) `
-            -Parameters $Params
+            -Parameters $params
         
         $managedSchedules += $jobSchedule
     }
