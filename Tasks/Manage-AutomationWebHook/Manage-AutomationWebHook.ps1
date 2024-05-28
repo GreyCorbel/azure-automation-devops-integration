@@ -130,12 +130,8 @@ foreach($def in $definitions)
             } else {
                 Write-Host "Converting parameters to Hashtable..."
                 $params = @{}
-                $setting.Parameters | ForEach-Object {
-                    $params += $_.psobject.properties | ForEach-Object {
-                        @{
-                            $_.Name = $_.Value
-                        }
-                    }
+                foreach($param in $setting.Parameters.PSObject.Properties) {
+                    $params[$param.Name] = $param.Value
                 }
             }
 
