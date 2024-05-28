@@ -138,9 +138,6 @@ foreach($def in $definitions)
             if((-not [string]::IsNullOrEmpty($setting.RunOn) -and ($setting.RunOn -ne 'Azure'))) {$runOn = $setting.RunOn}
         }
 
-        Write-Host "Checking params :"
-        $params
-
         $Expires = [DateTime]::UtcNow + [Timespan]::Parse($def.Expiration)
         $SupportedRequestTypes = $def.SupportedRequestTypes
         $webhookName = "$($def.NamePrefix)-$ts"
@@ -152,11 +149,6 @@ foreach($def in $definitions)
             -ExpiresOn $Expires `
             -Parameters $params
         
-
-        Write-Host "API response: "
-        $webhook2json = $webhook | ConvertTo-Json
-        $webhook2json
-
         $webhook | Add-Member -MemberType NoteProperty -Name SupportedRequestTypes -Value $SupportedRequestTypes
         $managedWebhooks+=$webhook
         $newWebhooks += $webhook
