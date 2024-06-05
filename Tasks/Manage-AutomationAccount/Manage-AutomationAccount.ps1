@@ -592,6 +592,17 @@ if (Check-Scope -Scope $scope -RequiredScope 'JobSchedules') {
     $allSchedules = Get-AutoObject -objectType Schedules
     $existingRunbooks = Get-AutoObject -objectType Runbooks
 
+    #testing purposes - delete!
+    Write-Host "Write all jobSchedules:"
+    Write-Host $alljobSchedules
+
+    Write-Host "Write all schedules:"
+    Write-Host $allSchedules
+
+    Write-Host "Write all runbooks:"
+    Write-Host $existingRunbooks
+    #end of region to delete
+
     $managedSchedules = @()
     foreach ($def in $definitions) {
         "Checking runbook existence: $($def.runbookName)"
