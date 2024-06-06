@@ -592,17 +592,6 @@ if (Check-Scope -Scope $scope -RequiredScope 'JobSchedules') {
     $allSchedules = Get-AutoObject -objectType Schedules
     $existingRunbooks = Get-AutoObject -objectType Runbooks
 
-    #testing purposes - delete!
-    Write-Host "Write all jobSchedules:"
-    Write-Host $alljobSchedules
-
-    Write-Host "Write all schedules:"
-    Write-Host $allSchedules
-
-    Write-Host "Write all runbooks:"
-    Write-Host $existingRunbooks
-    #end of region to delete
-
     $managedSchedules = @()
     foreach ($def in $definitions) {
         "Checking runbook existence: $($def.runbookName)"
@@ -623,11 +612,12 @@ if (Check-Scope -Scope $scope -RequiredScope 'JobSchedules') {
         Write-Host $scheduleDetail
 
          # Compare specific properties
-         $propertiesToCompare = @("startTime", "expiryTime", "nextRun", "interval", "frequency")
+         $propertiesToCompare = @("StartTime", "Interval", "Frequency", "MonthDays", "WeekDays")
          $definitionsSchedules = @(Get-DefinitionFiles -FileType Schedules)
 
          foreach ($definitionsSchedule in $definitionsSchedules) {
             foreach ($property in $propertiesToCompare) {
+                Write-Host "property "
                 if ($scheduleDetail.properties.$property -ne $definitionsSchedule.$property) {
                     write-host "Change detected in property: $($definitionsSchedule.$property) -> $($scheduleDetail.properties.$property)"
                 }

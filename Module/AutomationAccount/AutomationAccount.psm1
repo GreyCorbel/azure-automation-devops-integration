@@ -1295,6 +1295,7 @@ Function Get-ScheduleDetail {
                 -Uri $uri `
                 -Headers $headers `
                 -ErrorAction Stop
+            Write-Host "Response Parameters: $($response.properties)"
             return $response
         } catch {
             write-error $_
