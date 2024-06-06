@@ -617,7 +617,7 @@ if (Check-Scope -Scope $scope -RequiredScope 'JobSchedules') {
         }
 
         #get schedule detail
-        $scheduleDetail = Get-ScheduleDetail -Name $def.scheduleName
+        $scheduleDetail = Get-ScheduleDetail -Name $($def.scheduleName)
         Write-Host "Get-ScheduleDetail: $($def.scheduleName)"
         Write-Host $scheduleDetail
 

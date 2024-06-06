@@ -1284,7 +1284,8 @@ Function Get-ScheduleDetail {
 
     begin {
         $headers = Get-AutoAccessToken -AsHashTable
-        $uri = "https://management.azure.com$AutomationAccountResourceId/schedules/$Name?api-version=2023-11-01"
+        $uri = "https://management.azure.com$($AutomationAccountResourceId)/schedules/$($Name)?api-version=2023-11-01"
+        Write-Host "Tohle je uri: $($uri)"
     }
 
     process {
