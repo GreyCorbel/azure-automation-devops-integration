@@ -617,9 +617,25 @@ if (Check-Scope -Scope $scope -RequiredScope 'JobSchedules') {
         }
 
         #get schedule detail
+        
         $scheduleDetail = Get-ScheduleDetail -Name $($def.scheduleName)
         Write-Host "Get-ScheduleDetail: $($def.scheduleName)"
         Write-Host $scheduleDetail
+
+         # Compare specific properties
+         $propertiesToCompare = @("startTime", "expiryTime", "nextRun", "interval", "frequency")
+         $definitionsSchedules = @(Get-DefinitionFiles -FileType Schedules)
+
+         foreach ($definitionsSchedule in $definitionsSchedules) {
+            foreach ($property in $propertiesToCompare) {
+                if ($scheduleDetail.properties.$property -ne $definitionsSchedule.$property) {
+                    write-host "Change detected in property: $($definitionsSchedule.$property) -> $($scheduleDetail.properties.$property)"
+                }
+                else {
+                    write-host "No changes for $($scheduleDetail.properties.$property) detected."
+                }
+            }
+         }
 
         $params = @{}
         if (-not [string]::IsNullOrEmpty($def.Settings)) {
