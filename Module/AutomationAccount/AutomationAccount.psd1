@@ -73,7 +73,7 @@ FunctionsToExport = @('Initialize-AadAuthenticationFactory', 'Get-AutoAccessToke
     'Get-AutoPowershell7Module','Get-AutoObject', 'Remove-AutoObject', 'Remove-AutoPowershell7Module', 'Get-AutoModuleUrl',
     'Add-AutoVariable', 'Add-AutoSchedule','Add-AutoModule','Add-AutoPowershell7Module',
     'Add-AutoRunbook','Add-AutoPowershell7Runbook','Add-AutoConfiguration','Add-AutoJobSchedule','Add-AutoWebhook',
-    'Wait-AutoObjectProcessing','Get-BlobSasUrl','Assign-DscNodeConfig','Get-DscNodeConfiguration','Get-DscNodes'
+    'Wait-AutoObjectProcessing','Get-BlobSasUrl','Assign-DscNodeConfig','Get-DscNodeConfiguration','Get-DscNodes', 'Get-ScheduleDetail'
 )
 
 # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
