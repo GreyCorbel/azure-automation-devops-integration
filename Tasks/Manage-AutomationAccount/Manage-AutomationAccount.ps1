@@ -615,6 +615,12 @@ if (Check-Scope -Scope $scope -RequiredScope 'JobSchedules') {
             Write-Warning "Schedule $($def.scheduleName) does not exist --> skipping job schedule"
             continue
         }
+
+        #get schedule detail
+        $scheduleDetail = Get-ScheduleDetail -Name $def.scheduleName
+        Write-Host "Get-ScheduleDetail: $($def.scheduleName)"
+        Write-Host $scheduleDetail
+
         $params = @{}
         if (-not [string]::IsNullOrEmpty($def.Settings)) {
             $settingsFile = Get-FileToProcess -FileType JobSchedules -FileName $def.Settings
