@@ -605,27 +605,66 @@ if (Check-Scope -Scope $scope -RequiredScope 'JobSchedules') {
             continue
         }
 
-        #get schedule detail
+        # Comparing shedule changes 
         
-        $scheduleDetail = Get-ScheduleDetail -Name $($def.scheduleName)
-        Write-Host "Get-ScheduleDetail: $($def.scheduleName)"
-        Write-Host $scheduleDetail
+        $definitionsSchedules = @(Get-DefinitionFiles -FileType Schedules)
+        foreach ($defSchedule in $definitionsSchedules) {
+            
+            $changesDetected = $false
+            $respSchedule = Get-ScheduleDetail -Name $($defSchedule.Name)
 
-         # Compare specific properties
-         $propertiesToCompare = @("StartTime", "Interval", "Frequency", "MonthDays", "WeekDays")
-         $definitionsSchedules = @(Get-DefinitionFiles -FileType Schedules)
-
-         foreach ($definitionsSchedule in $definitionsSchedules) {
-            foreach ($property in $propertiesToCompare) {
-                Write-Host "property "
-                if ($scheduleDetail.properties.$property -ne $definitionsSchedule.$property) {
-                    write-host "Change detected in property: $($definitionsSchedule.$property) -> $($scheduleDetail.properties.$property)"
-                }
-                else {
-                    write-host "No changes for $($scheduleDetail.properties.$property) detected."
-                }
+            # compare startTime property
+            $definitionStartTime = [datetime]::Parse($defSchedule.startTime).ToString("HH:mm:ss")
+            $responseStartTime = [datetime]::Parse($respSchedule.properties.startTime).ToString("HH:mm:ss")
+            if ($definitionStartTime -ne $responseStartTime) {
+                Write-Host "Change detected in startTime property: $definitionStartTime -> $responseStartTime"
+                $changesDetected = $true
             }
-         }
+            else {
+                Write-Host "No changes detected for startTime property..."
+            }
+
+            # compare Interval property
+            if ($defSchedule.interval -ne $respSchedule.properties.interval) {
+                Write-Host "Change detected in interval property: $($defSchedule.interval) -> $($respSchedule.properties.interval)"
+                $changesDetected = $true
+            }
+            else {
+                Write-Host "No changes detected for interval property..."
+            }
+
+            # compare Frequency property
+            if ($defSchedule.Frequency -ne $respSchedule.properties.Frequency) {
+                Write-Host "Change detected in Frequency property: $($defSchedule.Frequency) -> $($respSchedule.properties.Frequency)"
+                $changesDetected = $true
+            }
+            else {
+                Write-Host "No changes detected for Frequency property..."
+            }
+
+            # compare MonthDays property
+            if ($defSchedule.MonthDays -ne $respSchedule.properties.MonthDays) {
+                Write-Host "Change detected in MonthDays property: $($defSchedule.MonthDays) -> $($respSchedule.properties.MonthDays)"
+                $changesDetected = $true
+            }
+            else {
+                Write-Host "No changes detected for MonthDays property..."
+            }
+
+            # compare WeekDays property
+            if ($defSchedule.WeekDays -ne $respSchedule.properties.WeekDays) {
+                Write-Host "Change detected in WeekDays property: $($defSchedule.WeekDays) -> $($respSchedule.properties.WeekDays)"
+                $changesDetected = $true
+            }
+            else {
+                Write-Host "No changes detected for WeekDays property..."
+            }
+
+            if ($changesDetected) {
+                Write-Host "Mažu...!"
+            }
+        }
+
 
         $params = @{}
         if (-not [string]::IsNullOrEmpty($def.Settings)) {
