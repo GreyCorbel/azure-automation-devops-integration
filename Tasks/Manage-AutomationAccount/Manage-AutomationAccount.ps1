@@ -605,67 +605,6 @@ if (Check-Scope -Scope $scope -RequiredScope 'JobSchedules') {
             continue
         }
 
-        # Comparing shedule changes 
-        
-        $definitionsSchedules = @(Get-DefinitionFiles -FileType Schedules)
-        foreach ($defSchedule in $definitionsSchedules) {
-            
-            $changesDetected = $false
-            $respSchedule = Get-ScheduleDetail -Name $($defSchedule.Name)
-
-            # compare startTime property
-            $definitionStartTime = [datetime]::Parse($defSchedule.startTime).ToString("HH:mm:ss")
-            $responseStartTime = [datetime]::Parse($respSchedule.properties.startTime).ToString("HH:mm:ss")
-            if ($definitionStartTime -ne $responseStartTime) {
-                Write-Host "Change detected in startTime property: $definitionStartTime -> $responseStartTime"
-                $changesDetected = $true
-            }
-            else {
-                Write-Host "No changes detected for startTime property..."
-            }
-
-            # compare Interval property
-            if ($defSchedule.interval -ne $respSchedule.properties.interval) {
-                Write-Host "Change detected in interval property: $($defSchedule.interval) -> $($respSchedule.properties.interval)"
-                $changesDetected = $true
-            }
-            else {
-                Write-Host "No changes detected for interval property..."
-            }
-
-            # compare Frequency property
-            if ($defSchedule.Frequency -ne $respSchedule.properties.Frequency) {
-                Write-Host "Change detected in Frequency property: $($defSchedule.Frequency) -> $($respSchedule.properties.Frequency)"
-                $changesDetected = $true
-            }
-            else {
-                Write-Host "No changes detected for Frequency property..."
-            }
-
-            # compare MonthDays property
-            if ($defSchedule.MonthDays -ne $respSchedule.properties.MonthDays) {
-                Write-Host "Change detected in MonthDays property: $($defSchedule.MonthDays) -> $($respSchedule.properties.MonthDays)"
-                $changesDetected = $true
-            }
-            else {
-                Write-Host "No changes detected for MonthDays property..."
-            }
-
-            # compare WeekDays property
-            if ($defSchedule.WeekDays -ne $respSchedule.properties.WeekDays) {
-                Write-Host "Change detected in WeekDays property: $($defSchedule.WeekDays) -> $($respSchedule.properties.WeekDays)"
-                $changesDetected = $true
-            }
-            else {
-                Write-Host "No changes detected for WeekDays property..."
-            }
-
-            if ($changesDetected) {
-                Write-Host "Mažu...!"
-            }
-        }
-
-
         $params = @{}
         if (-not [string]::IsNullOrEmpty($def.Settings)) {
             $settingsFile = Get-FileToProcess -FileType JobSchedules -FileName $def.Settings
@@ -691,6 +630,72 @@ if (Check-Scope -Scope $scope -RequiredScope 'JobSchedules') {
         
         $managedSchedules += $jobSchedule
     }
+     # Comparing shedule changes 
+     Write-Host "Comparing changes in Schedules..."
+     $definitionsSchedules = @(Get-DefinitionFiles -FileType Schedules)
+     foreach ($defSchedule in $definitionsSchedules) {
+         
+         $changesDetected = $false
+         $respSchedule = Get-ScheduleDetail -Name $($defSchedule.Name)
+
+         # compare StartTime property
+         $definitionStartTime = [datetime]::Parse($defSchedule.startTime).ToString("HH:mm:ss")
+         $responseStartTime = [datetime]::Parse($respSchedule.properties.startTime).ToString("HH:mm:ss")
+         if ($definitionStartTime -ne $responseStartTime) {
+             Write-Host "Change detected in startTime property: $definitionStartTime -> $responseStartTime"
+             $changesDetected = $true
+         }
+         else {
+             Write-Host "No changes detected for startTime property..."
+         }
+
+         # compare Interval property
+         if ($defSchedule.Interval -ne $respSchedule.properties.Interval) {
+             Write-Host "Change detected in interval property: $($defSchedule.interval) -> $($respSchedule.properties.interval)"
+             $changesDetected = $true
+         }
+         else {
+             Write-Host "No changes detected for Interval property..."
+         }
+
+         # compare Frequency property
+         if ($defSchedule.Frequency -ne $respSchedule.properties.Frequency) {
+             Write-Host "Change detected in Frequency property: $($defSchedule.Frequency) -> $($respSchedule.properties.Frequency)"
+             $changesDetected = $true
+         }
+         else {
+             Write-Host "No changes detected for Frequency property..."
+         }
+
+         # compare MonthDays property
+         if ($defSchedule.MonthDays -ne $respSchedule.properties.MonthDays) {
+             Write-Host "Change detected in MonthDays property: $($defSchedule.MonthDays) -> $($respSchedule.properties.MonthDays)"
+             $changesDetected = $true
+         }
+         else {
+             Write-Host "No changes detected for MonthDays property..."
+         }
+
+         # compare WeekDays property
+         if ($defSchedule.WeekDays -ne $respSchedule.properties.WeekDays) {
+             Write-Host "Change detected in WeekDays property: $($defSchedule.WeekDays) -> $($respSchedule.properties.WeekDays)"
+             $changesDetected = $true
+         }
+         else {
+             Write-Host "No changes detected for WeekDays property..."
+         }
+         # delete obsolite jobSchedules
+         if ($changesDetected) {
+             Write-Host "Time to delete JobSchedules from old Schedules $($defSchedule.Name) version...!"
+             foreach ($jobSchedule in $alljobSchedules) {
+                 if ($jobSchedule.properties.schedule.name -eq $defSchedule.Name) {
+                     Write-Host "Removing JobSchedule: $($jobSchedule.properties.jobScheduleId)"
+                     Remove-AutoObject -Name $jobSchedule.properties.jobScheduleId -objectType JobSchedules
+                 }
+             }
+         }
+     }
+
     if ($fullSync) {
         "Removing unmanaged job schedules"
         foreach ($jobSchedule in $alljobSchedules) {
