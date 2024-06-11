@@ -14,7 +14,7 @@ Let's demonstrate this with the following example:
 ## Definitions
 
 Following image demonstrates how the definition directory structure looks like:
-![Definitions directory tree example](images/Definitions.png)
+![Definitions directory tree example](./images/Definitions.png)
 
 Example of runbook file named <strong>test.json</strong>
 
@@ -55,12 +55,12 @@ Example of jobSchedule file named <strong>test.json</strong>
     "Settings": "Default-Parameters.json"
 }
 ```
-Note: Setting refers to the detail (parameters) of schedules of a specific runbook. In this bow in Source in file Default-Parameters.json the parameters are defined.
+Note: Setting refers to the detail (parameters) of schedules of a specific runbook. In this example in Source in file Default-Parameters.json the parameters are defined.
 
 ## Source
 
 Following image demonstrates how the source directory structure looks like:
-![Source directory tree example](images/Source.png)
+![Source directory tree example](./images/Source.png)
 
 Example of runbook file named <strong>test.ps1</strong>
 
