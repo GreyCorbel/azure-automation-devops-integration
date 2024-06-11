@@ -12,25 +12,29 @@ The logic of this extension is based on a predefined directory structure where y
 Let's demonstrate this with the following example:
 
 ### Directory tree:
-Definitions
----Runbooks
-------test.json
-------test2.json
----JobSchedules
-------test.json
-------test2.json
----Schedules
-------Minutes-15.json
-------Minutes-30.json
-Source
----Common
----Prod
-------Runbooks
----------test.ps1
----------test2.ps1
-------JobSchedules
----------Default-Parameters.json
----UAT
+```
+-Definitions
+    -Runbooks
+        -test.json
+        -test2.json
+    -JobSchedules
+        -test.json
+        -test2.json
+    -Schedules
+        -Minutes-15.json
+        -Minutes-30.json
+-Source
+    -Common
+    -Prod
+        -Runbooks
+            -test.ps1
+            -test2.ps1
+        -JobSchedules
+            -Default-Parameters.json
+    -UAT
+
+```
+
 
 
 ## Definitions
