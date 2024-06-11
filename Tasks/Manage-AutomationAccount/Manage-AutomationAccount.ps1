@@ -634,6 +634,8 @@ if (Check-Scope -Scope $scope -RequiredScope 'JobSchedules') {
      Write-Host "Comparing changes in Schedules..."
      $definitionsSchedules = @(Get-DefinitionFiles -FileType Schedules)
      foreach ($defSchedule in $definitionsSchedules) {
+
+        Write-Host "Checking Schedule: $($defSchedule.Name)"
          
          $changesDetected = $false
          $respSchedule = Get-ScheduleDetail -Name $($defSchedule.Name)
