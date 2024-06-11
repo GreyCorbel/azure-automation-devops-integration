@@ -7,9 +7,16 @@ Integrate this extension into your pipeline and let it take care of everything f
 
 ## How does it all work?
 
-The logic of this extension is based on a predefined directory structure where you store individual items you want to synchronize with Azure Automation. To obtain this directory structure, a PowerShell script called InitializeRepository is used, which, among other things, creates an example in each directory of how the definition of each item to be synchronized should look. The only mandatory input for this script is the directory where the predefined structure should be created. This script creates a directory structure divided into Definitions and Source. Individual environments are defined in the Source directory (for example: UAT, Production,..Note: if you do not use an environment, use the Common directory). The definition is the same for all environments in the Source directory. Simply put, in Definitions we determine the definitions and bindings of individual objects, and in Source we store common objects that we want to synchronize with the storage account.
+The logic of this extension is based on a predefined directory structure where you store individual items you want to synchronize with Azure Automation. To obtain this directory structure, a PowerShell script called InitializeRepository is used, which, among other things, creates an example in each directory of how the definition of each item to be synchronized should look. The only mandatory input for this script is the directory where the predefined structure should be created. This script creates a directory structure divided into Definitions and Source. Individual environments are defined in the Source directory (for example: UAT, Production,..Note: if you do not use an environment, use the Common directory). The definition is the same for all environments in the Source directory. Simply put, in Definitions you specify the definition and bindings of individual objects, and in Source you store common objects to be synchronized with the storage account.
 
-For example, in the Definitions in directory Runbooks, a test.json file can be created with the following definitions:
+Let's demonstrate this with the following example:
+
+## Definitions
+
+Following image demonstrates how the definition directory structure looks like:
+![Definitions directory tree example](images/Definitions.png)
+
+Example of runbook file named <strong>test.json</strong>
 
 ```json
 {
@@ -24,9 +31,54 @@ For example, in the Definitions in directory Runbooks, a test.json file can be c
 }
 ```
 
-...this means that the Manage-AutomationAccount devOps task will look for a file called test.ps1 in the Source directory (according to the defined environment, note: Common is the default) and upload it to the appropriate storage account.
+Example of schedule file named <strong>Minutes-15.json</strong>
 
-The Manage-automationAccount DevOps extension consists of two main parts:
+```json
+{
+    "Name": "Minutes-15",
+    "StartTime": "00:00:00",
+    "Interval": 15,
+    "Frequency": "Minute",
+    "MonthDays": [],
+    "WeekDays": [],
+    "Description": "Schedule starting every 15 minutes",
+    "Disabled": false
+}
+```
+
+Example of jobSchedule file named <strong>test.json</strong>
+
+```json
+{
+    "RunbookName": "test",
+    "ScheduleName": "Minutes-15",
+    "Settings": "Default-Parameters.json"
+}
+```
+Note: Setting refers to the detail (parameters) of schedules of a specific runbook. In this bow in Source in file Default-Parameters.json the parameters are defined.
+
+## Source
+
+Following image demonstrates how the source directory structure looks like:
+![Source directory tree example](images/Source.png)
+
+Example of runbook file named <strong>test.ps1</strong>
+
+```powershell
+Write-Host "This is production pwsh script..."
+```
+
+Example of jobSchedule file named <strong>Default-Parameters.json</strong>
+
+```json
+{
+    "RunOn": "azure",
+    "Parameters": {"parameterTest":"test2"}
+}
+```
+
+
+### The Manage-automationAccount DevOps extension consists of two main parts:
 1. manage-automationAccount - With this part, you can synchronize items such as Runbooks, Variables, Configurations, Schedules, Modules, and Job Schedules.
 2. manage-automationWebHooks - Use this part even if you use WebHooks to trigger some Runbooks.
 
