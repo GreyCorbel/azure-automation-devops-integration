@@ -696,6 +696,8 @@ if (Check-Scope -Scope $scope -RequiredScope 'JobSchedules') {
                  }
              }
          }
+
+         Write-Host "-------------------------------"
      }
 
     if ($fullSync) {
