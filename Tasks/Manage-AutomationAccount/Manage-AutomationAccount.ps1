@@ -40,6 +40,7 @@ if ($null -eq (Get-Module -Name AadAuthenticationFactory -ListAvailable)) {
     Install-Module -Name AadAuthenticationFactory -Force -Scope CurrentUser
 }
 Write-Host "Installation succeeded!"
+Import-Module AadAuthenticationFactory
 
 Write-Host "Importing internal PS modules..."
 $modulePath = [System.IO.Path]::Combine($PSScriptRoot, 'Module', 'AutomationAccount')
