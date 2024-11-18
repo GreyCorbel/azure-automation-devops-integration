@@ -18,11 +18,14 @@ param(
     [string]$storageAccount,
     [Parameter(Mandatory = $true)]
     [ValidateSet("arc", "vm")]
-    [string]$machineType
+    [string]$machineType,
+    [Parameter()]
+    $proxy
 )
 #################
 ## Variables  
 #################
+"ModulesList: $blobNameModulesJson"
 $script:scriptRoot = $(Split-Path -Parent $MyInvocation.MyCommand.Path)
 $script:scriptName = $MyInvocation.MyCommand.Name
 $script:scriptPath = Join-path $scriptRoot $scriptName
@@ -35,11 +38,13 @@ $script:blobPathModules = "$($storageAccountContainer)/$($blobNameModulesJson)"
 $script:blobPathCompliance = "$($storageAccountContainer)/$($env:COMPUTERNAME)-PS-$($runTimeVersion)-modules-compliance.json" 
 $script:storageAccount = $storageAccount
 $script:machineType = $machineType
+if($proxy -ne '') {$script:proxy = $proxy} else {$script:proxy = $null}
 # (optional) - define extra repositories on top of powershell gallery if required or keep empty
-# $script:repositories = @{
-#     "NAME_OF_REPO"  = "URL_TO_REPO"
-# }
-$script:builtinModulesToIgnore = @(
+<# $script:repositories = @{
+     "repo_name"  = "https://repo_url"
+}
+ #>
+ $script:builtinModulesToIgnore = @(
     "Microsoft.PowerShell.Core",
     "Pester",
     "PSReadline",
@@ -147,11 +152,11 @@ function Manage-ModuleComplianceJson {
     process {
         switch ($action) {
             "GET" {
-                $rsp = Invoke-RestMethod -Uri "https://$($storageAccount).blob.core.windows.net/$($blobPathCompliance)"  -Headers $h -Method GET
+                $rsp = Invoke-RestMethod -Uri "https://$($storageAccount).blob.core.windows.net/$($blobPathCompliance)"  -Headers $h -Method GET -Proxy $script:proxy
             }
             "PUT" {
                 $h['x-ms-blob-type'] = 'BlockBlob'
-                $rsp = Invoke-RestMethod -Uri "https://$($storageAccount).blob.core.windows.net/$($blobPathCompliance)"  -Headers $h  -body $body  -Method PUT -ContentType 'application/json'
+                $rsp = Invoke-RestMethod -Uri "https://$($storageAccount).blob.core.windows.net/$($blobPathCompliance)"  -Headers $h  -body $body  -Method PUT -ContentType 'application/json' -Proxy $script:proxy
             }
         }
         $rsp
@@ -200,7 +205,7 @@ function Get-Token {
             $encodedResource = $resourceUrl
             $uri = "$baseUri/token?api-version=$apiVersion`&resource=$encodedResource"
             try {
-                Invoke-WebRequest `
+                $response = Invoke-WebRequest `
                     -UseBasicParsing `
                     -Uri $uri `
                     -Headers @{ Metadata = "true" } `
@@ -220,7 +225,7 @@ function Get-Token {
                 -Headers @{ Metadata = "true"; Authorization = "Basic $secret" } `
                 -ErrorAction Stop
             $h = @{}
-            $h.Add("Authorization", "Bearer $($token)")
+            $h.Add("Authorization", "$($token.token_type) $($token.access_token)")
             $h.Add('x-ms-version', '2023-11-03')
             $h.Add('x-ms-date', [DateTime]::UtcNow.ToString('R'))
             return $h
@@ -242,7 +247,7 @@ function Get-ModulesToProcess {
     process {
         $rsp = Invoke-RestMethod `
             -Uri "https://$storageAccount`.blob.core.windows.net/$blobPath" `
-            -Headers $h 
+            -Headers $h -Proxy $script:proxy
         $rsp
     }
 }
@@ -295,11 +300,12 @@ function Ensure-Repositories {
     )
     foreach ($repositoryName in $repositories.Keys) {
         $sourceLocation = $repositories[$repositoryName]
+        Write-Log "Checking repository $repositoryName"
         if (-not (Get-PSRepository -Name $repositoryName -ErrorAction SilentlyContinue)) {
             Register-PSRepository -Name $repositoryName -SourceLocation $sourceLocation -InstallationPolicy Trusted
         }
         else {
-            "$repositoryName registered - no action"
+            Write-log "$repositoryName registered - no action"
         }
         #make sure default repo is available
         if (-not (Get-PSRepository -Name "PSGallery")) {
@@ -323,7 +329,7 @@ function Manage-CustomModule {
             
                 $zipFilePath = "$($env:temp)\$($module.name).zip"
                 Write-Log "Retrieveing source file :$($module.source)"
-                Invoke-RestMethod -Uri $module.source -OutFile $zipFilePath
+                Invoke-RestMethod -Uri $module.source -OutFile $zipFilePath -Proxy $script:proxy
             
                 $extractPath = "$($env:temp)\"
                 Write-Log "Extracting module to $($extractPath)"
@@ -386,7 +392,7 @@ function Manage-CustomModule {
                 Write-Log "Installing $($module.Name) from $($repo.Name) - overwriting version $($module.currentVersion), with: $($module.requiredVersion)"
                 $zipFilePath = "$($env:temp)\$($module.name).zip"
                 Write-Log "Retrieving source file :$($module.source)"
-                Invoke-RestMethod -Uri $module.source -OutFile $zipFilePath
+                Invoke-RestMethod -Uri $module.source -OutFile $zipFilePath -Proxy $script:proxy
             
                 $extractPath = "$($env:temp)\"
                 Write-Log "Extracting module to $($extractPath)"
@@ -448,7 +454,7 @@ function Manage-GalleryModule {
                 foreach ($repo in $repos) {
                   
                     Write-Log "Installing $($module.Name) from $($repo.Name) with version $($module.version)"
-                    Install-Module -Name $module.Name -RequiredVersion $module.Version -AllowClobber -SkipPublisherCheck -Force -ErrorAction Stop -Repository $repo.Name -Verbose -Scope AllUsers
+                    Install-Module -Name $module.Name -RequiredVersion $module.Version -AllowClobber -SkipPublisherCheck -Force -ErrorAction Stop -Repository $repo.Name -Verbose -Scope AllUsers -Proxy $script:proxy
                     
                     $testModule = (Get-Module -ListAvailable $module.name | Where-Object { $_.Version -eq $module.Version })
                     if ($null -ne $testModule) {
@@ -473,10 +479,10 @@ function Manage-GalleryModule {
                         Write-Log "Re-installing (upgrading) $($module.Name) from $($repo.Name) - overwriting version $($module.currentVersion), with: $($module.requiredVersion)"
                         switch ($runTimeVersion) {
                             "7" {
-                                Update-Module -name $module.name -RequiredVersion $module.requiredVersion -Force -confirm:$false -Verbose -scope AllUsers
+                                Update-Module -name $module.name -RequiredVersion $module.requiredVersion -Force -confirm:$false -Verbose -scope AllUsers -Proxy $script:proxy
                             }
                             "5" {
-                                Update-Module -name $module.name -RequiredVersion $module.requiredVersion -Force -confirm:$false -Verbose 
+                                Update-Module -name $module.name -RequiredVersion $module.requiredVersion -Force -confirm:$false -Verbose  -Proxy $script:proxy
                             }
                         }
                         #remove old versions
@@ -519,7 +525,7 @@ function Manage-GalleryModule {
                         else {
                             Write-log "No old versions to uninstall."
                         }
-                        Install-Module -Name $module.Name -RequiredVersion $module.requiredVersion -AllowClobber -SkipPublisherCheck -Force -ErrorAction Stop -Repository $repo.Name -Verbose -Scope AllUsers
+                        Install-Module -Name $module.Name -RequiredVersion $module.requiredVersion -AllowClobber -SkipPublisherCheck -Force -ErrorAction Stop -Repository $repo.Name -Verbose -Scope AllUsers -proxy $script:proxy
                         $testModule = (Get-Module -ListAvailable $module.name | Where-Object { $_.Version -eq $module.Version })
                     }
                     Write-log "Checking if new version was installed"
@@ -611,7 +617,7 @@ Start-Log -Path $LogFile
 $user = &whoami
 Write-Log "RuntimeVersion: $($runTimeVersion)| server: $($env:COMPUTERNAME)| user: $($user)"
 # Ensure repose are mapped
-Ensure-Repositories -repositories $repositories
+Ensure-Repositories -repositories $script:repositories
 # Ensure Nuget Installation
 Ensure-NuGet -version "2.8.5.201"
 try {  
