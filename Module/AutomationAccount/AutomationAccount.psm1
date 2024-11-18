@@ -1274,3 +1274,31 @@ Function Assign-DscNodeConfig
     return Invoke-RestMethod -Method Patch -Uri $baseUri -Headers $h -ContentType "application/json" -Body $body
 }
 
+Function Get-ScheduleDetail {
+    param (
+        [Parameter(Mandatory)]
+        [string]$Name,
+        [Parameter()]
+        [string]$AutomationAccountResourceId = $script:AutomationAccountResourceId
+    )
+
+    begin {
+        $headers = Get-AutoAccessToken -AsHashTable
+        $uri = "https://management.azure.com$($AutomationAccountResourceId)/schedules/$($Name)?api-version=2023-11-01"
+    }
+
+    process {
+        write-verbose "Fetching schedule details from $uri"
+        try {
+            $response = Invoke-RestMethod -Method Get `
+                -Uri $uri `
+                -Headers $headers `
+                -ErrorAction Stop
+            return $response
+        } catch {
+            write-error $_
+            throw
+        }
+    }
+}
+

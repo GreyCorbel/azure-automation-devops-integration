@@ -2,7 +2,7 @@
     "manifestVersion": 1,
     "id": "Manage-AutomationAccount",
     "name": "Manage-AutomationAccount",
-    "version": "1.9.98",
+    "version": "1.9.120",
     "publisher": "GreyCorbelSolutions",
     "targets": [
         {
@@ -35,7 +35,6 @@
         {
             "path": "Module"
         }
-
     ],
     "contributions": [
         {

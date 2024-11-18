@@ -40,6 +40,7 @@ if ($null -eq (Get-Module -Name AadAuthenticationFactory -ListAvailable)) {
     Install-Module -Name AadAuthenticationFactory -Force -Scope CurrentUser
 }
 Write-Host "Installation succeeded!"
+Import-Module AadAuthenticationFactory
 
 Write-Host "Importing internal PS modules..."
 $modulePath = [System.IO.Path]::Combine($PSScriptRoot, 'Module', 'AutomationAccount')
@@ -592,6 +593,16 @@ if (Check-Scope -Scope $scope -RequiredScope 'JobSchedules') {
     $allSchedules = Get-AutoObject -objectType Schedules
     $existingRunbooks = Get-AutoObject -objectType Runbooks
 
+    Write-Host "Removing obsolite JobSchedules to update all JobSchedules parameters..."
+
+    # delete all JobSchedule, REST API missing update method...
+    foreach ($jobSchedule in $alljobSchedules) {
+        Write-Host "Removing jobSchedule: $($jobSchedule.properties.jobScheduleId)"
+        Remove-AutoObject -Name $jobSchedule.properties.jobScheduleId -objectType JobSchedules
+    }
+
+    Write-Host "Removing done. Creating..."
+
     $managedSchedules = @()
     foreach ($def in $definitions) {
         "Checking runbook existence: $($def.runbookName)"
@@ -604,6 +615,7 @@ if (Check-Scope -Scope $scope -RequiredScope 'JobSchedules') {
             Write-Warning "Schedule $($def.scheduleName) does not exist --> skipping job schedule"
             continue
         }
+
         $params = @{}
         if (-not [string]::IsNullOrEmpty($def.Settings)) {
             $settingsFile = Get-FileToProcess -FileType JobSchedules -FileName $def.Settings
@@ -629,6 +641,7 @@ if (Check-Scope -Scope $scope -RequiredScope 'JobSchedules') {
         
         $managedSchedules += $jobSchedule
     }
+
     if ($fullSync) {
         "Removing unmanaged job schedules"
         foreach ($jobSchedule in $alljobSchedules) {
