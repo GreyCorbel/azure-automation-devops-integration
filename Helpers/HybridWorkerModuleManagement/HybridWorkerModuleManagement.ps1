@@ -18,9 +18,7 @@ param(
     [string]$storageAccount,
     [Parameter(Mandatory = $true)]
     [ValidateSet("arc", "vm")]
-    [string]$machineType,
-    [Parameter()]
-    $proxy
+    [string]$machineType
 )
 #################
 ## Variables  
@@ -38,13 +36,12 @@ $script:blobPathModules = "$($storageAccountContainer)/$($blobNameModulesJson)"
 $script:blobPathCompliance = "$($storageAccountContainer)/$($env:COMPUTERNAME)-PS-$($runTimeVersion)-modules-compliance.json" 
 $script:storageAccount = $storageAccount
 $script:machineType = $machineType
-if($proxy -ne '') {$script:proxy = $proxy} else {$script:proxy = $null}
+
 # (optional) - define extra repositories on top of powershell gallery if required or keep empty
 <# $script:repositories = @{
-     "repo_name"  = "https://repo_url"
-}
- #>
- $script:builtinModulesToIgnore = @(
+     "my_gallery"  = "https://my_gallery.azurewebsites.net/nuget"
+} #>
+$script:builtinModulesToIgnore = @(
     "Microsoft.PowerShell.Core",
     "Pester",
     "PSReadline",
@@ -152,11 +149,11 @@ function Manage-ModuleComplianceJson {
     process {
         switch ($action) {
             "GET" {
-                $rsp = Invoke-RestMethod -Uri "https://$($storageAccount).blob.core.windows.net/$($blobPathCompliance)"  -Headers $h -Method GET -Proxy $script:proxy
+                $rsp = Invoke-RestMethod -Uri "https://$($storageAccount).blob.core.windows.net/$($blobPathCompliance)"  -Headers $h -Method GET
             }
             "PUT" {
                 $h['x-ms-blob-type'] = 'BlockBlob'
-                $rsp = Invoke-RestMethod -Uri "https://$($storageAccount).blob.core.windows.net/$($blobPathCompliance)"  -Headers $h  -body $body  -Method PUT -ContentType 'application/json' -Proxy $script:proxy
+                $rsp = Invoke-RestMethod -Uri "https://$($storageAccount).blob.core.windows.net/$($blobPathCompliance)"  -Headers $h  -body $body  -Method PUT -ContentType 'application/json'
             }
         }
         $rsp
@@ -243,11 +240,12 @@ function Get-ModulesToProcess {
     )
     begin {
         $h = Get-Token -resourceUrl "https://storage.azure.com" -machineType $machineType
+        Write-Log -Message ($h | ConvertTo-Json) -LogLevel Informational
     }
     process {
         $rsp = Invoke-RestMethod `
             -Uri "https://$storageAccount`.blob.core.windows.net/$blobPath" `
-            -Headers $h -Proxy $script:proxy
+            -Headers $h
         $rsp
     }
 }
@@ -329,7 +327,7 @@ function Manage-CustomModule {
             
                 $zipFilePath = "$($env:temp)\$($module.name).zip"
                 Write-Log "Retrieveing source file :$($module.source)"
-                Invoke-RestMethod -Uri $module.source -OutFile $zipFilePath -Proxy $script:proxy
+                Invoke-RestMethod -Uri $module.source -OutFile $zipFilePath
             
                 $extractPath = "$($env:temp)\"
                 Write-Log "Extracting module to $($extractPath)"
@@ -392,7 +390,7 @@ function Manage-CustomModule {
                 Write-Log "Installing $($module.Name) from $($repo.Name) - overwriting version $($module.currentVersion), with: $($module.requiredVersion)"
                 $zipFilePath = "$($env:temp)\$($module.name).zip"
                 Write-Log "Retrieving source file :$($module.source)"
-                Invoke-RestMethod -Uri $module.source -OutFile $zipFilePath -Proxy $script:proxy
+                Invoke-RestMethod -Uri $module.source -OutFile $zipFilePath
             
                 $extractPath = "$($env:temp)\"
                 Write-Log "Extracting module to $($extractPath)"
@@ -454,7 +452,7 @@ function Manage-GalleryModule {
                 foreach ($repo in $repos) {
                   
                     Write-Log "Installing $($module.Name) from $($repo.Name) with version $($module.version)"
-                    Install-Module -Name $module.Name -RequiredVersion $module.Version -AllowClobber -SkipPublisherCheck -Force -ErrorAction Stop -Repository $repo.Name -Verbose -Scope AllUsers -Proxy $script:proxy
+                    Install-Module -Name $module.Name -RequiredVersion $module.Version -AllowClobber -SkipPublisherCheck -Force -ErrorAction SilentlyContinue -Repository $repo.Name -Verbose -Scope AllUsers
                     
                     $testModule = (Get-Module -ListAvailable $module.name | Where-Object { $_.Version -eq $module.Version })
                     if ($null -ne $testModule) {
@@ -479,10 +477,10 @@ function Manage-GalleryModule {
                         Write-Log "Re-installing (upgrading) $($module.Name) from $($repo.Name) - overwriting version $($module.currentVersion), with: $($module.requiredVersion)"
                         switch ($runTimeVersion) {
                             "7" {
-                                Update-Module -name $module.name -RequiredVersion $module.requiredVersion -Force -confirm:$false -Verbose -scope AllUsers -Proxy $script:proxy
+                                Update-Module -name $module.name -RequiredVersion $module.requiredVersion -Force -confirm:$false -Verbose -scope AllUsers -ErrorAction SilentlyContinue
                             }
                             "5" {
-                                Update-Module -name $module.name -RequiredVersion $module.requiredVersion -Force -confirm:$false -Verbose  -Proxy $script:proxy
+                                Update-Module -name $module.name -RequiredVersion $module.requiredVersion -Force -confirm:$false -Verbose -ErrorAction SilentlyContinue
                             }
                         }
                         #remove old versions
@@ -525,7 +523,7 @@ function Manage-GalleryModule {
                         else {
                             Write-log "No old versions to uninstall."
                         }
-                        Install-Module -Name $module.Name -RequiredVersion $module.requiredVersion -AllowClobber -SkipPublisherCheck -Force -ErrorAction Stop -Repository $repo.Name -Verbose -Scope AllUsers -proxy $script:proxy
+                        Install-Module -Name $module.Name -RequiredVersion $module.requiredVersion -AllowClobber -SkipPublisherCheck -Force -ErrorAction SilentlyContinue -Repository $repo.Name -Verbose -Scope AllUsers
                         $testModule = (Get-Module -ListAvailable $module.name | Where-Object { $_.Version -eq $module.Version })
                     }
                     Write-log "Checking if new version was installed"
@@ -639,6 +637,10 @@ if ($modules.install.count -eq 0) {
 else {
     # get repositories from which we try to install
     $repos = $(Get-PSRepository)
+    foreach($repo in $repos)
+    {
+        Write-log "Will try to install modules from $($repo.name)"
+    }
     # We intentially remove all the modules from session to make sure there is no dependency issue
     Get-module | Where-object { $_.name -notin ($builtinModulesToIgnore) } | Remove-Module -Confirm:$false -force 
     foreach ($module in $modules.install) {
