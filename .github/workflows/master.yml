@@ -5,6 +5,8 @@ on:
       - master
     paths:
       - 'vss-extension.json'
+  workflow_dispatch:
+
 jobs:
   build:
     runs-on: windows-latest
