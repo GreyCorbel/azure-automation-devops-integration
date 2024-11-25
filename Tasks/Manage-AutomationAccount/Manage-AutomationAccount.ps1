@@ -333,7 +333,15 @@ function GetModuleContentLink {
 
     process {
         if (-not [string]::IsNullOrEmpty($moduleDefinition.VersionIndependentLink)) {
-            return "$($moduleDefinition.VersionIndependentLink)/$($moduleDefinition.Version)"
+            #we want to support custom nuget providers that have different format of URL
+            if($moduleDefinition.VersionIndependentLink -contains '{0}')
+            {
+                return $moduleDefinition.VersionIndependentLink -f $moduleDefinition.Version
+            }
+            else
+            {
+                return "$($moduleDefinition.VersionIndependentLink)/$($moduleDefinition.Version)"
+            }
         }
         else {
             $moduleFolder = Get-ModuleToProcess -ModuleName $moduleDefinition.Name
