@@ -132,7 +132,7 @@ jobs:
 
     - name: Generate and Upload VSIX file
       env:
-        AUTH_TOKEN: ${{ secrets.PUBLISH_MARKETPLACE }}
+        MARKETPLACE_AUTH_TOKEN: ${{ secrets.PUBLISH_MARKETPLACE }}
       run: |
         Write-Host "Start generate and upload VSIX file..."
-        tfx extension publish --publisher GreyCorbelSolutions --manifest-globs vss-extension.json --token $env:AUTH_TOKEN
+        tfx extension publish --publisher GreyCorbelSolutions --manifest-globs vss-extension.json --token $env:MARKETPLACE_AUTH_TOKEN
