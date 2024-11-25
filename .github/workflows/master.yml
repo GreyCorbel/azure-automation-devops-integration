@@ -132,7 +132,7 @@ jobs:
 
     - name: Generate and Upload VSIX file
       env:
-        NODE_AUTH_TOKEN: ${{ secrets.PAT_ROMAN_MANAGE_AUTOMATION_ACCOUNT }}
+        AUTH_TOKEN: ${{ secrets.PUBLISH_MARKETPLACE }}
       run: |
         Write-Host "Start generate and upload VSIX file..."
-        tfx extension publish --publisher GreyCorbelSolutions --manifest-globs vss-extension.json --token $env:NODE_AUTH_TOKEN
+        tfx extension publish --publisher GreyCorbelSolutions --manifest-globs vss-extension.json --token $env:AUTH_TOKEN
