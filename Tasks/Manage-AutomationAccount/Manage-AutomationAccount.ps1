@@ -334,7 +334,7 @@ function GetModuleContentLink {
     process {
         if (-not [string]::IsNullOrEmpty($moduleDefinition.VersionIndependentLink)) {
             #we want to support custom nuget providers that have different format of URL
-            if($moduleDefinition.VersionIndependentLink -contains '{0}')
+            if($moduleDefinition.VersionIndependentLink.Contains('{0}'))
             {
                 return $moduleDefinition.VersionIndependentLink -f $moduleDefinition.Version
             }
