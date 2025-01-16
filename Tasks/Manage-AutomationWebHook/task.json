@@ -7,7 +7,7 @@
   "author": "GreyCorbel s.r.o.",
   "publisher": "GreyCorbel s.r.o.",
   "icon": "icon.png",
-  "helpMarkDown": "For details and usage, see task source code repository [https://github.com/GreyCorbel/azure-automation-devops-integration](https://github.com/GreyCorbel/azure-automation-devops-integration)",
+  "helpMarkDown": "[More details](https://github.com/GreyCorbel/azure-automation-devops-integration)",
   "category": "Utility",
   "visibility": [
     "Build",
