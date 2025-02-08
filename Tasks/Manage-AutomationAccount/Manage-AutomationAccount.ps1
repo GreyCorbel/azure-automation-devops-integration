@@ -16,8 +16,10 @@ $verboseLog = Get-VstsInput -Name 'verbose'
 $helperHybridWorkerModuleManagement = Get-VstsInput -Name 'helperHybridWorkerModuleManagement'
 
 if ($verboseLog) {
+    Write-host "Verose log will be enabled"
     $VerbosePreference = 'Continue'
 }
+Write-Host "Full sync set to $fullSync"
 
 if ($helperHybridWorkerModuleManagement -eq $true) {
     Write-host "Helper Hybrid Worker module management is set to: $($helperHybridWorkerModuleManagement)"
