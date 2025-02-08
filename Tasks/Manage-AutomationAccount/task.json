@@ -113,6 +113,14 @@
       "defaultValue": false,
       "required": false,
       "helpMarkDown": "Whether to turn on helper: HybridWorkerModuleManagement"
+    },    
+    {
+      "name": "verbose",
+      "type": "boolean",
+      "label": "Produce verbose log",
+      "defaultValue": false,
+      "required": false,
+      "helpMarkDown": "Whether to turn on verbose logging"
     }
   ],
   "execution": {

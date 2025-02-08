@@ -10,10 +10,10 @@ $resourceGroup = Get-VstsInput -Name 'resourceGroup' -Require
 $automationAccount = Get-VstsInput -Name 'automationAccount' -Require
 $storageAccount = Get-VstsInput -Name 'storageAccount'
 $storageAccountContainer = Get-VstsInput -Name 'storageAccountContainer'
-$fullSync = Get-VstsInput -Name 'fullSync'
-$reportMissingImplementation = Get-VstsInput -Name 'reportMissingImplementation'
-$verboseLog = Get-VstsInput -Name 'verbose'
-$helperHybridWorkerModuleManagement = Get-VstsInput -Name 'helperHybridWorkerModuleManagement'
+$fullSync = Get-VstsInput -Name 'fullSync' -AsBool
+$reportMissingImplementation = Get-VstsInput -Name 'reportMissingImplementation' -AsBool
+$verboseLog = Get-VstsInput -Name 'verbose' -AsBool
+$helperHybridWorkerModuleManagement = Get-VstsInput -Name 'helperHybridWorkerModuleManagement' -AsBool
 
 if ($verboseLog) {
     Write-host "Verose log will be enabled"
