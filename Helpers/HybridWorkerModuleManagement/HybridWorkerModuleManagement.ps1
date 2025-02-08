@@ -193,7 +193,7 @@ function Get-Token {
             $h = @{}
             $h.Add("Authorization", "Bearer $($token)")
             $h.Add("x-ms-version", "2017-11-09")
-            $h.Add("Accept", "application/json")
+            $h.Add('x-ms-date', [DateTime]::UtcNow.ToString('R'))
             return $h
         }
         "arc" {
@@ -228,8 +228,8 @@ function Get-Token {
             return $h
         }
     }
-        
 }
+
 function Get-ModulesToProcess {
     param(
         [Parameter(Mandatory = $true)]
@@ -310,7 +310,6 @@ function Ensure-Repositories {
             Register-PSRepository -Default
         }
     }
-    
 }
 function Manage-CustomModule {
     [CmdLetBinding()]
@@ -449,21 +448,18 @@ function Manage-GalleryModule {
     process {
         switch ($action) {
             "Install" {
-                foreach ($repo in $repos) {
+                $repo = $repos.Where{$module.Source -like "$($_.SourceLocation)*"}
                   
-                    Write-Log "Installing $($module.Name) from $($repo.Name) with version $($module.version)"
-                    Install-Module -Name $module.Name -RequiredVersion $module.Version -AllowClobber -SkipPublisherCheck -Force -ErrorAction SilentlyContinue -Repository $repo.Name -Verbose -Scope AllUsers
-                    
-                    $testModule = (Get-Module -ListAvailable $module.name | Where-Object { $_.Version -eq $module.Version })
-                    if ($null -ne $testModule) {
-                        Write-Log "Module: $($module.name) installed."
-                        break
-                    }
-                    else {
-                        Write-Log "Module:  $($module.name) installation failed." -LogLevel Error
-                       
-                      
-                    }
+                Write-Log "Installing $($module.Name) from $($repo.Name) with version $($module.version)"
+                Install-Module -Name $module.Name -RequiredVersion $module.Version -AllowClobber -SkipPublisherCheck -Force -ErrorAction SilentlyContinue -Repository $repo.Name -Verbose -Scope AllUsers
+                
+                $testModule = (Get-Module -ListAvailable $module.name | Where-Object { $_.Version -eq $module.Version })
+                if ($null -ne $testModule) {
+                    Write-Log "Module: $($module.name) installed."
+                    break
+                }
+                else {
+                    Write-Log "Module:  $($module.name) installation failed." -LogLevel Error
                 }
             } 
             "Reinstall" {
@@ -471,72 +467,70 @@ function Manage-GalleryModule {
                     "7" { $modulePath = "*\Powershell\*" }
                     "5" { $modulePath = "*\WindowsPowershell\*" }
                 }
-                foreach ($repo in $repos) {
-                    # if required version > current version we use update-module
-                    if ($module.requiredVersion -gt $module.currentVersion) {
-                        Write-Log "Re-installing (upgrading) $($module.Name) from $($repo.Name) - overwriting version $($module.currentVersion), with: $($module.requiredVersion)"
-                        switch ($runTimeVersion) {
-                            "7" {
-                                Update-Module -name $module.name -RequiredVersion $module.requiredVersion -Force -confirm:$false -Verbose -scope AllUsers -ErrorAction SilentlyContinue
-                            }
-                            "5" {
-                                Update-Module -name $module.name -RequiredVersion $module.requiredVersion -Force -confirm:$false -Verbose -ErrorAction SilentlyContinue
-                            }
+                $repo = $repos.Where{$module.Source -like "$($_.SourceLocation)*"}
+                # if required version > current version we use update-module
+                if ($module.requiredVersion -gt $module.currentVersion) {
+                    Write-Log "Re-installing (upgrading) $($module.Name) from $($repo.Name) - overwriting version $($module.currentVersion), with: $($module.requiredVersion)"
+                    switch ($runTimeVersion) {
+                        "7" {
+                            Update-Module -name $module.name -RequiredVersion $module.requiredVersion -Force -confirm:$false -Verbose -scope AllUsers -ErrorAction SilentlyContinue
                         }
-                        #remove old versions
-                        $modulesToRemove = Get-module -ListAvailable $module.Name | Where-Object { $_.Version -ne $module.requiredVersion }
-                        $modulesToRemove = ($modulesToRemove | Where-Object { $_.path -like $modulePath })
-                        if ($modulesToRemove.count -gt 0) {
-                            foreach ($moduleToRemove in $modulesToRemove) {
-                                $path = ($moduleToRemove.path.split("\") | Select-Object -SkipLast 1) -join "\"
-                                try {
-                            
-                                    Write-log "Removing old version of: $($moduleToRemove.name), path: $($path)"
-                                    Remove-item $path -Force -Confirm:$false -Recurse
-                                }
-                                catch {
-                                    Write-log "Error during removal of old version $($path) : $($_.exception.message)" -LogLevel Error
-                                }
-                            }
-                        }
-                        else {
-                            Write-log "No old versions to uninstall."
+                        "5" {
+                            Update-Module -name $module.name -RequiredVersion $module.requiredVersion -Force -confirm:$false -Verbose -ErrorAction SilentlyContinue
                         }
                     }
-                    # if required version < current version we -force remove folder locally
-                    else {
-                        Write-Log "Re-installing (downgrading) $($module.Name) from $($repo.Name) - overwriting version $($module.currentVersion), with: $($module.requiredVersion)"
-                        $modulesToRemove = Get-module -ListAvailable $module.Name | Where-Object { $_.Version -ne $module.requiredVersion }
-                        $modulesToRemove = ($modulesToRemove | Where-Object { $_.path -like $modulePath })
-                        if ($modulesToRemove.count -gt 0) {
-                            foreach ($moduleToRemove in $modulesToRemove) {
-                                $path = ($moduleToRemove.path.split("\") | Select-Object -SkipLast 1) -join "\"
-                                try {
-                                    Write-log "Removing old version of: $($moduleToRemove.name), path: $($path)"
-                                    Remove-item $path -Force -Confirm:$false -Recurse
-                                }
-                                catch {
-                                    Write-log "Error during removal of old version $($path) : $($_.exception.message)" -LogLevel Error
-                                }
+                    #remove old versions
+                    $modulesToRemove = Get-module -ListAvailable $module.Name | Where-Object { $_.Version -ne $module.requiredVersion }
+                    $modulesToRemove = ($modulesToRemove | Where-Object { $_.path -like $modulePath })
+                    if ($modulesToRemove.count -gt 0) {
+                        foreach ($moduleToRemove in $modulesToRemove) {
+                            $path = ($moduleToRemove.path.split("\") | Select-Object -SkipLast 1) -join "\"
+                            try {
+                        
+                                Write-log "Removing old version of: $($moduleToRemove.name), path: $($path)"
+                                Remove-item $path -Force -Confirm:$false -Recurse
+                            }
+                            catch {
+                                Write-log "Error during removal of old version $($path) : $($_.exception.message)" -LogLevel Error
                             }
                         }
-                        else {
-                            Write-log "No old versions to uninstall."
-                        }
-                        Install-Module -Name $module.Name -RequiredVersion $module.requiredVersion -AllowClobber -SkipPublisherCheck -Force -ErrorAction SilentlyContinue -Repository $repo.Name -Verbose -Scope AllUsers
-                        $testModule = (Get-Module -ListAvailable $module.name | Where-Object { $_.Version -eq $module.Version })
-                    }
-                    Write-log "Checking if new version was installed"
-                    $testModule = (Get-Module -ListAvailable $module.name | Where-Object { $_.Version -eq $module.requiredVersion })
-                    if ($null -ne $testModule) {
-                        Write-Log "Module: $($module.name) installed in path $($testmodule.path)"
-                        break
                     }
                     else {
-                        Write-Log "Module:  $($module.name) installation failed" -LogLevel Error
-                        continue
-                
+                        Write-log "No old versions to uninstall."
                     }
+                }
+                # if required version < current version we -force remove folder locally
+                else {
+                    Write-Log "Re-installing (downgrading) $($module.Name) from $($repo.Name) - overwriting version $($module.currentVersion), with: $($module.requiredVersion)"
+                    $modulesToRemove = Get-module -ListAvailable $module.Name | Where-Object { $_.Version -ne $module.requiredVersion }
+                    $modulesToRemove = ($modulesToRemove | Where-Object { $_.path -like $modulePath })
+                    if ($modulesToRemove.count -gt 0) {
+                        foreach ($moduleToRemove in $modulesToRemove) {
+                            $path = ($moduleToRemove.path.split("\") | Select-Object -SkipLast 1) -join "\"
+                            try {
+                                Write-log "Removing old version of: $($moduleToRemove.name), path: $($path)"
+                                Remove-item $path -Force -Confirm:$false -Recurse
+                            }
+                            catch {
+                                Write-log "Error during removal of old version $($path) : $($_.exception.message)" -LogLevel Error
+                            }
+                        }
+                    }
+                    else {
+                        Write-log "No old versions to uninstall."
+                    }
+                    Install-Module -Name $module.Name -RequiredVersion $module.requiredVersion -AllowClobber -SkipPublisherCheck -Force -ErrorAction SilentlyContinue -Repository $repo.Name -Verbose -Scope AllUsers
+                    $testModule = (Get-Module -ListAvailable $module.name | Where-Object { $_.Version -eq $module.Version })
+                }
+                Write-log "Checking if new version was installed"
+                $testModule = (Get-Module -ListAvailable $module.name | Where-Object { $_.Version -eq $module.requiredVersion })
+                if ($null -ne $testModule) {
+                    Write-Log "Module: $($module.name) installed in path $($testmodule.path)"
+                    break
+                }
+                else {
+                    Write-Log "Module:  $($module.name) installation failed" -LogLevel Error
+                    continue
                 }
             }
         }
