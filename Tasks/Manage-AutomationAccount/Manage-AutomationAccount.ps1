@@ -113,6 +113,7 @@ switch ($serviceConnection.auth.scheme) {
 
         Write-Verbose "Getting access token for service connection"
         $vstsEndpoint = Get-VstsEndpoint -Name SystemVssConnection -Require
+        vrite-verbose "VSTS endpoint: `n$($vstsEndpoint | ConvertTo-Json -Depth 99 | Out-String)"
         $vstsAccessToken = $vstsEndpoint.auth.parameters.AccessToken
         $servicePrincipalId = $vstsEndpoint.auth.parameters.serviceprincipalid
         $tenantId = $vstsEndpoint.auth.parameters.tenantid
@@ -130,7 +131,7 @@ switch ($serviceConnection.auth.scheme) {
         $oidcToken = $response.oidcToken
         $assertion = $oidcToken
         
-        Write-verbose "Initialůizing AAD factory with assertion $assertion for tenant $tenantId"
+        Write-verbose "Initializing AAD factory with assertion $assertion for tenant $tenantId"
         Initialize-AadAuthenticationFactory `
             -servicePrincipalId $servicePrincipalId `
             -assertion $assertion `
