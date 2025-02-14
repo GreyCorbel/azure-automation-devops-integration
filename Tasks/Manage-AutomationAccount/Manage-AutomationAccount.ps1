@@ -16,7 +16,7 @@ $verboseLog = Get-VstsInput -Name 'verbose' -AsBool
 $helperHybridWorkerModuleManagement = Get-VstsInput -Name 'helperHybridWorkerModuleManagement' -AsBool
 
 if ($verboseLog) {
-    Write-host "Verose log will be enabled"
+    Write-host "Verbose log will be enabled"
     $VerbosePreference = 'Continue'
 }
 Write-Host "Full sync set to $fullSync"
@@ -57,9 +57,8 @@ Write-Host "Import succeeded!"
 Write-Host "Starting process..."
 # retrieve service connection object
 $serviceConnection = Get-VstsEndpoint -Name $azureSubscription -Require
-$serviceConnectionSerialized = ConvertTo-Json $serviceConnection
 
-# define type od service connection
+# we support service principal with client secret or certificate, MSI, and workload identity federation
 switch ($serviceConnection.auth.scheme) {
     'ServicePrincipal' { 
         # get service connection object properties
@@ -113,10 +112,7 @@ switch ($serviceConnection.auth.scheme) {
 
         Write-Verbose "Getting access token for service connection"
         $vstsEndpoint = Get-VstsEndpoint -Name SystemVssConnection -Require
-        Write-Verbose "VSTS endpoint: `n$($vstsEndpoint | ConvertTo-Json -Depth 99 | Out-String)"
         $vstsAccessToken = $vstsEndpoint.auth.parameters.AccessToken
-        $servicePrincipalId = $vstsEndpoint.auth.parameters.serviceprincipalid
-        $tenantId = $vstsEndpoint.auth.parameters.tenantid
         
         $url = "$uri/$projectId/_apis/distributedtask/hubs/$hub/plans/$planId/jobs/$jobId/oidctoken?serviceConnectionId=$serviceConnectionId`&api-version=7.2-preview.1"
 
@@ -127,11 +123,11 @@ switch ($serviceConnection.auth.scheme) {
         Write-Verbose "Getting OIDC token from VSTS on uri: $url"
         $response = Invoke-RestMethod -Uri $url -Method Post -Headers @{ "Authorization" = ("Basic {0}" -f $base64AuthInfo) } -ContentType "application/json"
         
-        Write-Verbose ($response | ConvertTo-Json -Depth 99 | Out-String )
-        $oidcToken = $response.oidcToken
-        $assertion = $oidcToken
+        $assertion = $response.oidcToken
         
-        Write-verbose "Initializing AAD factory with assertion $assertion for tenant $tenantId"
+        $servicePrincipalId = $serviceConnection.auth.parameters.serviceprincipalid
+        $tenantId = $serviceConnection.auth.parameters.tenantid
+        Write-verbose "Initializing AAD factory with clientId $servicePrincipalId for tenant $tenantId"
         Initialize-AadAuthenticationFactory `
             -servicePrincipalId $servicePrincipalId `
             -assertion $assertion `
