@@ -111,6 +111,7 @@ switch ($serviceConnection.auth.scheme) {
         $uri = Get-VstsTaskVariable -Name 'System.CollectionUri' -Require
         $serviceConnectionId = $azureSubscription
 
+        Write-Verbose "Getting access token for service connection"
         $vstsEndpoint = Get-VstsEndpoint -Name SystemVssConnection -Require
         $vstsAccessToken = $vstsEndpoint.auth.parameters.AccessToken
         $servicePrincipalId = $vstsEndpoint.auth.parameters.serviceprincipalid
@@ -122,11 +123,14 @@ switch ($serviceConnection.auth.scheme) {
         $password = $vstsAccessToken
         $base64AuthInfo = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(("{0}:{1}" -f $username, $password)))
 
+        Write-Verbose "Getting OIDC token from VSTS on uri: $url"
         $response = Invoke-RestMethod -Uri $url -Method Post -Headers @{ "Authorization" = ("Basic {0}" -f $base64AuthInfo) } -ContentType "application/json"
-
+        
+        Write-Verbose ($response | ConvertTo-Json -Depth 99 | Out-String )
         $oidcToken = $response.oidcToken
         $assertion = $oidcToken
-
+        
+        Write-verbose "Initialůizing AAD factory with assertion $assertion for tenant $tenantId"
         Initialize-AadAuthenticationFactory `
             -servicePrincipalId $servicePrincipalId `
             -assertion $assertion `
