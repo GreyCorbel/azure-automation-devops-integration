@@ -113,7 +113,7 @@ switch ($serviceConnection.auth.scheme) {
 
         Write-Verbose "Getting access token for service connection"
         $vstsEndpoint = Get-VstsEndpoint -Name SystemVssConnection -Require
-        vrite-verbose "VSTS endpoint: `n$($vstsEndpoint | ConvertTo-Json -Depth 99 | Out-String)"
+        Write-Verbose "VSTS endpoint: `n$($vstsEndpoint | ConvertTo-Json -Depth 99 | Out-String)"
         $vstsAccessToken = $vstsEndpoint.auth.parameters.AccessToken
         $servicePrincipalId = $vstsEndpoint.auth.parameters.serviceprincipalid
         $tenantId = $vstsEndpoint.auth.parameters.tenantid
