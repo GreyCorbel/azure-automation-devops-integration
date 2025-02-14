@@ -282,9 +282,10 @@ function Compare-Modules {
             }
             else {
                 #if module is installed, compare version 
-                if ($module.Version -ne ($localModules | Where-Object { $_.Name -eq $module.Name }).version) {
-                    Write-Log "$($module.name) is installed but has different version $($module.version) from required and $(($localModules|Where-Object{$_.Name -eq $module.Name}).version) from local" 
-                    $overview.diffVersion += @{"name" = $module.Name; "currentVersion" = $(($localModules | Where-Object { $_.Name -eq $module.Name }).version); "requiredVersion" = $module.Version; "Source" = $($module.source) }
+                $localModule = $localModules | Where-Object { $_.Name -eq $module.Name }
+                if ($module.Version -ne $localModule.Version) {
+                    Write-Log "$($module.name) is installed but has different version $($module.Version) from required and $($localModule.Version) from local" 
+                    $overview.diffVersion += @{"name" = $module.Name; "currentVersion" = $localModule.Version; "requiredVersion" = $module.Version; "Source" = $($module.source) }
                 }
             }
            
@@ -469,7 +470,17 @@ function Manage-GalleryModule {
                 }
                 $repo = $repos.Where{$module.Source -like "$($_.SourceLocation)*"}
                 # if required version > current version we use update-module
-                if ($module.requiredVersion -gt $module.currentVersion) {
+                #we convert to [Version] to properly compare versions
+                try {
+                    $requiredVersion = [Version]::Parse($module.requiredVersion)
+                    $currentVersion = [Version]::Parse($module.currentVersion)
+                }
+                catch {
+                    #fallback to string comparison
+                    $requiredVersion = $module.requiredVersion
+                    $currentVersion = $module.currentVersion
+                }
+                if ($requiredVersion -gt $currentVersion) {
                     Write-Log "Re-installing (upgrading) $($module.Name) from $($repo.Name) - overwriting version $($module.currentVersion), with: $($module.requiredVersion)"
                     switch ($runTimeVersion) {
                         "7" {
@@ -486,7 +497,6 @@ function Manage-GalleryModule {
                         foreach ($moduleToRemove in $modulesToRemove) {
                             $path = ($moduleToRemove.path.split("\") | Select-Object -SkipLast 1) -join "\"
                             try {
-                        
                                 Write-log "Removing old version of: $($moduleToRemove.name), path: $($path)"
                                 Remove-item $path -Force -Confirm:$false -Recurse
                             }
