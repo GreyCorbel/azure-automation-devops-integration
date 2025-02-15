@@ -176,7 +176,11 @@ function Test-PSInstallation {
     }
 }
 function Get-Token {
-    param(    )
+    param
+    (
+        [string]$resourceUrl
+
+    )
     process
     {
         if($null -eq $env:IDENTITY_ENDPOINT)
@@ -202,7 +206,7 @@ function Get-Token {
                 $apiVersion = '2019-11-01'
                 $baseUri = $env:IDENTITY_ENDPOINT
                 $encodedResource = $resourceUrl
-                $uri = "$baseUri?api-version=$apiVersion`&resource=$encodedResource"
+                $uri = "$baseUri`?api-version=$apiVersion`&resource=$encodedResource"
                 try {
                     $response = Invoke-WebRequest `
                         -UseBasicParsing `
@@ -220,7 +224,7 @@ function Get-Token {
                 $secret = Get-Content $secretPath -Raw
                 # Acquire Access Token
                 $token = Invoke-RestMethod `
-                    -Uri "$baseUri?api-version=$apiVersion&resource=$encodedResource" `
+                    -Uri "$baseUri`?api-version=$apiVersion&resource=$encodedResource" `
                     -Headers @{ Metadata = "true"; Authorization = "Basic $secret" } `
                     -ErrorAction Stop
                 $h = @{}
@@ -328,7 +332,7 @@ function Manage-CustomModule {
                 Write-Log "Installing $($module.Name)" 
             
                 $zipFilePath = "$($env:temp)\$($module.name).zip"
-                Write-Log "Retrieveing source file :$($module.source)"
+                Write-Log "Retrieving source file: $($module.source)"
                 Invoke-RestMethod -Uri $module.source -OutFile $zipFilePath
             
                 $extractPath = "$($env:temp)\"
