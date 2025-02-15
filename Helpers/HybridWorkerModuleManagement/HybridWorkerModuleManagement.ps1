@@ -15,10 +15,7 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$storageAccountContainer,
     [Parameter(Mandatory = $true)]
-    [string]$storageAccount,
-    [Parameter(Mandatory = $true)]
-    [ValidateSet("arc", "vm")]
-    [string]$machineType
+    [string]$storageAccount
 )
 #################
 ## Variables  
@@ -35,7 +32,6 @@ $script:reinstalledModules = @()
 $script:blobPathModules = "$($storageAccountContainer)/$($blobNameModulesJson)"
 $script:blobPathCompliance = "$($storageAccountContainer)/$($env:COMPUTERNAME)-PS-$($runTimeVersion)-modules-compliance.json" 
 $script:storageAccount = $storageAccount
-$script:machineType = $machineType
 
 # (optional) - define extra repositories on top of powershell gallery if required or keep empty
 <# $script:repositories = @{
@@ -144,7 +140,7 @@ function Manage-ModuleComplianceJson {
         [string]$action
     )
     begin {
-        $h = Get-Token -resourceUrl "https://storage.azure.com" -machineType $machineType
+        $h = Get-Token -resourceUrl "https://storage.azure.com"
     }
     process {
         switch ($action) {
@@ -180,52 +176,59 @@ function Test-PSInstallation {
     }
 }
 function Get-Token {
-    param(
-        $resourceUrl,
-        [ValidateSet("vm", "arc")]
-        $machineType
-    )
-    switch ($machineType) {
-        "vm" {
-            $resourceUrl = [Uri]::EscapeUriString($resourceUrl)
-            $baseUri = "http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=$resourceUrl"
-            $token = (Invoke-RestMethod -Uri $baseUri -Headers @{ Metadata = "true" }).access_token
-            $h = @{}
-            $h.Add("Authorization", "Bearer $($token)")
-            $h.Add("x-ms-version", "2017-11-09")
-            $h.Add('x-ms-date', [DateTime]::UtcNow.ToString('R'))
-            return $h
+    param(    )
+    process
+    {
+        if($null -eq $env:IDENTITY_ENDPOINT)
+        {
+            $machineType = "vm"
         }
-        "arc" {
-            $apiVersion = '2019-11-01'
-            $baseUri = 'http://localhost:40342/metadata/identity/oauth2'
-            $encodedResource = $resourceUrl
-            $uri = "$baseUri/token?api-version=$apiVersion`&resource=$encodedResource"
-            try {
-                $response = Invoke-WebRequest `
-                    -UseBasicParsing `
-                    -Uri $uri `
-                    -Headers @{ Metadata = "true" } `
+        else
+        {
+            $machineType = "arc"
+        }
+        switch ($machineType) {
+            "vm" {
+                $resourceUrl = [Uri]::EscapeUriString($resourceUrl)
+                $baseUri = "http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=$resourceUrl"
+                $token = (Invoke-RestMethod -Uri $baseUri -Headers @{ Metadata = "true" }).access_token
+                $h = @{}
+                $h.Add("Authorization", "Bearer $($token)")
+                $h.Add("x-ms-version", "2017-11-09")
+                $h.Add('x-ms-date', [DateTime]::UtcNow.ToString('R'))
+                return $h
+            }
+            "arc" {
+                $apiVersion = '2019-11-01'
+                $baseUri = $env:IDENTITY_ENDPOINT
+                $encodedResource = $resourceUrl
+                $uri = "$baseUri?api-version=$apiVersion`&resource=$encodedResource"
+                try {
+                    $response = Invoke-WebRequest `
+                        -UseBasicParsing `
+                        -Uri $uri `
+                        -Headers @{ Metadata = "true" } `
+                        -ErrorAction Stop
+                }
+                catch {
+                    $response = $_.Exception.Response
+                }
+                # Extract the path to the secret file
+                $header = $response.Headers.Where{ $_.Key -eq 'WWW-Authenticate' }
+                $secretPath = $header.value.TrimStart("Basic realm=")
+                # Read the token
+                $secret = Get-Content $secretPath -Raw
+                # Acquire Access Token
+                $token = Invoke-RestMethod `
+                    -Uri "$baseUri?api-version=$apiVersion&resource=$encodedResource" `
+                    -Headers @{ Metadata = "true"; Authorization = "Basic $secret" } `
                     -ErrorAction Stop
+                $h = @{}
+                $h.Add("Authorization", "$($token.token_type) $($token.access_token)")
+                $h.Add('x-ms-version', '2023-11-03')
+                $h.Add('x-ms-date', [DateTime]::UtcNow.ToString('R'))
+                return $h
             }
-            catch {
-                $response = $_.Exception.Response
-            }
-            # Extract the path to the secret file
-            $header = $response.Headers.Where{ $_.Key -eq 'WWW-Authenticate' }
-            $secretPath = $header.value.TrimStart("Basic realm=")
-            # Read the token
-            $secret = Get-Content $secretPath -Raw
-            # Acquire Access Token
-            $token = Invoke-RestMethod `
-                -Uri "$baseUri/token?api-version=$apiVersion&resource=$encodedResource" `
-                -Headers @{ Metadata = "true"; Authorization = "Basic $secret" } `
-                -ErrorAction Stop
-            $h = @{}
-            $h.Add("Authorization", "$($token.token_type) $($token.access_token)")
-            $h.Add('x-ms-version', '2023-11-03')
-            $h.Add('x-ms-date', [DateTime]::UtcNow.ToString('R'))
-            return $h
         }
     }
 }
@@ -239,7 +242,7 @@ function Get-ModulesToProcess {
         
     )
     begin {
-        $h = Get-Token -resourceUrl "https://storage.azure.com" -machineType $machineType
+        $h = Get-Token -resourceUrl "https://storage.azure.com"
     }
     process {
         $rsp = Invoke-RestMethod `
