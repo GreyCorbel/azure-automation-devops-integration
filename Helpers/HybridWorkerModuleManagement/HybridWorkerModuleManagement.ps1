@@ -240,7 +240,6 @@ function Get-ModulesToProcess {
     )
     begin {
         $h = Get-Token -resourceUrl "https://storage.azure.com" -machineType $machineType
-        Write-Log -Message ($h | ConvertTo-Json) -LogLevel Informational
     }
     process {
         $rsp = Invoke-RestMethod `
