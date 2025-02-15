@@ -169,22 +169,18 @@ if($FullSync)
         }
     }
 }
-#This is for PS5 and its JSON serialization specifics
-function Get-SerializedData
+
+#store webhooks to folder for future reference by subsequent task
+$newWebhooksfolder = "$($env:SYSTEM_DEFAULTWORKINGDIRECTORY)/WebHooks-new"
+$managedWebhooksfolder = "$($env:SYSTEM_DEFAULTWORKINGDIRECTORY)/WebHooks-managed"
+if(-not (Test-Path $newWebhooksfolder)) {New-Item -ItemType Directory -Path $newWebhooksfolder | Out-Null}
+if(-not (Test-Path $managedWebhooksfolder)) {New-Item -ItemType Directory -Path $managedWebhooksfolder | Out-Null}
+foreach($webhook in $newWebhooks)
 {
-    param($data)
-    process
-    {
-        switch($data.count)
-        {
-            0 {'[]'; break;}
-            1 {"[$($data | ConvertTo-Json -Compress -Depth 9)]"; break;}
-            default {$data | ConvertTo-Json -Compress -Depth 9; break;}
-        }
-    }
+    $webhook | ConvertTo-Json -Depth 9 | Set-Content "$newWebhooksfolder/$($webhook.Name).json" -Encoding UTF8
 }
-#set manageWebHooks as task variable
-$variableValue = Get-SerializedData -data $managedWebhooks
-Write-Host "##vso[task.setvariable variable=managedWebhooks;issecret=true]$variableValue"
-$variableValue = Get-SerializedData -data $newWebhooks
-Write-Host "##vso[task.setvariable variable=newWebhooks;issecret=true]$variableValue"
+foreach($webhook in $managedWebhooks)
+{
+    $webhook | ConvertTo-Json -Depth 9 | Set-Content "$managedWebhooksfolder/$($webhook.Name).json" -Encoding UTF8
+}
+Write-Host "Processing finished!"
