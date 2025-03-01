@@ -47,7 +47,7 @@ Import-Module AadAuthenticationFactory
 Write-Host "Importing internal PS modules..."
 $modulePath = [System.IO.Path]::Combine($PSScriptRoot, 'Module', 'AutomationAccount')
 Write-Host "module path: $modulePath"
-Import-Module $modulePath -Force
+Import-Module $modulePath -Force -WarningAction SilentlyContinue
 #load runtime support
 $modulePath = [System.IO.Path]::Combine($PSScriptRoot, 'Module', 'AutoRuntime')
 Write-Host "module path: $modulePath"
