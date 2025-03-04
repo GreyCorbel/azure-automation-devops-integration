@@ -34,9 +34,16 @@ $script:blobPathCompliance = "$($storageAccountContainer)/$($env:COMPUTERNAME)-P
 $script:storageAccount = $storageAccount
 
 # (optional) - define extra repositories on top of powershell gallery if required or keep empty
-<# $script:repositories = @{
-     "my_gallery"  = "https://my_gallery.azurewebsites.net/nuget"
-} #>
+# We also try to load it from custom-repositories.json file from $storageAccountContainer/$storageAccountContainer
+<# $script:repositories = @'
+    [
+        {
+            "name": "my_gallery",
+            "sourceLocation": "https://my_gallery.azurewebsites.net/nuget"]
+        }
+    ]
+'@ | ConvertFrom-Json
+ #>
 $script:builtinModulesToIgnore = @(
     "Microsoft.PowerShell.Core",
     "Pester",
@@ -219,7 +226,13 @@ function Get-Token {
                 }
                 # Extract the path to the secret file
                 $header = $response.Headers.Where{ $_.Key -eq 'WWW-Authenticate' }
+                #$header = $response.Headers['WWW-Authenticate'] #PS5
+                if([string]::IsNullOrEmpty($header)) {
+                    Write-Log "Get-Token: WWW-Authenticate header not present, check proxy bypass for $baseUri)" -LogLevel Error
+                    exit
+                }
                 $secretPath = $header.value.TrimStart("Basic realm=")
+                #$secretPath = $header.TrimStart("Basic realm=")    #PS5
                 # Read the token
                 $secret = Get-Content $secretPath -Raw
                 # Acquire Access Token
@@ -237,7 +250,7 @@ function Get-Token {
     }
 }
 
-function Get-ModulesToProcess {
+function Get-FileFromStorage {
     param(
         [Parameter(Mandatory = $true)]
         [string]$storageAccount,
@@ -303,14 +316,13 @@ function Ensure-Repositories {
     param(
         $repositories
     )
-    foreach ($repositoryName in $repositories.Keys) {
-        $sourceLocation = $repositories[$repositoryName]
-        Write-Log "Checking repository $repositoryName"
-        if (-not (Get-PSRepository -Name $repositoryName -ErrorAction SilentlyContinue)) {
-            Register-PSRepository -Name $repositoryName -SourceLocation $sourceLocation -InstallationPolicy Trusted
+    foreach ($repository in $repositories) {
+        Write-Log "Checking repository $($repository.Name)"
+        if (-not (Get-PSRepository -Name $repository.Name -ErrorAction SilentlyContinue)) {
+            Register-PSRepository -Name $repository.Name -SourceLocation $repository.SourceLocation -InstallationPolicy Trusted
         }
         else {
-            Write-log "$repositoryName registered - no action"
+            Write-log "$($repository.Name) registered - no action"
         }
         #make sure default repo is available
         if (-not (Get-PSRepository -Name "PSGallery")) {
@@ -624,14 +636,31 @@ function Ensure-NuGet {
 Start-Log -Path $LogFile
 $user = &whoami
 Write-Log "RuntimeVersion: $($runTimeVersion)| server: $($env:COMPUTERNAME)| user: $($user)"
+#get custom repositories from storage account
+if($null -eq $script:repositories)
+{
+    try {
+        Write-Log "No custom repositories defined, trying to load from file on storage account: custom-repositories.json"
+        $customRepos = Get-FileFromStorage -storageAccount $storageAccount -blobpath "$($storageAccountContainer)/custom-repositories.json"
+        if ($null -ne $customRepos) {
+            $script:repositories = $customRepos
+        }
+    }
+    catch {
+        Write-Log "Error retrieving custom repositories from blob $($_.exception.message)"
+    }
+}
+else {
+    Write-Log "Custom repositories defined, using them"
+}
 # Ensure repose are mapped
 Ensure-Repositories -repositories $script:repositories
 # Ensure Nuget Installation
 Ensure-NuGet -version "2.8.5.201"
 try {  
     # Get all modules
-    Write-log "Retrieving module info from $storageAccount/$($blobPathModules)"
-    $requiredModules = Get-ModulesToProcess -storageAccount $storageAccount -blobpath $blobPathModules
+    Write-log "Retrieving module info from $storageAccount/$blobPathModules"
+    $requiredModules = Get-FileFromStorage -storageAccount $storageAccount -blobpath $blobPathModules
 }
 catch {
     Write-log  "Error retrieving modules from blob $($_.exception.message)" -Loglevel Error
