@@ -42,14 +42,84 @@ Write-Host "Starting processing"
 # retrieve service connection object
 $serviceConnection = Get-VstsEndpoint -Name $azureSubscription -Require
 
-# get service connection object properties
-$servicePrincipalId = $serviceConnection.auth.parameters.serviceprincipalid
-$servicePrincipalkey = $serviceConnection.auth.parameters.serviceprincipalkey
-$tenantId = $serviceConnection.auth.parameters.tenantid
-
 #initialize aadAuthenticationFactory
 Write-Verbose "Initialize AadAuthenticationFactory object..."
-Initialize-AadAuthenticationFactory -servicePrincipalId $servicePrincipalId -servicePrincipalKey $servicePrincipalkey -tenantId $tenantId
+switch ($serviceConnection.auth.scheme) {
+    'ServicePrincipal' { 
+        # get service connection object properties
+        $servicePrincipalId = $serviceConnection.auth.parameters.serviceprincipalid
+        $servicePrincipalkey = $serviceConnection.auth.parameters.serviceprincipalkey
+        $tenantId = $serviceConnection.auth.parameters.tenantid
+
+        # SPNcertificate
+        if ($serviceConnection.auth.parameters.authenticationType -eq 'SPNCertificate') {
+            Write-Host "ServicePrincipal with Certificate auth"
+
+            $certData = $serviceConnection.Auth.parameters.servicePrincipalCertificate
+            $cert= [System.Security.Cryptography.X509Certificates.X509Certificate2]::CreateFromPem($certData,$certData)
+
+            Initialize-AadAuthenticationFactory `
+            -servicePrincipalId $servicePrincipalId `
+            -servicePrincipalKey $servicePrincipalkey `
+            -tenantId $tenantId `
+            -cert $cert
+        }
+        #Service Principal
+        else {
+            Write-Host "ServicePrincipal with ClientSecret auth"
+
+            Initialize-AadAuthenticationFactory `
+            -servicePrincipalId $servicePrincipalId `
+            -servicePrincipalKey $servicePrincipalkey `
+            -tenantId $tenantId
+        }
+        break;
+     }
+
+     'ManagedServiceIdentity' {
+        Write-Host "ManagedIdentitx auth"
+
+        Initialize-AadAuthenticationFactory `
+            -serviceConnection $serviceConnection
+        break;
+     }
+
+     'WorkloadIdentityFederation' {
+        Write-Host "Workload identity auth"
+
+        # get service connection properties
+        $planId = Get-VstsTaskVariable -Name 'System.PlanId' -Require
+        $jobId = Get-VstsTaskVariable -Name 'System.JobId' -Require
+        $hub = Get-VstsTaskVariable -Name 'System.HostType' -Require
+        $projectId = Get-VstsTaskVariable -Name 'System.TeamProjectId' -Require
+        $uri = Get-VstsTaskVariable -Name 'System.CollectionUri' -Require
+        $serviceConnectionId = $azureSubscription
+
+        Write-Verbose "Getting access token for service connection"
+        $vstsEndpoint = Get-VstsEndpoint -Name SystemVssConnection -Require
+        $vstsAccessToken = $vstsEndpoint.auth.parameters.AccessToken
+        
+        $url = "$uri/$projectId/_apis/distributedtask/hubs/$hub/plans/$planId/jobs/$jobId/oidctoken?serviceConnectionId=$serviceConnectionId`&api-version=7.2-preview.1"
+
+        $username = "username"
+        $password = $vstsAccessToken
+        $base64AuthInfo = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(("{0}:{1}" -f $username, $password)))
+
+        Write-Verbose "Getting OIDC token from VSTS on uri: $url"
+        $response = Invoke-RestMethod -Uri $url -Method Post -Headers @{ "Authorization" = ("Basic {0}" -f $base64AuthInfo) } -ContentType "application/json"
+        
+        $assertion = $response.oidcToken
+        
+        $servicePrincipalId = $serviceConnection.auth.parameters.serviceprincipalid
+        $tenantId = $serviceConnection.auth.parameters.tenantid
+        Write-verbose "Initializing AAD factory with clientId $servicePrincipalId for tenant $tenantId"
+        Initialize-AadAuthenticationFactory `
+            -servicePrincipalId $servicePrincipalId `
+            -assertion $assertion `
+            -tenantId $tenantId
+        break;
+     }
+}
 
 #initialize runtime according to environment environment
 Init-Environment -ProjectDir $ProjectDir -Environment $EnvironmentName
