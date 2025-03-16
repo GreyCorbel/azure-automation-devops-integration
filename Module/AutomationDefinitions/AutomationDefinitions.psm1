@@ -13,8 +13,13 @@ function New-RunbookDefinition
             #Type of the runbook
         $Type,
         [string]
-            #Type of the runbook
-        $Location = 'westeurope',
+            #Version of runtime to run on
+            #Used by v1 of ManageAutomationAccount task
+        $RuntimeVersion = '5.1',
+        [string]
+            #id of runtime environment to run on
+            #Used by v2 of ManageAutomationAccount task
+        $RuntimeEnvironment = 'PowerShell-5.1',
         [switch]
             #where runbook runs
             #for running on Azure, enter 'Azure' or empty string.
@@ -35,7 +40,8 @@ function New-RunbookDefinition
             Name = $Name
             Implementation = $Implementation
             Type = $Type
-            Location = $Location
+            RuntimeVersion = $RuntimeVersion
+            RuntimeEnvironment = $RuntimeEnvironment
             AutoPublish = (-not $DoNotPublish.IsPresent)
             RequiredModules = $RequiredModules
         }
@@ -348,7 +354,12 @@ function New-ModuleDefinition
         [string]
             #Runtime for the module
             #Supported runtimes are 5.1 and 7.2
+            #Used by v1 of ManageAutomationAccount task
         $RuntimeVersion,
+        [string]
+            #identifier of automation account runtime environment to import module to
+            #used by v2 of ManageAutomationAccount task
+            $RuntimeEnvironment,
         [string]
             #Version of module to be imported
         $Version,
@@ -377,6 +388,7 @@ function New-ModuleDefinition
         $retVal = [PSCustomObject][ordered]@{
             Name = $Name
             RuntimeVersion = $RuntimeVersion
+            RuntimeEnvironment = $RuntimeEnvironment
             Version = $Version
             VersionIndependentLink = $VersionIndependentLink
             Order = $Order

@@ -12,7 +12,7 @@
 RootModule = 'AutomationAccount.psm1'
 
 # Version number of this module.
-ModuleVersion = '1.2.2'
+ModuleVersion = '2.0.0'
 
 # Supported PSEditions
 CompatiblePSEditions = @('Desktop', 'Core')
@@ -70,9 +70,9 @@ Copyright = '(c) Jiri Formacek. All rights reserved.'
 
 # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
 FunctionsToExport = @('Initialize-AadAuthenticationFactory', 'Get-AutoAccessToken', 'Get-AutoSubscription', 'Connect-AutoAutomationAccount',
-    'Get-AutoPowershell7Module','Get-AutoObject', 'Remove-AutoObject', 'Remove-AutoPowershell7Module', 'Get-AutoModuleUrl',
-    'Add-AutoVariable', 'Add-AutoSchedule','Add-AutoModule','Add-AutoPowershell7Module',
-    'Add-AutoRunbook','Add-AutoPowershell7Runbook','Add-AutoConfiguration','Add-AutoJobSchedule','Add-AutoWebhook',
+    'Get-AutoPowershell7Module','Get-AutoObject', 'Remove-AutoObject', 'Remove-AutoPowershell7Module', 'Remove-AutoPackage', 'Get-AutoModuleUrl', 'Get-AutoPackage',
+    'Add-AutoVariable', 'Add-AutoSchedule','Add-AutoModule','Add-AutoPowershell7Module', 'Add-AutoPackage',
+    'Add-AutoRunbook','Add-AutoConfiguration','Add-AutoJobSchedule','Add-AutoWebhook',
     'Wait-AutoObjectProcessing','Get-BlobSasUrl','Assign-DscNodeConfig','Get-DscNodeConfiguration','Get-DscNodes', 'Get-ScheduleDetail'
 )
 
