@@ -385,11 +385,15 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
             }
             catch {
                 Write-Warning $_
-                if ($_.Exception.Message -like '*NotFound*') {
-                    #if module not found, do nothing -> will be installed
-                    #{"code":"NotFound","message":"The package does not exist in runtime environment PowerShell-74. "}
+                ###[warning]{"code":"NotFound","message":"The package does not exist in runtime environment PowerShell-74. "}
+                
+                if ($_ -like '*NotFound*') {
                     Write-Warning "Error NotFound"
-                } else {
+                }
+                elseif ($_.Exception.Message -like '*NotFound*') {
+                    Write-Warning "Error NotFound"
+                }
+                else {
                     Write-Warning "Uknown error"
                     throw
                 }
