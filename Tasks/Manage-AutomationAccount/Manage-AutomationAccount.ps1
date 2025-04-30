@@ -380,7 +380,19 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
             }
 
             "Processing module $($module.Name) $($module.Version) for runtime $($module.RuntimeEnvironment)"
-            $existingPackage = Get-AutoPackage -RuntimeEnvironment $module.RuntimeEnvironment -Name $module.Name -ErrorAction SilentlyContinue
+            try {
+                $existingPackage = Get-AutoPackage -RuntimeEnvironment $module.RuntimeEnvironment -Name $module.Name -ErrorAction Stop
+            }
+            catch {
+                Write-Error $_
+                if ($_.Exception.Message -like '*NotFound*') {
+                    #if module not found, do nothing -> will be installed
+                    #{"code":"NotFound","message":"The package does not exist in runtime environment PowerShell-74. "}
+                } else {
+                    throw
+                }
+            }
+
             if ($null -ne $existingPackage -and $existingPackage.properties.Version -eq $module.version) {
                 "Module up to date"
                 continue
