@@ -443,10 +443,12 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
             $results = $importingPackages
             do
             {
+                Start-Sleep -Seconds 5
                 $results = $results `
                 | Get-AutoPackage `
                 | Where-Object {$_.properties.provisioningState -in @('Creating')}
-                Start-Sleep -Seconds 5
+                "Waiting for $($results.Count) module(s) to be imported"
+                 $results | select-object name, @{N = 'version'; E = { $_.properties.version } }, @{N = 'provisioningState'; E = { $_.properties.provisioningState } } | Out-String
             }while($results.Count -gt 0)
         }
         $results = $importingPackages | Get-AutoPackage
