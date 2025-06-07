@@ -560,6 +560,10 @@ if (Check-Scope -Scope $scope -RequiredScope 'Schedules') {
 if (Check-Scope -Scope $scope -RequiredScope 'Runbooks') {
     "Processing Runbooks"
 
+    "Getting installed runbooks"
+    $installedRunbooks = Get-AutoObject -objectType Runbooks
+    "$($installedRunbooks.Count) runbooks installed"
+
     $definitions = @(Get-DefinitionFiles -FileType Runbooks)
 
     $importingRunbooks = new-object System.Collections.Generic.List[PSCustomObject]
@@ -576,6 +580,11 @@ if (Check-Scope -Scope $scope -RequiredScope 'Runbooks') {
             write-warning "Missing implementation file --> skipping"
             continue
         }
+        $installedRunbook = $installedRunbooks | Where-Object { $_.Name -eq $runbook.Name}
+        if($null -ne $installedRunbook -and $installedRunbook.properties.RuntimeEnvironment -ne $runbook.properties.RuntimeEnvironment) {
+            "Runbook $($runbook.Name) has different runtime environment --> removing runbook before updating"
+            Remove-AutoObject -Name $runbook.Name -objectType Runbooks | Out-Null
+        }
         $runbook = Add-AutoRunbook -Name $runbook.Name `
             -Type $runbook.Type `
             -RuntimeEnvironment $runbook.RuntimeEnvironment `
@@ -585,30 +594,6 @@ if (Check-Scope -Scope $scope -RequiredScope 'Runbooks') {
             -Location $runbook.Location
         $importingRunbooks.Add($runbook) | Out-Null
     }
-
-    #--remove all runbooks that have different RuntimeEnvironment:
-    #1. Get a list of currently installed runtimes:
-    $installedRunbooks = Get-AutoObject -objectType Runbooks
-    
-    #2.Comparing with importingRunbooks list and in case different RuntimeEnvironment then add to list for remove: 
-    $runbooksToRemoveDueDifferentEnvironment = @()
-    foreach($installedRunbook in $installedRunbooks) {
-        
-        $runbookToCheck = $importingRunbooks | Where-Object { $_.Name -in $installedRunbook.Name }
-        if ($null -ne $runbookToCheck) {
-            if ($runbookToCheck.RuntimeEnvironment -ne $installedRunbook.RuntimeEnvironment) {
-                $runbooksToRemoveDueDifferentEnvironment.Add($runbookToCheck)
-            }
-        }
-    }
-
-    foreach($runbook in $runbooksToRemoveDueDifferentEnvironment)
-    {
-        "Removing $($runbook.Name) for runtime $($runtimeEnvironment.Name) that is different to importing version."
-        #TODO Remove-AutoObject -Name $runbook.Name -objectType Runbooks | Out-Null
-    }
-    
-    #--
 
     #wait for runbook import completion
     if ($importingRunbooks.Count -gt 0) {

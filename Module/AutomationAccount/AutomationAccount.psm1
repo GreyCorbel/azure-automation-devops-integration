@@ -180,6 +180,10 @@ function Get-AutoObject
                 #RuntimeEnvironments are not available in 2023-11-01
                 $uri = "$uri`?api-version=2023-05-15-preview"
             }
+            'Runbooks' {
+                #Runtime environments for Runbooks are not available in 2023-11-01
+                $uri = "$uri`?api-version=2023-05-15-preview"
+            }
             default {
                 $uri = "$uri`?api-version=2023-11-01"
             }
