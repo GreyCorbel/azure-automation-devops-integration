@@ -581,8 +581,8 @@ if (Check-Scope -Scope $scope -RequiredScope 'Runbooks') {
             continue
         }
         $installedRunbook = $installedRunbooks | Where-Object { $_.Name -eq $runbook.Name}
-        if($null -ne $installedRunbook -and $installedRunbook.properties.RuntimeEnvironment -ne $runbook.properties.RuntimeEnvironment) {
-            "Runbook $($runbook.Name) has different runtime environment --> removing runbook before updating"
+        if($null -ne $installedRunbook -and $installedRunbook.properties.RuntimeEnvironment -ne $runbook.RuntimeEnvironment) {
+            "Runbook $($runbook.Name) has different runtime environment ($($installedRunbook.properties.RuntimeEnvironment) : $(($runbook.RuntimeEnvironment)))--> removing runbook before updating"
             Remove-AutoObject -Name $runbook.Name -objectType Runbooks | Out-Null
         }
         $runbook = Add-AutoRunbook -Name $runbook.Name `
