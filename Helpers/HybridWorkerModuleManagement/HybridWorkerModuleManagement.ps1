@@ -54,7 +54,9 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$storageAccountContainer,
     [Parameter(Mandatory = $true)]
-    [string]$storageAccount
+    [string]$storageAccount,
+    [Parameter()]
+    [string]$logFolder = $scriptRoot
 )
 #################
 ## Variables  
@@ -64,7 +66,7 @@ $script:scriptRoot = $(Split-Path -Parent $MyInvocation.MyCommand.Path)
 $script:scriptName = $MyInvocation.MyCommand.Name
 $script:scriptPath = Join-path $scriptRoot $scriptName
 $script:runTimeVersion = $PSVersionTable.PSVersion.Major
-$script:LogFile = Join-Path $scriptRoot "Manage-PS-$($runTimeVersion)Modules-$(Get-date -Format yyyy-MM-dd).log"
+$script:LogFile = Join-Path $logFolder "Manage-PS-$($runTimeVersion)Modules-$(Get-date -Format yyyy-MM-dd).log"
 $script:newContent = @()
 $script:installedmodules = @()
 $script:reinstalledModules = @()
@@ -106,8 +108,12 @@ $script:builtinModulesToIgnore = @(
 #################
 #logging functions
 function Remove-OldLogs {
+    param(
+        [Parameter(Mandatory)]
+        [string]$logFolder
+    )
     Write-Log "Checking if any logs are older than 14days and needs to be deleted"
-    $AllLogs = Get-ChildItem -Path $scriptRoot | Where-Object { $_.Extension -eq ".log" }
+    $AllLogs = Get-ChildItem -Path $logFolder | Where-Object { $_.Extension -eq ".log" }
     foreach ($logfile in $AllLogs) {
         $result = (Get-Date) - $logfile.lastWriteTime
         if ($result.Days -ge 14) {
@@ -811,4 +817,4 @@ catch {
     "Error uploading json to blob $($_.exception.message)"
 }
 # check if there are any logs older than 14 days. 
-Remove-OldLogs
+Remove-OldLogs -logFolder $logFolder
