@@ -7,7 +7,6 @@ Note: Motivation behind creation of this helper is that native DSC PackageManage
   - Automation Account
   - Hybrid Worker Registered to Arc
   - Hybrid Worker Registered to Dsc (of your Automation Account)
-  - Managed Identity
   - Azure Storage Account
 
 # Pre-requites preparation
@@ -46,18 +45,8 @@ Note: If you use Azure VM this step is not required.
 ! Make sure you keep ConfigurationMode set to 'ApplyAndAutoCorrect' !
 Once this step is done, you can see your worker registered in Automation Account under DSC blade. 
 
-## 3) Create Managed Identity
-
-Note: Arc Connect machine do not provide an option to use system assigned managed identity, therefore we have to create user assigned managed identity, by following these steps: 
-- Search for Managed Identities
-- Click Create
-- Select Resource group to which you want to assign managed identity
-- Select Region and Name
-- Click Create
-
-
-## 4) Assign Storage Blob Data Contributor Role
-You have to assign role to your worker (that belongs to your user assigned managed identity) as well as to your Service Connection (in case you are deploying with pipeline). 
+## 3) Assign Storage Blob Data Contributor Role
+You have to assign role to your worker (through worker's managed identity) as well as to your Service Connection (in case you are deploying with pipeline). 
 
   Open the Storage Account Container where you will store necessary files. 
   - From the left side navigation menu, select Access Control (IAM).
