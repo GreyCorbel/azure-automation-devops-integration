@@ -12,7 +12,7 @@
 RootModule = 'AutomationAccount.psm1'
 
 # Version number of this module.
-ModuleVersion = '2.0.1'
+ModuleVersion = '2.0.2'
 
 # Supported PSEditions
 CompatiblePSEditions = @('Desktop', 'Core')
@@ -24,7 +24,7 @@ GUID = 'a44575cc-1c72-4a62-9ff4-3a462dd5326a'
 Author = 'Jiri Formacek, GreyCorbel Solutions'
 
 # Company or vendor of this module
-CompanyName = 'Unknown'
+CompanyName = 'GreyCorbel'
 
 # Copyright statement for this module
 Copyright = '(c) Jiri Formacek. All rights reserved.'

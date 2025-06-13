@@ -15,7 +15,9 @@ function Initialize-AadAuthenticationFactory
         [Parameter(ParameterSetName = 'ManagedServiceIdentity')]
         [string]$ServiceConnection,
         [Parameter()]
-        [string]$tenantId
+        [string]$tenantId,
+        [Parameter(ParameterSetName = 'Debugging')]
+        [switch]$Debugging
     )
     process
     {
@@ -53,6 +55,11 @@ function Initialize-AadAuthenticationFactory
                     -TenantId $tenantId `
                     -ClientId $servicePrincipalId `
                     -Assertion $assertion
+            }
+            'Debugging' {
+                $script:aadAuthenticationFactory = New-AadAuthenticationFactory `
+                    -TenantId $tenantId `
+                    -AuthMode Interactive
             }
         }
     }

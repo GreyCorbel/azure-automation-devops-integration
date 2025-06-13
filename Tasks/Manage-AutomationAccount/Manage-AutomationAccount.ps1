@@ -371,14 +371,8 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
     foreach ($priority in $priorities) {
         "Batching modules processing for priority $priority"
         $modulesBatch = $definitions | Where-Object { $_.Order -eq $priority }
-        $importingPackages = @()
+        $importingPackages = new-object System.Collections.ArrayList
         foreach ($module in $modulesBatch) {
-            switch($module.RuntimeEnvironment)
-            {
-                {$_ -in '5.1','PowerShell-5.1'} { $module.RuntimeEnvironment = 'PowerShell-5.1'; break}
-                {$_ -in '7.2','PowerShell-7.2'} { $module.RuntimeEnvironment = 'PowerShell-7.2'; break }
-            }
-
             "Processing module $($module.Name) $($module.Version) for runtime $($module.RuntimeEnvironment)"
             try {
                 $existingPackage = Get-AutoPackage -RuntimeEnvironment $module.RuntimeEnvironment -Name $module.Name -ErrorAction Stop
@@ -413,25 +407,28 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
             }
             switch ($module.RuntimeEnvironment) {
                 'PowerShell-5.1' {
-                    $importingPackages += Add-AutoModule `
+                    $newPackage = Add-AutoModule `
                         -Name $module.Name `
                         -ContentLink $contentLink `
                         -Version $module.Version
+                    $ImportingPackages.Add($newPackage) | Out-Null
                     break;
                 }
                 'PowerShell-7.2' {
-                    $importingPackages += Add-AutoPowershell7Module `
+                    $newPackage = Add-AutoPowershell7Module `
                         -Name $module.Name `
                         -ContentLink  $contentLink `
                         -Version $module.Version
+                    $ImportingPackages.Add($newPackage) | Out-Null
                     break;
                 }
-                default {
-                    $importingPackages += Add-AutoPackage `
+                default {                    
+                    $newPackage =  Add-AutoPackage `
                         -Name $module.Name `
                         -RuntimeEnvironment $module.RuntimeEnvironment `
                         -ContentLink  $contentLink `
                         -Version $module.Version
+                    $ImportingPackages.Add($newPackage) | Out-Null
                     break;
                 }
             }
@@ -440,15 +437,12 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
         
         if ($importingPackages.count -gt 0) {
             'Waiting for import of modules'
-            $results = $importingPackages
+            $results = $importingPackages.ToArray()
             do
             {
                 Start-Sleep -Seconds 5
-                $results = $results `
-                | Get-AutoPackage `
-                | Where-Object {$_.properties.provisioningState -in @('Creating')}
+                $results = @( $results | Get-AutoPackage | Where-Object {$_.properties.provisioningState -in @('Creating')} )
                 "Waiting for $($results.Count) module(s) to be imported"
-                 $results | select-object name, @{N = 'version'; E = { $_.properties.version } }, @{N = 'provisioningState'; E = { $_.properties.provisioningState } } | Out-String
             }while($results.Count -gt 0)
         }
         $results = $importingPackages | Get-AutoPackage
@@ -493,7 +487,6 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
                 "$($manageModulesPS1Path) do not exist --> skipping copy to storage account - ensure that script is available in storage account."
             }
         }
-
     }
     if ($FullSync) {
         $runtimeEnvironments = @($definitions | Select-Object -ExpandProperty RuntimeEnvironment -Unique | Sort-Object)
