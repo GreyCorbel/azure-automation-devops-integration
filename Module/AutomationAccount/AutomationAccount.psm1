@@ -158,26 +158,43 @@ function Get-AutoObject
 {
     param
     (
-        [Parameter(Mandatory)]
-        [ValidateSet('Variables','Runbooks','Schedules','Configurations','Compilationjobs', 'Powershell72Modules', 'Webhooks','JobSchedules','RuntimeEnvironments')]
+        [Parameter(Mandatory, ParameterSetName='Name')]
+        [ValidateSet('Variables','Runbooks','Schedules','Configurations','Compilationjobs', 'Modules', 'Powershell72Modules', 'Webhooks','JobSchedules','RuntimeEnvironments')]
         [string]$objectType,
-        [Parameter()]
+        [Parameter(ParameterSetName='Name')]
         [string]$Name,
-        [Parameter()]
-        [string]$AutomationAccountResourceId = $script:AutomationAccountResourceId
+        [Parameter(ParameterSetName='Name')]
+        [string]$AutomationAccountResourceId = $script:AutomationAccountResourceId,
+        [Parameter(Mandatory, ValueFromPipelineByPropertyName, ParameterSetName='ResourceId')]
+        [string]$Id
     )
 
     begin
     {
         $headers = Get-AutoAccessToken -AsHashTable
-        $uri = "https://management.azure.com$AutomationAccountResourceId/$objectType"
-        if(-not [string]::IsnullOrEmpty($Name))
+        if($PSCmdlet.ParameterSetName -eq 'Name')
         {
-            $uri = "$uri/$Name"
+            $uri = "https://management.azure.com$AutomationAccountResourceId/$objectType"
+            if(-not [string]::IsnullOrEmpty($Name))
+            {
+                $uri = "$uri/$Name"
+            }
+            Write-Verbose "Base URI: $uri"
+
         }
     }
     process
     {
+        if($PSCmdlet.ParameterSetName -eq 'ResourceId')
+        {
+            $uri = "https://management.azure.com$Id`?api-version=2023-05-15-preview"
+            Invoke-RestMethod `
+                -Uri $uri `
+                -Headers $headers `
+                -ErrorAction Stop
+            return
+        }
+        #getting by resouce type and name
         switch($objectType)
         {
             'Webhooks' {
@@ -1082,10 +1099,7 @@ function Wait-AutoObjectProcessing
     param
     (
         [Parameter(Mandatory)]
-        [string[]]$Name,
-        [Parameter(Mandatory)]
-        [ValidateSet('Runbooks','Compilationjobs','Modules','Powershell7Modules')]
-        [string]$objectType
+        [PSCustomObject[]]$objects
     )
 
     begin
@@ -1097,19 +1111,9 @@ function Wait-AutoObjectProcessing
         do
         {
             $unprocessed = 0
-            foreach($objName in $name)
+            foreach($object in $objects.Where({$_.properties.provisioningState -in $processingStates}))
             {
-                switch($objectType)
-                {
-                    'Powershell7Modules' {
-                        $obj = Get-AutoPowershell7Module -Name $objName
-                        break;
-                    }
-                    default {
-                        $obj = Get-AutoObject -objectType $objectType -Name $objName
-                        break;
-                    }
-                }
+                $obj = Get-AutoObject -id $object.id
                 if($obj.properties.provisioningState -in $processingStates)
                 {
                     $unprocessed++
@@ -1122,20 +1126,7 @@ function Wait-AutoObjectProcessing
             }
         }while($unprocessed -gt 0)
         #report results
-        foreach($objName in $name)
-        {
-            switch($objectType)
-            {
-                'Powershell7Modules' {
-                    Get-AutoPowershell7Module -Name $objName
-                    break;
-                }
-                default {
-                    Get-AutoObject -objectType $objectType -Name $objName
-                    break;
-                }
-            }
-        }
+        $objects | Get-AutoObject
     }
 }
 

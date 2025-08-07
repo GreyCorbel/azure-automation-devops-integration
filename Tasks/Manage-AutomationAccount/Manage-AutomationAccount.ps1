@@ -360,6 +360,7 @@ function GetModuleContentLink {
         }
     }
 }
+
 if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
     "Processing Modules"
     
@@ -392,9 +393,9 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
                     throw
                 }
             }
-
-            if ($null -ne $existingPackage -and $existingPackage.properties.Version -eq $module.version) {
-                "Module up to date"
+            Write-Verbose "Existing package: $($existingPackage.Name) version $($existingPackage.properties.Version)"
+            if (($null -ne $existingPackage) -and ($existingPackage.properties.Version -eq $module.version)) {
+                "Module $($module.Name) up to date: "
                 continue
             }
             "Module version does not match --> importing"
@@ -410,7 +411,8 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
                     $newPackage = Add-AutoModule `
                         -Name $module.Name `
                         -ContentLink $contentLink `
-                        -Version $module.Version
+                        -Version $module.Version `
+                        -RuntimeEnvironment $module.RuntimeEnvironment
                     $ImportingPackages.Add($newPackage) | Out-Null
                     break;
                 }
@@ -437,21 +439,14 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
         
         if ($importingPackages.count -gt 0) {
             'Waiting for import of modules'
-            $results = $importingPackages.ToArray()
-            do
-            {
-                Start-Sleep -Seconds 5
-                $results = @( $results | Get-AutoPackage | Where-Object {$_.properties.provisioningState -in @('Creating')} )
-                "Waiting for $($results.Count) module(s) to be imported"
-            }while($results.Count -gt 0)
-        }
-        $results = $importingPackages | Get-AutoPackage
-        $results | select-object name, @{N = 'version'; E = { $_.properties.version } }, @{N = 'provisioningState'; E = { $_.properties.provisioningState } } | Out-String
-        #report provisioning results
-        $failed = $results | Where-Object { $_.properties.provisioningState -ne 'Succeeded' }
-        if ($failed.Count -gt 0) {
-            Write-Error "Some modules failed to import"
-            $failed | select-object name, @{N = 'version'; E = { $_.properties.version } }, @{N = 'provisioningState'; E = { $_.properties.provisioningState } } | Out-String
+            $results = Wait-AutoObjectProcessing -objects $importingPackages
+            $results | select-object name, @{N = 'version'; E = { $_.properties.version } }, @{N = 'provisioningState'; E = { $_.properties.provisioningState } } | Out-String
+            #report provisioning results
+            $failed = $results | Where-Object { $_.properties.provisioningState -ne 'Succeeded' }
+            if ($failed.Count -gt 0) {
+                Write-Error "Some modules failed to import"
+                $failed | select-object name, @{N = 'version'; E = { $_.properties.version } }, @{N = 'provisioningState'; E = { $_.properties.provisioningState } } | Out-String
+            }
         }
         #shall we wait for some time before importing next batch?
 
@@ -593,7 +588,7 @@ if (Check-Scope -Scope $scope -RequiredScope 'Runbooks') {
     #wait for runbook import completion
     if ($importingRunbooks.Count -gt 0) {
         'Waiting for import of runbooks'
-        $results = Wait-AutoObjectProcessing -Name $importingRunbooks.Name -objectType Runbooks
+        $results = Wait-AutoObjectProcessing -objects $importingRunbooks
         #report provisioning results
         $results | select-object name, @{N = 'provisioningState'; E = { $_.properties.provisioningState } } | Out-String
         $failed = $results | Where-Object { $_.properties.provisioningState -ne 'Succeeded' }
