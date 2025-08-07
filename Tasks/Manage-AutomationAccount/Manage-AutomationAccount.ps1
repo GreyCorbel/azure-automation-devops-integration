@@ -375,6 +375,7 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
         $importingPackages = new-object System.Collections.ArrayList
         foreach ($module in $modulesBatch) {
             "Processing module $($module.Name) $($module.Version) for runtime $($module.RuntimeEnvironment)"
+            $existingPackage = $null
             try {
                 $existingPackage = Get-AutoPackage -RuntimeEnvironment $module.RuntimeEnvironment -Name $module.Name -ErrorAction Stop
             }
