@@ -30,7 +30,7 @@ Write-Host "Import succeeded!"
 #read pipeline variables
 Write-Host "Reading pipeline variables... (Using vstsTaskSdk)"
 $environmentName = Get-VstsInput -Name 'environmentName' -Require
-$cloudEnvironment = Get-VstsInput -Name 'cloudEnvironment' -Require
+$cloudEnvironment = Get-VstsInput -Name 'cloudEnvironment'
 $projectDir = Get-VstsInput -Name 'projectDir' -Require
 $subscription = Get-VstsInput -Name 'subscription' -Require
 $azureSubscription = Get-VstsInput -Name 'azureSubscription' -Require

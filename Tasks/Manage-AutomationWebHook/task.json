@@ -78,8 +78,8 @@
       "name": "cloudEnvironment",
       "type": "picklist",
       "label": "Cloud Environment",
-      "defaultValue": "",
-      "required": true,
+      "defaultValue": "AzureCloud",
+      "required": false,
       "helpMarkDown": "Select the target Azure cloud environment",
       "options": {
         "AzureCloud": "Azure Public Cloud",

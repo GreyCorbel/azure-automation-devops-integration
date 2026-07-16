@@ -126,14 +126,14 @@ function Connect-AutoAutomationAccount
         [string]$ResourceGroup,
         [Parameter(Mandatory)]
         [string]$AutomationAccount,
-        [Parameter(Mandatory)]
-        [string]$CloudEnvironment
+        [Parameter(Mandatory=$false)]
+        [string]$CloudEnvironment = "AzureCloud"
     )
 
     process
     {
         $script:armEndpoint = switch ($CloudEnvironment) {
-        "AzureUSGovernment" { 
+            "AzureUSGovernment" { 
                 $script:armEndpoint = "management.usgovcloudapi.net"
                 $script:storageResourceUri = "https://storage.azure.us/.default"
                 $script:blobEndpointSuffix = "blob.core.usgovcloudapi.net"
@@ -148,7 +148,7 @@ function Connect-AutoAutomationAccount
                 $script:storageResourceUri = "https://storage.azure.com/.default"
                 $script:blobEndpointSuffix = "blob.core.windows.net"
             }
-    }
+        }
         $subscriptionObject = Get-AutoSubscription -Subscription $Subscription
         if($null -eq $subscriptionObject)
         {

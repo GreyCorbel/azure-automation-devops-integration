@@ -3,7 +3,7 @@ Write-Host "Reading task parameters"
 [char[]]$delimiters = @(',', ' ')
 $scope = (Get-VstsInput -Name 'scope' -Require).Split($delimiters, [StringSplitOptions]::RemoveEmptyEntries)
 $environmentName = Get-VstsInput -Name 'environmentName' -Require
-$cloudEnvironment = Get-VstsInput -Name 'cloudEnvironment' -Require
+$cloudEnvironment = Get-VstsInput -Name 'cloudEnvironment'
 $projectDir = Get-VstsInput -Name 'projectDir' -Require
 $subscription = Get-VstsInput -Name 'subscription' -Require
 $azureSubscription = Get-VstsInput -Name 'azureSubscription' -Require
