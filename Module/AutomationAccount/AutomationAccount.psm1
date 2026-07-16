@@ -62,12 +62,15 @@ function Get-AutoAccessToken
 {
     param
     (
-        [string]$ResourceUri = "https://management.azure.com/.default",
+        [string]$ResourceUri = "",
         [switch]$AsHashTable
     )
 
     process
     {
+        if ([string]::IsNullOrEmpty($ResourceUri)) {
+            $ResourceUri = "https://$($script:armEndpoint)/.default"
+        }
         if ($null -eq $script:aadAuthenticationFactory)
 		{
 			throw ('Call Initialize-AadAuthenticationFactory first')
@@ -87,7 +90,7 @@ function Get-AutoSubscription
     begin
     {
         $headers = Get-AutoAccessToken -AsHashTable
-        $pageUri = "https://management.azure.com/subscriptions`?api-version=2019-06-01"
+        $pageUri = "https://$($script:armEndpoint)/subscriptions`?api-version=2019-06-01"
     }
     process
     {
@@ -122,11 +125,30 @@ function Connect-AutoAutomationAccount
         [Parameter(Mandatory)]
         [string]$ResourceGroup,
         [Parameter(Mandatory)]
-        [string]$AutomationAccount
+        [string]$AutomationAccount,
+        [Parameter(Mandatory)]
+        [string]$CloudEnvironment
     )
 
     process
     {
+        $script:armEndpoint = switch ($CloudEnvironment) {
+        "AzureUSGovernment" { 
+                $script:armEndpoint = "management.usgovcloudapi.net"
+                $script:storageResourceUri = "https://storage.azure.us/.default"
+                $script:blobEndpointSuffix = "blob.core.usgovcloudapi.net"
+            }
+            "AzureChinaCloud" { 
+                $script:armEndpoint = "management.chinacloudapi.cn"
+                $script:storageResourceUri = "https://storage.azure.cn/.default"
+                $script:blobEndpointSuffix = "blob.core.chinacloudapi.cn"
+            }
+            "AzureCloud" { 
+                $script:armEndpoint = "management.azure.com"
+                $script:storageResourceUri = "https://storage.azure.com/.default"
+                $script:blobEndpointSuffix = "blob.core.windows.net"
+            }
+    }
         $subscriptionObject = Get-AutoSubscription -Subscription $Subscription
         if($null -eq $subscriptionObject)
         {
@@ -136,7 +158,7 @@ function Connect-AutoAutomationAccount
         $script:AutomationAccountResourceId = "$($subscriptionObject.id)/resourceGroups/$ResourceGroup/providers/Microsoft.Automation/automationAccounts/$AutomationAccount"
 
         $headers = Get-AutoAccessToken -AsHashTable
-        $uri = "https://management.azure.com$($script:AutomationAccountResourceId)`?api-version=2023-11-01"
+        $uri = "https://$($script:armEndpoint)$($script:AutomationAccountResourceId)`?api-version=2023-11-01"
         $rslt = Invoke-RestMethod `
             -Uri $uri `
             -Headers $headers `
@@ -164,7 +186,7 @@ function Get-AutoPowershell7Module
     begin
     {
         $headers = Get-AutoAccessToken -AsHashTable
-        $uri = "https://management.azure.com$AutomationAccountResourceId/powershell72Modules"
+        $uri = "https://$($script:armEndpoint)$($AutomationAccountResourceId)/powershell72Modules"
         if(-not [string]::IsnullOrEmpty($Name))
         {
             $uri = "$uri/$Name"
@@ -212,7 +234,7 @@ function Get-AutoObject
     begin
     {
         $headers = Get-AutoAccessToken -AsHashTable
-        $uri = "https://management.azure.com$AutomationAccountResourceId/$objectType"
+        $uri = "https://$($script:armEndpoint)$($AutomationAccountResourceId)/$objectType"
         if(-not [string]::IsnullOrEmpty($Name))
         {
             $uri = "$uri/$Name"
@@ -267,7 +289,7 @@ Function Remove-AutoObject
     begin
     {
         $headers = Get-AutoAccessToken -AsHashTable
-        $uri = "https://management.azure.com$AutomationAccountResourceId/$objectType/$Name"
+        $uri = "https://$($script:armEndpoint)$($AutomationAccountResourceId)/$objectType/$Name"
     }
     process
     {
@@ -301,7 +323,7 @@ Function Remove-AutoPowershell7Module
     begin
     {
         $headers = Get-AutoAccessToken -AsHashTable
-        $uri = "https://management.azure.com$AutomationAccountResourceId/Powershell72Modules/$Name`?api-version=2023-11-01"
+        $uri = "https://$($script:armEndpoint)$($AutomationAccountResourceId)/Powershell72Modules/$Name`?api-version=2023-11-01"
     }
     process
     {
@@ -333,7 +355,7 @@ Function Add-AutoVariable
     begin
     {
         $headers = Get-AutoAccessToken -AsHashTable
-        $uri = "https://management.azure.com$AutomationAccountResourceId/variables/$Name`?api-version=2023-11-01"
+        $uri = "https://$($script:armEndpoint)$AutomationAccountResourceId/variables/$Name`?api-version=2023-11-01"
     }
     process
     {
@@ -393,7 +415,7 @@ Function Add-AutoSchedule
     begin
     {
         $headers = Get-AutoAccessToken -AsHashTable
-        $uri = "https://management.azure.com$AutomationAccountResourceId/schedules/$Name`?api-version=2023-11-01"
+        $uri = "https://$($script:armEndpoint)$AutomationAccountResourceId/schedules/$Name`?api-version=2023-11-01"
     }
     process
     {
@@ -493,7 +515,7 @@ Function Add-AutoModule
     begin
     {
         $headers = Get-AutoAccessToken -AsHashTable
-        $uri = "https://management.azure.com$AutomationAccountResourceId/modules/$Name`?api-version=2023-11-01"
+        $uri = "https://$($script:armEndpoint)$AutomationAccountResourceId/modules/$Name`?api-version=2023-11-01"
     }
     process
     {
@@ -548,7 +570,7 @@ Function Add-AutoPowershell7Module
     begin
     {
         $headers = Get-AutoAccessToken -AsHashTable
-        $uri = "https://management.azure.com$AutomationAccountResourceId/powershell72Modules/$Name`?api-version=2023-11-01"
+        $uri = "https://$($script:armEndpoint)$AutomationAccountResourceId/powershell72Modules/$Name`?api-version=2023-11-01"
     }
     process
     {
@@ -614,9 +636,9 @@ Function Add-AutoRunbook
     begin
     {
         $headers = Get-AutoAccessToken -AsHashTable
-        $runbookUri = "https://management.azure.com$AutomationAccountResourceId/runbooks/$Name`?api-version=2023-11-01"
-        $runbookContentUri = "https://management.azure.com$AutomationAccountResourceId/runbooks/$Name/draft/content`?api-version=2022-08-08"
-        $runbookPublishUri = "https://management.azure.com$AutomationAccountResourceId/runbooks/$Name/publish`?api-version=2023-11-01"
+        $runbookUri = "https://$($script:armEndpoint)$AutomationAccountResourceId/runbooks/$Name`?api-version=2023-11-01"
+        $runbookContentUri = "https://$($script:armEndpoint)$AutomationAccountResourceId/runbooks/$Name/draft/content`?api-version=2022-08-08"
+        $runbookPublishUri = "https://$($script:armEndpoint)$AutomationAccountResourceId/runbooks/$Name/publish`?api-version=2023-11-01"
     }
     process
     {
@@ -700,9 +722,9 @@ Function Add-AutoPowershell7Runbook
     begin
     {
         $headers = Get-AutoAccessToken -AsHashTable
-        $runbookUri = "https://management.azure.com$AutomationAccountResourceId/runbooks/$Name`?api-version=2022-06-30-preview"
-        $runbookContentUri = "https://management.azure.com$AutomationAccountResourceId/runbooks/$Name/draft/content`?api-version=2022-08-08"
-        $runbookPublishUri = "https://management.azure.com$AutomationAccountResourceId/runbooks/$Name/publish`?api-version=2022-08-08"
+        $runbookUri = "https://$($script:armEndpoint)$AutomationAccountResourceId/runbooks/$Name`?api-version=2022-06-30-preview"
+        $runbookContentUri = "https://$($script:armEndpoint)$AutomationAccountResourceId/runbooks/$Name/draft/content`?api-version=2022-08-08"
+        $runbookPublishUri = "https://$($script:armEndpoint)$AutomationAccountResourceId/runbooks/$Name/publish`?api-version=2022-08-08"
     }
     process
     {
@@ -792,9 +814,9 @@ function Get-AutoModuleUrl
         Compress-Archive -Path $modulePath -DestinationPath $tempFile -Update
         #get compressinon results
         #upload to storage account
-        $h = Get-AutoAccessToken -ResourceUri 'https://storage.azure.com/.default' -AsHashTable
+        $h = Get-AutoAccessToken -ResourceUri $script:storageResourceUri -AsHashTable
         #block id statically set to '1' and we assume only uploading single block
-        $blobUri = "https://$storageAccount.blob.core.windows.net/$storageAccountFolder/$moduleName`.zip"
+        $blobUri = "https://$storageAccount.$($script:blobEndpointSuffix)/$storageAccountFolder/$moduleName`.zip"
         Write-Verbose "Uploading compressed module to $blobUri"
         $h['x-ms-version'] = '2019-12-12'
         $h['x-ms-date'] = [DateTime]::UtcNow.ToString("R")
@@ -842,9 +864,9 @@ Function Add-AutoConfiguration
     begin
     {
         $headers = Get-AutoAccessToken -AsHashTable
-        $configUri = "https://management.azure.com$AutomationAccountResourceId/configurations/$Name`?api-version=2023-11-01"
+        $configUri = "https://$($script:armEndpoint)$AutomationAccountResourceId/configurations/$Name`?api-version=2023-11-01"
         $compilationJobName = "$Name-$((New-Guid))"
-        $compilationUri = "https://management.azure.com$AutomationAccountResourceId/compilationjobs/$compilationJobName`?api-version=2019-06-01"
+        $compilationUri = "https://$($script:armEndpoint)$AutomationAccountResourceId/compilationjobs/$compilationJobName`?api-version=2019-06-01"
     }
     process
     {
@@ -937,7 +959,7 @@ Function Add-AutoJobSchedule
     {
         $headers = Get-AutoAccessToken -AsHashTable
         $jobScheduleName = "$((New-Guid))"
-        $Uri = "https://management.azure.com$AutomationAccountResourceId/jobSchedules/$jobScheduleName`?api-version=2023-11-01"
+        $Uri = "https://$($script:armEndpoint)$AutomationAccountResourceId/jobSchedules/$jobScheduleName`?api-version=2023-11-01"
     }
     process
     {
@@ -995,7 +1017,7 @@ Function Add-AutoWebhook
     begin
     {
         $headers = Get-AutoAccessToken -AsHashTable
-        $Uri = "https://management.azure.com$AutomationAccountResourceId/webhooks/$Name`?api-version=2018-06-30"
+        $Uri = "https://$($script:armEndpoint)$AutomationAccountResourceId/webhooks/$Name`?api-version=2018-06-30"
     }
     process
     {
@@ -1156,7 +1178,7 @@ Function Get-BlobSasUrl
         $signature = [Uri]::EscapeDataString($signature)
         $uriParams = "`?sp=$signedPermissions`&st=$signedStart`&se=$signedExpiry`&skoid=$signedKeyObjectId`&sktid=$signedKeyTenantId`&skt=$signedKeyStart`&ske=$signedKeyExpiry`&sks=$signedKeyService`&skv=$signedKeyVersion`&spr=$signedProtocol`&sv=$signedVersion`&sr=$signedResource`&sig=$signature"
         
-        "https://$storageAccount.blob.core.windows.net/$blobPath$uriParams"
+        "https://$storageAccount.$($script:blobEndpointSuffix)/$blobPath$uriParams"
     }
 }
 Function Get-DelegationToken
@@ -1176,10 +1198,10 @@ Function Get-DelegationToken
     process
     {
         $payload = [string]::Format($payloadTemplate, $startDate.ToString('yyyy-MM-ddTHH:mm:ssZ'), ($startDate+$ExpiresIn).ToString('yyyy-MM-ddTHH:mm:ssZ'))
-        $h = Get-AutoAccessToken -ResourceUri 'https://storage.azure.com/.default' -AsHashTable
+        $h = Get-AutoAccessToken -ResourceUri $script:storageResourceUri -AsHashTable
         $h['x-ms-version'] = '2022-11-02'
 
-        $rsp = Invoke-RestMethod -Method Post -Uri "https://$storageAccountName.blob.core.windows.net/`?restype=service`&comp=userdelegationkey" -Headers $h -body $payload -ContentType 'text/xml'
+        $rsp = Invoke-RestMethod -Method Post -Uri "https://$storageAccountName.$($script:blobEndpointSuffix)/`?restype=service`&comp=userdelegationkey" -Headers $h -body $payload -ContentType 'text/xml'
         $data =$rsp.Substring(3)
         
         # catch PS7 xml format issue
@@ -1232,7 +1254,7 @@ Function Get-DscNodes
     )
    
     $subscriptionObject = Get-AutoSubscription -Subscription $Subscription
-    $baseUri ="https://management.azure.com$($subscriptionObject.id)/resourceGroups/$($ResourceGroup)/providers/Microsoft.Automation/automationAccounts/$($AutomationAccount)/nodes?api-version=2023-11-01"
+    $baseUri ="https://$($script:armEndpoint)$($subscriptionObject.id)/resourceGroups/$($ResourceGroup)/providers/Microsoft.Automation/automationAccounts/$($AutomationAccount)/nodes?api-version=2023-11-01"
     $h = Get-AutoAccessToken -AsHashTable
     return (Invoke-RestMethod -Method Get -Uri $baseUri -Headers $h).value
 }
@@ -1245,7 +1267,7 @@ Function Get-DscNodeConfiguration
         $AutomationAccount
     )
     $subscriptionObject = Get-AutoSubscription -Subscription $Subscription
-    $baseUri ="https://management.azure.com$($subscriptionObject.id)/resourceGroups/$($ResourceGroup)/providers/Microsoft.Automation/automationAccounts/$($AutomationAccount)/nodeConfigurations?api-version=2023-11-01"
+    $baseUri ="https://$($script:armEndpoint)$($subscriptionObject.id)/resourceGroups/$($ResourceGroup)/providers/Microsoft.Automation/automationAccounts/$($AutomationAccount)/nodeConfigurations?api-version=2023-11-01"
     $h = Get-AutoAccessToken -AsHashTable
     return (Invoke-RestMethod -Method Get -Uri $baseUri -Headers $h).value
 }
@@ -1261,7 +1283,7 @@ Function Assign-DscNodeConfig
         $NodeName
     )
     $subscriptionObject = Get-AutoSubscription -Subscription $Subscription
-    $baseUri ="https://management.azure.com$($subscriptionObject.id)/resourceGroups/$($ResourceGroup)/providers/Microsoft.Automation/automationAccounts/$($AutomationAccount)/nodes/$($nodeName)?api-version=2019-06-01"
+    $baseUri ="https://$($script:armEndpoint)$($subscriptionObject.id)/resourceGroups/$($ResourceGroup)/providers/Microsoft.Automation/automationAccounts/$($AutomationAccount)/nodes/$($nodeName)?api-version=2019-06-01"
     $h = Get-AutoAccessToken -AsHashTable
     $body = @{
         nodeId= $NodeName
@@ -1284,7 +1306,7 @@ Function Get-ScheduleDetail {
 
     begin {
         $headers = Get-AutoAccessToken -AsHashTable
-        $uri = "https://management.azure.com$($AutomationAccountResourceId)/schedules/$($Name)?api-version=2023-11-01"
+        $uri = "https://$($script:armEndpoint)$($AutomationAccountResourceId)/schedules/$($Name)?api-version=2023-11-01"
     }
 
     process {

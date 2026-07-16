@@ -30,6 +30,7 @@ Write-Host "Import succeeded!"
 #read pipeline variables
 Write-Host "Reading pipeline variables... (Using vstsTaskSdk)"
 $environmentName = Get-VstsInput -Name 'environmentName' -Require
+$cloudEnvironment = Get-VstsInput -Name 'cloudEnvironment' -Require
 $projectDir = Get-VstsInput -Name 'projectDir' -Require
 $subscription = Get-VstsInput -Name 'subscription' -Require
 $azureSubscription = Get-VstsInput -Name 'azureSubscription' -Require
@@ -126,7 +127,7 @@ Init-Environment -ProjectDir $ProjectDir -Environment $EnvironmentName
 
 #this requires to be connected to be logged in to Azure. Azure POwershell task does it automatically for you
 #if running outside of this task, you may need to call Connect-AzAccount manually
-Connect-AutoAutomationAccount -Subscription $subscription -ResourceGroup $ResourceGroup -AutomationAccount $AutomationAccount
+Connect-AutoAutomationAccount -Subscription $subscription -ResourceGroup $ResourceGroup -AutomationAccount $AutomationAccount -CloudEnvironment $cloudEnvironment
 
 $base = new-object DateTime(1970,1,1)
 $base = [DateTime]::SpecifyKind($base, 'Utc')
