@@ -3,6 +3,7 @@ Write-Host "Reading task parameters"
 [char[]]$delimiters = @(',', ' ')
 $scope = (Get-VstsInput -Name 'scope' -Require).Split($delimiters, [StringSplitOptions]::RemoveEmptyEntries)
 $environmentName = Get-VstsInput -Name 'environmentName' -Require
+$cloudEnvironment = Get-VstsInput -Name 'cloudEnvironment'
 $projectDir = Get-VstsInput -Name 'projectDir' -Require
 $subscription = Get-VstsInput -Name 'subscription' -Require
 $azureSubscription = Get-VstsInput -Name 'azureSubscription' -Require
@@ -141,7 +142,7 @@ Init-Environment -ProjectDir $ProjectDir -Environment $EnvironmentName
 
 #this requires to be connected to be logged in to Azure. Azure POwershell task does it automatically for you
 #if running outside of this task, you may need to call Connect-AzAccount manually
-Connect-AutoAutomationAccount -Subscription $subscription -ResourceGroup $ResourceGroup -AutomationAccount $AutomationAccount
+Connect-AutoAutomationAccount -Subscription $subscription -ResourceGroup $ResourceGroup -AutomationAccount $AutomationAccount -CloudEnvironment $cloudEnvironment
 
 #region Variables
 if (Check-Scope -Scope $scope -RequiredScope 'Variables') {
