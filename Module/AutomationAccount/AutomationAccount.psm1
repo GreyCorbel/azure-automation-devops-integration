@@ -132,7 +132,7 @@ function Connect-AutoAutomationAccount
 
     process
     {
-        $script:armEndpoint = switch ($CloudEnvironment) {
+        switch ($CloudEnvironment) {
             "AzureUSGovernment" { 
                 $script:armEndpoint = "management.usgovcloudapi.net"
                 $script:storageResourceUri = "https://storage.azure.us/.default"
