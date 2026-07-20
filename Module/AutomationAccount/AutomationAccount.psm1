@@ -36,7 +36,7 @@ function Initialize-AadAuthenticationFactory
                     $script:aadAuthenticationFactory = New-AadAuthenticationFactory `
                     -TenantId $tenantId `
                     -ClientId $servicePrincipalId `
-                    -ClientSecret $servicePrincipalKey`
+                    -ClientSecret $servicePrincipalKey `
                     -CloudEnvironment $cloudEnvironment
                 }
             }
