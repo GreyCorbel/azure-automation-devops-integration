@@ -15,7 +15,7 @@ function Initialize-AadAuthenticationFactory
         [Parameter(ParameterSetName = 'ManagedServiceIdentity')]
         [string]$ServiceConnection,
         [Parameter()]
-        [string]$tenantIdj,
+        [string]$tenantId,
         [Parameter()]
         [string]$cloudEnvironment
     )
