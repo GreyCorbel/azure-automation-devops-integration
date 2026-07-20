@@ -15,12 +15,17 @@ function Initialize-AadAuthenticationFactory
         [Parameter(ParameterSetName = 'ManagedServiceIdentity')]
         [string]$ServiceConnection,
         [Parameter()]
-        [string]$tenantId
-        #[Parameter()]
-        #[string]$cloudEnvironment
+        [string]$tenantId,
+        [Parameter()]
+        [string]$cloudEnvironment
     )
     process
     {
+        switch($cloudEnvironment){
+            "AzureUSGovernment" { $loginApi ="https://login.microsoftonline.us" }
+            "AzureChinaCloud" { $loginApi = "https://login.chinacloudapi.cn" }
+            default { $loginApi ="https://login.microsftonline.com" }
+        }
         #create authnetication factory and store it into the script variable
         switch($PSCmdlet.ParameterSetName)
         {
@@ -30,14 +35,14 @@ function Initialize-AadAuthenticationFactory
                     -TenantId $tenantId `
                     -ClientId $servicePrincipalId `
                     -X509Certificate $cert `
-                    #-cloudEnvironment $cloudEnvironment
+                    -loginApi $loginApi
                 }
                 else {
                     $script:aadAuthenticationFactory = New-AadAuthenticationFactory `
                     -TenantId $tenantId `
                     -ClientId $servicePrincipalId `
                     -ClientSecret $servicePrincipalKey `
-                    #-cloudEnvironment $cloudEnvironment
+                    -loginApi $loginApi
                 }
             }
             'ManagedServiceIdentity' {
@@ -46,12 +51,12 @@ function Initialize-AadAuthenticationFactory
                     $script:aadAuthenticationFactory = New-AadAuthenticationFactory `
                     -ClientId $msiClientId `
                     -UseManagedIdentity `
-                    #-cloudEnvironment $cloudEnvironment
+                    -loginApi $loginApi
                 }
                 else {
                     $script:aadAuthenticationFactory = New-AadAuthenticationFactory `
                     -UseManagedIdentity `
-                    #-cloudEnvironment $cloudEnvironment
+                    -loginApi $loginApi
                 }
             }
             'WorkloadIdentityFederation' {
@@ -59,7 +64,7 @@ function Initialize-AadAuthenticationFactory
                     -TenantId $tenantId `
                     -ClientId $servicePrincipalId `
                     -Assertion $assertion `
-                    #-cloudEnvironment $cloudEnvironment
+                    -loginApi $loginApi
             }
         }
     }

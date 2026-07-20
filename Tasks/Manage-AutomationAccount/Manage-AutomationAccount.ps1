@@ -44,6 +44,7 @@ if ($null -eq (Get-Module -Name AadAuthenticationFactory -ListAvailable)) {
 }
 Write-Host "Installation succeeded!"
 Import-Module AadAuthenticationFactory
+Get-Module AadAuthenticationFactory | Format-List Name, Version, Path
 
 Write-Host "Importing internal PS modules..."
 $modulePath = [System.IO.Path]::Combine($PSScriptRoot, 'Module', 'AutomationAccount')
@@ -146,7 +147,7 @@ Init-Environment -ProjectDir $ProjectDir -Environment $EnvironmentName
 
 #this requires to be connected to be logged in to Azure. Azure POwershell task does it automatically for you
 #if running outside of this task, you may need to call Connect-AzAccount manually
-Connect-AutoAutomationAccount -Subscription $subscription -ResourceGroup $ResourceGroup -AutomationAccount $AutomationAccount -cloudEnvironment $cloudEnvironment
+Connect-AutoAutomationAccount -Subscription $subscription -ResourceGroup $ResourceGroup -AutomationAccount $AutomationAccount -CloudEnvironment $cloudEnvironment
 
 #region Variables
 if (Check-Scope -Scope $scope -RequiredScope 'Variables') {
