@@ -29,14 +29,14 @@ function Initialize-AadAuthenticationFactory
                     $script:aadAuthenticationFactory = New-AadAuthenticationFactory `
                     -TenantId $tenantId `
                     -ClientId $servicePrincipalId `
-                    -X509Certificate $cert
+                    -X509Certificate $cert `
                     -CloudEnvironment $cloudEnvironment
                 }
                 else {
                     $script:aadAuthenticationFactory = New-AadAuthenticationFactory `
                     -TenantId $tenantId `
                     -ClientId $servicePrincipalId `
-                    -ClientSecret $servicePrincipalKey
+                    -ClientSecret $servicePrincipalKey`
                     -CloudEnvironment $cloudEnvironment
                 }
             }
@@ -45,12 +45,12 @@ function Initialize-AadAuthenticationFactory
                 if ($msiClientId) {
                     $script:aadAuthenticationFactory = New-AadAuthenticationFactory `
                     -ClientId $msiClientId `
-                    -UseManagedIdentity
+                    -UseManagedIdentity `
                     -CloudEnvironment $cloudEnvironment
                 }
                 else {
                     $script:aadAuthenticationFactory = New-AadAuthenticationFactory `
-                    -UseManagedIdentity
+                    -UseManagedIdentity `
                     -CloudEnvironment $cloudEnvironment
                 }
             }
@@ -58,7 +58,7 @@ function Initialize-AadAuthenticationFactory
                 $script:aadAuthenticationFactory = New-AadAuthenticationFactory `
                     -TenantId $tenantId `
                     -ClientId $servicePrincipalId `
-                    -Assertion $assertion
+                    -Assertion $assertion `
                     -CloudEnvironment $cloudEnvironment
             }
         }
