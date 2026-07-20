@@ -21,11 +21,14 @@ function Initialize-AadAuthenticationFactory
     )
     process
     {
+        Write-Host "TenantId: $tenantId"
+        Write-Host "CloudEnvironment: $cloudEnvironment"
         switch($cloudEnvironment){
             "AzureUSGovernment" { $loginApi ="https://login.microsoftonline.us" }
             "AzureChinaCloud" { $loginApi = "https://login.chinacloudapi.cn" }
-            default { $loginApi ="https://login.microsftonline.com" }
+            default { $loginApi ="https://login.microsoftonline.com" }
         }
+        Write-Host "LoginApi: $loginApi"
         #create authnetication factory and store it into the script variable
         switch($PSCmdlet.ParameterSetName)
         {
