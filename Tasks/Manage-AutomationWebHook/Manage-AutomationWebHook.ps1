@@ -63,7 +63,8 @@ switch ($serviceConnection.auth.scheme) {
             -servicePrincipalId $servicePrincipalId `
             -servicePrincipalKey $servicePrincipalkey `
             -tenantId $tenantId `
-            -cert $cert
+            -cert $cert `
+            -cloudEnvironment $cloudEnvironment
         }
         #Service Principal
         else {
@@ -72,7 +73,8 @@ switch ($serviceConnection.auth.scheme) {
             Initialize-AadAuthenticationFactory `
             -servicePrincipalId $servicePrincipalId `
             -servicePrincipalKey $servicePrincipalkey `
-            -tenantId $tenantId
+            -tenantId $tenantId `
+            -cloudEnvironment $cloudEnvironment
         }
         break;
      }
@@ -81,7 +83,8 @@ switch ($serviceConnection.auth.scheme) {
         Write-Host "ManagedIdentitx auth"
 
         Initialize-AadAuthenticationFactory `
-            -serviceConnection $serviceConnection
+            -serviceConnection $serviceConnection `
+            -cloudEnvironment $cloudEnvironment
         break;
      }
 
@@ -117,7 +120,8 @@ switch ($serviceConnection.auth.scheme) {
         Initialize-AadAuthenticationFactory `
             -servicePrincipalId $servicePrincipalId `
             -assertion $assertion `
-            -tenantId $tenantId
+            -tenantId $tenantId `
+            -cloudEnvironment $cloudEnvironment
         break;
      }
 }

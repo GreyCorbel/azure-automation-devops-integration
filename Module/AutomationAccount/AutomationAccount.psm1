@@ -15,7 +15,9 @@ function Initialize-AadAuthenticationFactory
         [Parameter(ParameterSetName = 'ManagedServiceIdentity')]
         [string]$ServiceConnection,
         [Parameter()]
-        [string]$tenantId
+        [string]$tenantIdj,
+        [Parameter()]
+        [string]$cloudEnvironment
     )
     process
     {
@@ -28,12 +30,14 @@ function Initialize-AadAuthenticationFactory
                     -TenantId $tenantId `
                     -ClientId $servicePrincipalId `
                     -X509Certificate $cert
+                    -CloudEnvironment $cloudEnvironment
                 }
                 else {
                     $script:aadAuthenticationFactory = New-AadAuthenticationFactory `
                     -TenantId $tenantId `
                     -ClientId $servicePrincipalId `
                     -ClientSecret $servicePrincipalKey
+                    -CloudEnvironment $cloudEnvironment
                 }
             }
             'ManagedServiceIdentity' {
@@ -42,10 +46,12 @@ function Initialize-AadAuthenticationFactory
                     $script:aadAuthenticationFactory = New-AadAuthenticationFactory `
                     -ClientId $msiClientId `
                     -UseManagedIdentity
+                    -CloudEnvironment $cloudEnvironment
                 }
                 else {
                     $script:aadAuthenticationFactory = New-AadAuthenticationFactory `
                     -UseManagedIdentity
+                    -CloudEnvironment $cloudEnvironment
                 }
             }
             'WorkloadIdentityFederation' {
@@ -53,6 +59,7 @@ function Initialize-AadAuthenticationFactory
                     -TenantId $tenantId `
                     -ClientId $servicePrincipalId `
                     -Assertion $assertion
+                    -CloudEnvironment $cloudEnvironment
             }
         }
     }
@@ -165,6 +172,8 @@ function Connect-AutoAutomationAccount
             -ErrorAction Stop
         $script:accountLocation = $rslt.location
         write-verbose "Automation account validated; location: $($script:accountLocation)"
+        $global:StorageResourceUri = $script:storageResourceUri
+        $global:BlobEndpointSuffix = $script:blobEndpointSuffix
     }
 }
 

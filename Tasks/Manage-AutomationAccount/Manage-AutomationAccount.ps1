@@ -78,7 +78,8 @@ switch ($serviceConnection.auth.scheme) {
             -servicePrincipalId $servicePrincipalId `
             -servicePrincipalKey $servicePrincipalkey `
             -tenantId $tenantId `
-            -cert $cert
+            -cert $cert `
+            -cloudEnvironment $cloudEnvironment
         }
         #Service Principal
         else {
@@ -87,7 +88,8 @@ switch ($serviceConnection.auth.scheme) {
             Initialize-AadAuthenticationFactory `
             -servicePrincipalId $servicePrincipalId `
             -servicePrincipalKey $servicePrincipalkey `
-            -tenantId $tenantId
+            -tenantId $tenantId `
+            -cloudEnvironment $cloudEnvironment 
         }
         break;
      }
@@ -96,7 +98,8 @@ switch ($serviceConnection.auth.scheme) {
         Write-Host "ManagedIdentitx auth"
 
         Initialize-AadAuthenticationFactory `
-            -serviceConnection $serviceConnection
+            -serviceConnection $serviceConnection `
+            -cloudEnvironment $cloudEnvironment 
         break;
      }
 
@@ -132,7 +135,8 @@ switch ($serviceConnection.auth.scheme) {
         Initialize-AadAuthenticationFactory `
             -servicePrincipalId $servicePrincipalId `
             -assertion $assertion `
-            -tenantId $tenantId
+            -tenantId $tenantId `
+            -cloudEnvironment $cloudEnvironment
         break;
      }
 }
@@ -198,18 +202,20 @@ function Upload-FileToBlob {
         [Parameter(Mandatory = $true)]
         [string]$filePath,
         [Parameter(Mandatory = $true)]
-        [string]$storageBlobName
+        [string]$storageBlobName,
+        [Parameter(Mandatory = $false)]
+        [string]$blobEndpointSuffix = 'blob.core.windows.net'
     )
     
     begin {
-        $h = Get-AutoAccessToken -ResourceUri 'https://storage.azure.com/.default' -AsHashTable
+        $h = Get-AutoAccessToken -ResourceUri $global:StorageResourceUri -AsHashTable
         $h['x-ms-version'] = '2023-11-03'
         $h['x-ms-date'] = [DateTime]::UtcNow.ToString('R')
         $h['x-ms-blob-type'] = 'BlockBlob'
     }
     process {
         $rsp = Invoke-RestMethod `
-            -Uri "https://$($storageAccount).blob.core.windows.net/$($storageContainerName)/$($storageBlobName)" `
+            -Uri "https://$($storageAccount).$global:BlobEndpointSuffix)/$($storageContainerName)/$($storageBlobName)" `
             -Headers $h `
             -InFile $filePath `
             -Method Put
@@ -224,10 +230,12 @@ function Upload-ModulesForHybridWorker {
         [Parameter(Mandatory = $false)]
         [string]$storageBlobName,
         [Parameter(Mandatory = $true)]
-        [Array]$body
+        [Array]$body,
+        [Parameter(Mandatory = $false)]
+        [string]$blobEndpointSuffix = 'blob.core.windows.net'
     )
     begin {
-        $h = Get-AutoAccessToken -ResourceUri 'https://storage.azure.com/.default' -AsHashTable
+        $h = Get-AutoAccessToken -ResourceUri $global:StorageResourceUri -AsHashTable
         $h['x-ms-version'] = '2023-11-03'
         $h['x-ms-date'] = [DateTime]::UtcNow.ToString('R')
         $h['x-ms-blob-type'] = 'BlockBlob'
@@ -235,7 +243,7 @@ function Upload-ModulesForHybridWorker {
     process {
 
         $rsp = Invoke-RestMethod `
-            -Uri "https://$($storageAccount).blob.core.windows.net/$($storageContainerName)/$($storageBlobName)" `
+            -Uri "https://$($storageAccount).$global:BlobEndpointSuffix)/$($storageContainerName)/$($storageBlobName)" `
             -Headers $h `
             -body ($body | ConvertTo-Json)`
             -Method PUT
@@ -250,10 +258,12 @@ function Check-CustomModule {
         [Parameter(Mandatory = $true)]
         [string]$storageContainerName,
         [Parameter(Mandatory = $true)]
-        [string]$moduleName
+        [string]$moduleName,
+        [Parameter(Mandatory = $false)]
+        [string]$blobEndpointSuffix = 'blob.core.windows.net'
     )
     begin {
-        $h = Get-AutoAccessToken -ResourceUri 'https://storage.azure.com/.default' -AsHashTable
+        $h = Get-AutoAccessToken -ResourceUri $global:StorageResourceUri -AsHashTable
         $h['x-ms-version'] = '2023-11-03'
         $h['x-ms-date'] = [DateTime]::UtcNow.ToString('R')
         $h['x-ms-blob-type'] = 'BlockBlob'
@@ -261,7 +271,7 @@ function Check-CustomModule {
     process {
         try {
             $rsp = Invoke-RestMethod `
-                -Uri "https://$($storageAccount).blob.core.windows.net/$($storageContainerName)/$($moduleName).zip" `
+                -Uri "https://$($storageAccount).$global:BblobEndpointSuffix)/$($storageContainerName)/$($moduleName).zip" `
                 -Headers $h `
                 -ErrorAction Stop
         }
@@ -454,7 +464,6 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
                 -storageContainerName $storageAccountContainer `
                 -body $requiredModules `
                 -storageBlobName $blobNameModulesJson
-            
             # upload HybridWorkerModuleManagement.ps1 to storage account
             if((Test-path -Path $manageModulesPS1Path) -eq $true)
             {
