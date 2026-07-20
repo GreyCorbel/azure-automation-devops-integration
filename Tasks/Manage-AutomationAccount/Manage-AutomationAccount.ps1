@@ -146,7 +146,7 @@ Init-Environment -ProjectDir $ProjectDir -Environment $EnvironmentName
 
 #this requires to be connected to be logged in to Azure. Azure POwershell task does it automatically for you
 #if running outside of this task, you may need to call Connect-AzAccount manually
-Connect-AutoAutomationAccount -Subscription $subscription -ResourceGroup $ResourceGroup -AutomationAccount $AutomationAccount -CloudEnvironment $cloudEnvironment
+Connect-AutoAutomationAccount -Subscription $subscription -ResourceGroup $ResourceGroup -AutomationAccount $AutomationAccount -cloudEnvironment $cloudEnvironment
 
 #region Variables
 if (Check-Scope -Scope $scope -RequiredScope 'Variables') {
@@ -202,9 +202,9 @@ function Upload-FileToBlob {
         [Parameter(Mandatory = $true)]
         [string]$filePath,
         [Parameter(Mandatory = $true)]
-        [string]$storageBlobName,
-        [Parameter(Mandatory = $false)]
-        [string]$blobEndpointSuffix = 'blob.core.windows.net'
+        [string]$storageBlobName
+        #[Parameter(Mandatory = $false)]
+        #[string]$blobEndpointSuffix = 'blob.core.windows.net'
     )
     
     begin {
@@ -215,7 +215,7 @@ function Upload-FileToBlob {
     }
     process {
         $rsp = Invoke-RestMethod `
-            -Uri "https://$($storageAccount).$global:BlobEndpointSuffix)/$($storageContainerName)/$($storageBlobName)" `
+            -Uri "https://$($storageAccount).$($global:BlobEndpointSuffix)/$($storageContainerName)/$($storageBlobName)" `
             -Headers $h `
             -InFile $filePath `
             -Method Put
@@ -230,9 +230,9 @@ function Upload-ModulesForHybridWorker {
         [Parameter(Mandatory = $false)]
         [string]$storageBlobName,
         [Parameter(Mandatory = $true)]
-        [Array]$body,
-        [Parameter(Mandatory = $false)]
-        [string]$blobEndpointSuffix = 'blob.core.windows.net'
+        [Array]$body
+        #[Parameter(Mandatory = $false)]
+        #[string]$blobEndpointSuffix = 'blob.core.windows.net'
     )
     begin {
         $h = Get-AutoAccessToken -ResourceUri $global:StorageResourceUri -AsHashTable
@@ -243,7 +243,7 @@ function Upload-ModulesForHybridWorker {
     process {
 
         $rsp = Invoke-RestMethod `
-            -Uri "https://$($storageAccount).$global:BlobEndpointSuffix)/$($storageContainerName)/$($storageBlobName)" `
+            -Uri "https://$($storageAccount).$($global:BlobEndpointSuffix)/$($storageContainerName)/$($storageBlobName)" `
             -Headers $h `
             -body ($body | ConvertTo-Json)`
             -Method PUT
@@ -258,9 +258,9 @@ function Check-CustomModule {
         [Parameter(Mandatory = $true)]
         [string]$storageContainerName,
         [Parameter(Mandatory = $true)]
-        [string]$moduleName,
-        [Parameter(Mandatory = $false)]
-        [string]$blobEndpointSuffix = 'blob.core.windows.net'
+        [string]$moduleName
+        #[Parameter(Mandatory = $false)]
+        #[string]$blobEndpointSuffix = 'blob.core.windows.net'
     )
     begin {
         $h = Get-AutoAccessToken -ResourceUri $global:StorageResourceUri -AsHashTable
@@ -271,7 +271,7 @@ function Check-CustomModule {
     process {
         try {
             $rsp = Invoke-RestMethod `
-                -Uri "https://$($storageAccount).$global:BblobEndpointSuffix)/$($storageContainerName)/$($moduleName).zip" `
+                -Uri "https://$($storageAccount).$($global:BlobEndpointSuffix)/$($storageContainerName)/$($moduleName).zip" `
                 -Headers $h `
                 -ErrorAction Stop
         }

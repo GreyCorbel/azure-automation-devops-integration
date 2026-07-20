@@ -15,9 +15,9 @@ function Initialize-AadAuthenticationFactory
         [Parameter(ParameterSetName = 'ManagedServiceIdentity')]
         [string]$ServiceConnection,
         [Parameter()]
-        [string]$tenantId,
-        [Parameter()]
-        [string]$cloudEnvironment
+        [string]$tenantId
+        #[Parameter()]
+        #[string]$cloudEnvironment
     )
     process
     {
@@ -30,14 +30,14 @@ function Initialize-AadAuthenticationFactory
                     -TenantId $tenantId `
                     -ClientId $servicePrincipalId `
                     -X509Certificate $cert `
-                    -CloudEnvironment $cloudEnvironment
+                    #-cloudEnvironment $cloudEnvironment
                 }
                 else {
                     $script:aadAuthenticationFactory = New-AadAuthenticationFactory `
                     -TenantId $tenantId `
                     -ClientId $servicePrincipalId `
                     -ClientSecret $servicePrincipalKey `
-                    -CloudEnvironment $cloudEnvironment
+                    #-cloudEnvironment $cloudEnvironment
                 }
             }
             'ManagedServiceIdentity' {
@@ -46,12 +46,12 @@ function Initialize-AadAuthenticationFactory
                     $script:aadAuthenticationFactory = New-AadAuthenticationFactory `
                     -ClientId $msiClientId `
                     -UseManagedIdentity `
-                    -CloudEnvironment $cloudEnvironment
+                    #-cloudEnvironment $cloudEnvironment
                 }
                 else {
                     $script:aadAuthenticationFactory = New-AadAuthenticationFactory `
                     -UseManagedIdentity `
-                    -CloudEnvironment $cloudEnvironment
+                    #-cloudEnvironment $cloudEnvironment
                 }
             }
             'WorkloadIdentityFederation' {
@@ -59,7 +59,7 @@ function Initialize-AadAuthenticationFactory
                     -TenantId $tenantId `
                     -ClientId $servicePrincipalId `
                     -Assertion $assertion `
-                    -CloudEnvironment $cloudEnvironment
+                    #-cloudEnvironment $cloudEnvironment
             }
         }
     }
