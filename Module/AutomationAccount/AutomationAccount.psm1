@@ -873,7 +873,7 @@ Function Add-AutoConfiguration
         [switch]
         $WaitForCompletion,
         [Parameter()]
-        [string]$Location = "westeurope",
+        [string]$Location,
         [Parameter()]
         [string]$AutomationAccountResourceId = $script:AutomationAccountResourceId
     )
@@ -887,11 +887,16 @@ Function Add-AutoConfiguration
     }
     process
     {
+         if ([string]::IsNullOrEmpty($Location))
+        {
+            $Location = $script:accountLocation
+        }
+
         try {
             write-verbose "Modifying config on $configUri"
             $payload = @{
                 name = $Name
-                location = $location
+                location = $Location
                 properties = @{
                     description = $Description
                     source = @{

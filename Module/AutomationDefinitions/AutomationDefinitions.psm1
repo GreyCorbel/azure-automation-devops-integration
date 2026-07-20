@@ -14,7 +14,7 @@ function New-RunbookDefinition
         $Type,
         [string]
             #Type of the runbook
-        $Location = 'westeurope',
+        $Location,
         [switch]
             #where runbook runs
             #for running on Azure, enter 'Azure' or empty string.
