@@ -28,6 +28,7 @@ variables:
   automationAccountDEV: 'automation-account-name-dev'
   serviceConnectionDEV: 'devops-service-connection-name-dev'
   subscriptionDEV: 'azure-subscription-name-dev'
+  cloudEnvironmentDEV: 'AzureCloud'
 
   #add other environmetns as neede
 
@@ -47,5 +48,6 @@ stages:
       resourceGroup: ${{ variables.resourceGroupDEV }}
       automationAccount: ${{ variables.automationAccountDEV }}
       subscription: ${{ variables.subscriptionDEV }}
+      cloudEnvironment: ${{ variables.cloudEnvironmentDEV }}
 
 # deploy to other stages and needed

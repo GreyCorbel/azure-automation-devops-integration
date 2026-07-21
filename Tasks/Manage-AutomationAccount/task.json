@@ -121,6 +121,19 @@
       "defaultValue": false,
       "required": false,
       "helpMarkDown": "Whether to turn on verbose logging"
+    },
+    {
+      "name": "cloudEnvironment",
+      "type": "picklist",
+      "label": "Cloud Environment",
+      "defaultValue": "AzureCloud",
+      "required": false,
+      "helpMarkDown": "Select the target Azure cloud environment",
+      "options": {
+        "AzureCloud": "Azure Public Cloud",
+        "AzureUSGovernment": "Azure US Government",
+        "AzureChinaCloud": "Azure China Cloud"
+      }
     }
   ],
   "execution": {

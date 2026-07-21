@@ -30,6 +30,7 @@ Write-Host "Import succeeded!"
 #read pipeline variables
 Write-Host "Reading pipeline variables... (Using vstsTaskSdk)"
 $environmentName = Get-VstsInput -Name 'environmentName' -Require
+$cloudEnvironment = Get-VstsInput -Name 'cloudEnvironment'
 $projectDir = Get-VstsInput -Name 'projectDir' -Require
 $subscription = Get-VstsInput -Name 'subscription' -Require
 $azureSubscription = Get-VstsInput -Name 'azureSubscription' -Require
@@ -62,7 +63,8 @@ switch ($serviceConnection.auth.scheme) {
             -servicePrincipalId $servicePrincipalId `
             -servicePrincipalKey $servicePrincipalkey `
             -tenantId $tenantId `
-            -cert $cert
+            -cert $cert `
+            -cloudEnvironment $cloudEnvironment
         }
         #Service Principal
         else {
@@ -71,7 +73,8 @@ switch ($serviceConnection.auth.scheme) {
             Initialize-AadAuthenticationFactory `
             -servicePrincipalId $servicePrincipalId `
             -servicePrincipalKey $servicePrincipalkey `
-            -tenantId $tenantId
+            -tenantId $tenantId `
+            -cloudEnvironment $cloudEnvironment
         }
         break;
      }
@@ -80,7 +83,8 @@ switch ($serviceConnection.auth.scheme) {
         Write-Host "ManagedIdentitx auth"
 
         Initialize-AadAuthenticationFactory `
-            -serviceConnection $serviceConnection
+            -serviceConnection $serviceConnection `
+            -cloudEnvironment $cloudEnvironment
         break;
      }
 
@@ -116,7 +120,8 @@ switch ($serviceConnection.auth.scheme) {
         Initialize-AadAuthenticationFactory `
             -servicePrincipalId $servicePrincipalId `
             -assertion $assertion `
-            -tenantId $tenantId
+            -tenantId $tenantId `
+            -cloudEnvironment $cloudEnvironment
         break;
      }
 }
@@ -126,7 +131,7 @@ Init-Environment -ProjectDir $ProjectDir -Environment $EnvironmentName
 
 #this requires to be connected to be logged in to Azure. Azure POwershell task does it automatically for you
 #if running outside of this task, you may need to call Connect-AzAccount manually
-Connect-AutoAutomationAccount -Subscription $subscription -ResourceGroup $ResourceGroup -AutomationAccount $AutomationAccount
+Connect-AutoAutomationAccount -Subscription $subscription -ResourceGroup $ResourceGroup -AutomationAccount $AutomationAccount -CloudEnvironment $cloudEnvironment
 
 $base = new-object DateTime(1970,1,1)
 $base = [DateTime]::SpecifyKind($base, 'Utc')
