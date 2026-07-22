@@ -1,0 +1,76 @@
+name: Sync to Marketplace Repos
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  # --- SYNCHRONIZATION AUTOMATION ACCOUNT ---
+  sync-account-repo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Master Repo
+        uses: actions/checkout@v4
+        with:
+          path: master-repo
+
+      - name: Checkout Account Repo
+        uses: actions/checkout@v4
+        with:
+          repository: GreyCorbel/Manage-AutomationAccount 
+          token: ${{ secrets.GIT_ACTION_SYNC_PAT }}
+          path: account-repo
+
+      - name: Copy Files to Account Repo
+        run: |
+          cp -r master-repo/Module account-repo/
+          
+          mkdir -p account-repo/Tasks/Manage-AutomationAccount
+          cp master-repo/Tasks/Manage-AutomationAccount/Manage-AutomationAccount.ps1 account-repo/Tasks/Manage-AutomationAccount/
+          
+          cp master-repo/Tasks/Manage-AutomationAccount/action.yml account-repo/action.yml
+
+      - name: Push to Account Repo
+        run: |
+          cd account-repo
+          git config user.name "GitHub Action Bot"
+          git config user.email "bot@github.com"
+          git add .
+          git commit -m "Auto-sync from Master repository" || echo "Nothing new to synchronize"
+          git push
+
+  # --- SYNCHRONIZATION WEBHOOK ---
+  sync-webhook-repo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Master Repo
+        uses: actions/checkout@v4
+        with:
+          path: master-repo
+
+      - name: Checkout WebHook Repo
+        uses: actions/checkout@v4
+        with:
+          repository: GreyCorbel/Manage-AutomationWebHook
+          token: ${{ secrets.GIT_ACTION_SYNC_PAT }}
+          path: webhook-repo
+
+      - name: Copy Files to WebHook Repo
+        run: |
+          cp -r master-repo/Module webhook-repo/
+          
+          mkdir -p webhook-repo/Tasks/Manage-AutomationWebHook
+          cp master-repo/Tasks/Manage-AutomationWebHook/Manage-AutomationWebHook.ps1 webhook-repo/Tasks/Manage-AutomationWebHook/
+          
+          cp master-repo/Tasks/Manage-AutomationWebHook/action.yml webhook-repo/action.yml
+
+      - name: Push to WebHook Repo
+        run: |
+          cd webhook-repo
+          git config user.name "GitHub Action Bot"
+          git config user.email "bot@github.com"
+          git add .
+          git commit -m "Auto-sync from Master repository" || echo "Nothing new to synchronize"
+          git push

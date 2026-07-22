@@ -1,0 +1,50 @@
+name: 'Manage-AutomationAccountWebHook'
+description: "Checks for webhook expiration in automation account and automatically creates a new instance when webhook is about to expire"
+author: 'Greycorbel s.r.o'
+
+branding:
+  icon: cloud
+  color: blue
+
+inputs:
+  environmentName:
+    description: "Name of the stage/environment we're deploying."
+    required: true
+  projectDir:
+    description: "Root folder of automation account content. e.g. '$(System.DefaultWorkingDirectory)/Automation/Default'"
+    required: true
+  subscription:
+    description: "Name of the subscription where automation account is located."
+    required: true
+  azureSubscription:
+    description: "Name of service connection with contributors rights for defined subscription."
+    required: true
+  resourceGroup:
+    description: "Name of the resource group where automation account is located."
+    required: true
+  automationAccount: 
+    description: "Name of automation account that we deploy to."
+    required: true
+  fullSync:
+    description: "Whether or not to remove any existing runbooks and variables from automation account that are not source-controlled."
+    required: false
+  cloudEnvironment:
+    description: "Select the target Azure cloud environment"
+    required: false
+    default: "AzureCloud"
+runs:
+  using: "composite"
+  steps:
+    - name: run Manage-AutomationAccountWebHook script
+      shell: pwsh
+      run: |
+        & "$env:GITHUB_ACTION_PATH/Manage-AutomationAccountWebHook.ps1" `
+        -EnvironmentName "${{ inputs.environmentName }}" `
+        -ProjectDir "${{ inputs.projectDir }}" `
+        -Subscription "${{ inputs.subscription }}" `
+        -AzureSubscription "${{ inputs.azureSubscription }}" `
+        -ResourceGroup "${{ inputs.resourceGroup }}" `
+        -AutomationAccount "${{ inputs.automationAccount }}" `
+        -FullSync:"${{ inputs.fullSync }}" `
+        -CloudEnvironment "${{ inputs.cloudEnvironment }}"
+
