@@ -38,7 +38,7 @@ runs:
     - name: run Manage-AutomationAccountWebHook script
       shell: pwsh
       run: |
-        & "$env:GITHUB_ACTION_PATH/Manage-AutomationAccountWebHook.ps1" `
+        & "$env:GITHUB_ACTION_PATH/Tasks/Manage-AutomationAccountWebHook.ps1" `
         -EnvironmentName "${{ inputs.environmentName }}" `
         -ProjectDir "${{ inputs.projectDir }}" `
         -Subscription "${{ inputs.subscription }}" `

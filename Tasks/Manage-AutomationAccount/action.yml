@@ -63,7 +63,7 @@ runs:
     - name: run Manage-AutomationAccount script
       shell: pwsh
       run: |
-        & "$env:GITHUB_ACTION_PATH/Manage-AutomationAccount.ps1" `
+        & "$env:GITHUB_ACTION_PATH/Tasks/Manage-AutomationAccount.ps1" `
           -Scope "${{ inputs.scope }}" `
           -EnvironmentName "${{ inputs.environmentName }}" `
           -ProjectDir "${{ inputs.projectDir }}" `
