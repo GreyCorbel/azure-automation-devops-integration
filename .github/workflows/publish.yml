@@ -3,7 +3,7 @@ name: Sync to Marketplace Repos
 on:
   push:
     branches:
-      - master
+      - git-action
   workflow_dispatch:
 
 jobs:
