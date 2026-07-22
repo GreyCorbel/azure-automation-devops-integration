@@ -1,5 +1,5 @@
 name: 'Manage-AutomationAccount'
-description: 'Deploys runbooks, variables, schedules and their links to runbooks, modules and Dsc configurations to Azure Automation account'
+description: 'Deploys runbooks, variables, schedules and links to runbooks, modules and Dsc configurations to Azure Automation account'
 author: 'Greycorbel s.r.o'
 
 branding:
