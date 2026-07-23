@@ -37,14 +37,14 @@ runs:
   steps:
     - name: run Manage-AutomationAccountWebHook script
       shell: pwsh
-      run: |
-        & "$env:GITHUB_ACTION_PATH/Tasks/Manage-AutomationAccountWebHook/Manage-AutomationAccountWebHook.ps1" `
-        -INPUT_ENVIRONMENTNAME "${{ inputs.environmentName }}" `
-        -INPUT_PROJECTDIR "${{ inputs.projectDir }}" `
-        -INPUT_SUBSCRIPTION "${{ inputs.subscription }}" `
-        -INPUT_AZURESUBSCRIPTION "${{ inputs.azureSubscription }}" `
-        -INPUT_RESOURCEGROUP "${{ inputs.resourceGroup }}" `
-        -INPUT_AUTOMATIONACCOUNT "${{ inputs.automationAccount }}" `
-        -INPUT_FULLSYNC:"${{ inputs.fullSync }}" `
-        -INPUT_CLOUDENVIRONMENT "${{ inputs.cloudEnvironment }}"
+      run: '& "$env:GITHUB_ACTION_PATH/Tasks/Manage-AutomationAccountWebHook/Manage-AutomationAccountWebHook.ps1"'
+      env:
+        INPUT_ENVIRONMENTNAME: "${{ inputs.environmentName }}"
+        INPUT_PROJECTDIR: "${{ inputs.projectDir }}"
+        INPUT_SUBSCRIPTION: "${{ inputs.subscription }}"
+        INPUT_AZURESUBSCRIPTION: "${{ inputs.azureSubscription }}"
+        INPUT_RESOURCEGROUP: "${{ inputs.resourceGroup }}"
+        INPUT_AUTOMATIONACCOUNT: "${{ inputs.automationAccount }}"
+        INPUT_FULLSYNC: "${{ inputs.fullSync }}" 
+        INPUT_CLOUDENVIRONMENT: "${{ inputs.cloudEnvironment }}"
 
