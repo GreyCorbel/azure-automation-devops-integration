@@ -37,6 +37,7 @@ inputs:
   fullSync:
     description: "Whether or not to remove any existing runbooks and variables from automation account that are not source-controlled."
     required: false
+    default: 'false'
   cloudEnvironment:
     description: "Select the target Azure cloud environment"
     required: false
