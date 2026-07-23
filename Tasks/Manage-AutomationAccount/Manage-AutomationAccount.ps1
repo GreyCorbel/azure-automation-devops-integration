@@ -2,7 +2,7 @@
 Write-Host "Reading task parameters"
 [char[]]$delimiters = @(',', ' ')
 
-if($env.GITHUB_ACTIONS -eq 'true'){
+if($env:GITHUB_ACTIONS -eq 'true'){
 
     $scope = $env.INPUT_SCOPE.Split($delimiters, [StringSplitOptions]::RemoveEmptyEntries)
     $environmentName = $env.INPUT_ENVIRONMENTNAME
@@ -78,7 +78,7 @@ Write-Host "Import succeeded!"
 
 Write-Host "Starting process..."
 
-if($env.GITHUB_ACTIONS -eq 'true'){
+if($env:GITHUB_ACTIONS -eq 'true'){
     try {
             $spnCredentials = $azureSubscription | ConvertFrom-Json
 
