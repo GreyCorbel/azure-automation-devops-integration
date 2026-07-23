@@ -16,8 +16,17 @@ inputs:
   subscription:
     description: "Name of the subscription where automation account is located."
     required: true
-  azureSubscription:
-    description: "Name of service connection with contributors rights for defined subscription."
+  azureClientId:
+    description: "Client ID (App ID) of the service principal with contributor rights for defined subscription."
+    required: true
+  azureClientSecret:
+    description: "Client secret of the service principal."
+    required: true
+  azureTenantId:
+    description: "Azure AD tenant ID of the service principal."
+    required: true
+  azureSubscriptionId:
+    description: "Subscription ID where automation account is located."
     required: true
   resourceGroup:
     description: "Name of the resource group where automation account is located."
@@ -42,7 +51,7 @@ runs:
         INPUT_ENVIRONMENTNAME: "${{ inputs.environmentName }}"
         INPUT_PROJECTDIR: "${{ inputs.projectDir }}"
         INPUT_SUBSCRIPTION: "${{ inputs.subscription }}"
-        INPUT_AZURESUBSCRIPTION: "${{ inputs.azureSubscription }}"
+        INPUT_AZURESUBSCRIPTION: '{"clientId":"${{ inputs.azureClientId }}","clientSecret":"${{ inputs.azureClientSecret }}","tenantId":"${{ inputs.azureTenantId }}","subscriptionId":"${{ inputs.azureSubscriptionId }}"}'
         INPUT_RESOURCEGROUP: "${{ inputs.resourceGroup }}"
         INPUT_AUTOMATIONACCOUNT: "${{ inputs.automationAccount }}"
         INPUT_FULLSYNC: "${{ inputs.fullSync }}" 
