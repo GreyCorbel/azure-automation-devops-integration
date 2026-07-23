@@ -7,9 +7,6 @@ branding:
   color: blue
 
 inputs:
-  taskType:
-    description: "Enter the operation you want to perform: 'Account' or 'Webhook'"
-    required: true
   scope:
     description: "What we are deploying - 'Runbooks', 'Variables', 'Configurations', 'Schedules', 'Modules', 'JobSchedules','Webhooks'"
     required: true
