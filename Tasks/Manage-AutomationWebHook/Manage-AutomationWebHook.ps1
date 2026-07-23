@@ -28,14 +28,14 @@ Import-Module $modulePath -Force -WarningAction SilentlyContinue
 Write-Host "Import succeeded!"
 if($env:GITHUB_ACTIONS -eq 'true'){
     Write-Host "Reading pipeline variables... (github actions)"
-    $environmentName = $env.INPUT_ENVIRONMENTNAME
-    $cloudEnvironment = $env.INPUT_CLOUDENVIRONMENT
-    $projectDir = $env.INPUT_PROJECTDIR
-    $subscription = $env.INPUT_SUBSCRIPTION
-    $azureSubscription = $env.INPUT_AZUREsUBSCRIPTION
-    $resourceGroup = $env.RESOURCEGROUP
-    $automationAccount = $env.AUTOMATIONACCOUNT
-    $fullSync = [System.Convert]::ToBoolean($env.fullSync)
+    $environmentName = $env:INPUT_ENVIRONMENTNAME
+    $cloudEnvironment = $env:INPUT_CLOUDENVIRONMENT
+    $projectDir = $env:INPUT_PROJECTDIR
+    $subscription = $env:INPUT_SUBSCRIPTION
+    $azureSubscription = $env:INPUT_AZUREsUBSCRIPTION
+    $resourceGroup = $env:RESOURCEGROUP
+    $automationAccount = $env:AUTOMATIONACCOUNT
+    $fullSync = [System.Convert]::ToBoolean($env:fullSync)
 }else{
     #read pipeline variables
     Write-Host "Reading pipeline variables... (Using vstsTaskSdk)"
