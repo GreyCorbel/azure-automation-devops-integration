@@ -7,16 +7,16 @@ if($env:GITHUB_ACTIONS -eq 'true'){
     $scope = $env:INPUT_SCOPE.Split($delimiters, [StringSplitOptions]::RemoveEmptyEntries)
     $environmentName = $env:INPUT_ENVIRONMENTNAME
     $cloudEnvironment = $env:INPUT_CLOUDENVIRONMENT
-    $projectDir = $env:INPUT.PROJECTDIR
+    $projectDir = $env:INPUT_PROJECTDIR
     $subscription = $env:INPUT_SUBSCRIPTION
     $azureSubscription = $env:INPUT_AZURESUBSCRIPTION
     $resourceGroup = $env:INPUT_RESOURCEGROUP
     $automationAccount = $env:INPUT_AUTOMATIONACCOUNT
     $storageAccount = $env:INPUT_STORAGEACCOUNT
     $storageAccountContainer = $env:INPUT_STORAGEACCOUNTCONTAINER
-    $fullSync = [System.convert]::ToBoolean($evn:INPUT_FULLSYNC)
+    $fullSync = [System.convert]::ToBoolean($env:INPUT_FULLSYNC)
     $reportMissingImplementation = [System.convert]::ToBoolean($env:INPUT_REPORTMISSINGIMPLEMENTATION)
-    $verboseLog = [System.convert]::ToBoolean($env:INPUT_VERBOSELOG)
+    $verboseLog = [System.convert]::ToBoolean($env:INPUT_VERBOSE)
     $helperHybridWorkerModuleManagement = [System.convert]::ToBoolean($env:INPUT_HELPERHYBRIDWORKERMODULEMANAGEMENT)
 }else{
     $scope = (Get-VstsInput -Name 'scope' -Require).Split($delimiters, [StringSplitOptions]::RemoveEmptyEntries)

@@ -40,10 +40,10 @@ if($env:GITHUB_ACTIONS -eq 'true'){
     $cloudEnvironment = $env:INPUT_CLOUDENVIRONMENT
     $projectDir = $env:INPUT_PROJECTDIR
     $subscription = $env:INPUT_SUBSCRIPTION
-    $azureSubscription = $env:INPUT_AZUREsUBSCRIPTION
-    $resourceGroup = $env:RESOURCEGROUP
-    $automationAccount = $env:AUTOMATIONACCOUNT
-    $fullSync = [System.Convert]::ToBoolean($env:fullSync)
+    $azureSubscription = $env:INPUT_AZURESUBSCRIPTION
+    $resourceGroup = $env:INPUT_RESOURCEGROUP
+    $automationAccount = $env:INPUT_AUTOMATIONACCOUNT
+    $fullSync = [System.Convert]::ToBoolean($env:INPUT_FULLSYNC)
 }else{
     #read pipeline variables
     Write-Host "Reading pipeline variables... (Using vstsTaskSdk)"
@@ -283,8 +283,9 @@ if($FullSync)
 }
 
 #store webhooks to folder for future reference by subsequent task
-$newWebhooksfolder = "$($env:SYSTEM_DEFAULTWORKINGDIRECTORY)/WebHooks-new"
-$managedWebhooksfolder = "$($env:SYSTEM_DEFAULTWORKINGDIRECTORY)/WebHooks-managed"
+$workingDir = if ($env:GITHUB_ACTIONS -eq 'true') { $env:GITHUB_WORKSPACE } else { $env:SYSTEM_DEFAULTWORKINGDIRECTORY }
+$newWebhooksfolder = "$workingDir/WebHooks-new"
+$managedWebhooksfolder = "$workingDir/WebHooks-managed"
 if(-not (Test-Path $newWebhooksfolder)) {New-Item -ItemType Directory -Path $newWebhooksfolder | Out-Null}
 if(-not (Test-Path $managedWebhooksfolder)) {New-Item -ItemType Directory -Path $managedWebhooksfolder | Out-Null}
 foreach($webhook in $newWebhooks)
