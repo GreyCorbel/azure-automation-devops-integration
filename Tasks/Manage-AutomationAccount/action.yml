@@ -64,17 +64,17 @@ runs:
       shell: pwsh
       run: |
         & "$env:GITHUB_ACTION_PATH/Tasks/Manage-AutomationAccount/Manage-AutomationAccount.ps1" `
-          -Scope "${{ inputs.scope }}" `
-          -EnvironmentName "${{ inputs.environmentName }}" `
-          -ProjectDir "${{ inputs.projectDir }}" `
-          -Subscription "${{ inputs.subscription }}" `
-          -AzureSubscription "${{ inputs.azureSubscription }}" `
-          -ResourceGroup "${{ inputs.resourceGroup }}" `
-          -AutomationAccount "${{ inputs.automationAccount }}" `
-          -StorageAccount "${{ inputs.storageAccount }}" `
-          -StorageAccountContainer "${{ inputs.storageAccountContainer }}" `
-          -FullSync:"${{ inputs.fullSync }}" `
-          -ReportMissingImplementation:"${{ inputs.reportMissingImplementation }}" `
-          -HelperHybridWorkerModuleManagement:"${{ inputs. helperHybridWorkerModuleManagement }}" `
-          -Verbose:"${{ inputs.verbose }}" `
-          -CloudEnvironment "${{ inputs.cloudEnvironment }}"
+          -INPUT_SCOPE "${{ inputs.scope }}" `
+          -INPUT_ENVIRONMENTNAME "${{ inputs.environmentName }}" `
+          -INPUT_PROJECTDIR "${{ inputs.projectDir }}" `
+          -INPUT_SUBSCRIPTION "${{ inputs.subscription }}" `
+          -INPUT_AZURESUBSCRIPTION "${{ inputs.azureSubscription }}" `
+          -INPUT_RESOURCEGROUP "${{ inputs.resourceGroup }}" `
+          -INPUT_AUTOMATIONACCOUNT "${{ inputs.automationAccount }}" `
+          -INPUT_STORAGEACCOUNT "${{ inputs.storageAccount }}" `
+          -INPUT_STORAGEACCOUNTCONTAINER "${{ inputs.storageAccountContainer }}" `
+          -INPUT_FULLSYNC:"${{ inputs.fullSync }}" `
+          -INPUT_REPORTMISSINGIMPLEMENTATION:"${{ inputs.reportMissingImplementation }}" `
+          -INPUT_HELPERHYBRIDWORKERMODULEMANAGEMENT:"${{ inputs.helperHybridWorkerModuleManagement }}" `
+          -INPUT_VERBOSE:"${{ inputs.verbose }}" `
+          -INPUT_CLOUDENVIRONMENT "${{ inputs.cloudEnvironment }}"
