@@ -19,7 +19,7 @@ Write-Host "Importing internal PS modules..."
 #$parentDirectory = Split-Path -Path $PSScriptRoot -Parent
 #$grandparentDirectory = Split-Path -Path $parentDirectory -Parent
 if($env:GITHUB_ACTIONS -eq 'true'){
-    $modulePath = Join-Path -Path $env:GITHUB_ACTIONS_PATH -ChildPath 'Module\AutomationAccount'
+    $modulePath = Join-Path -Path $env:GITHUB_ACTION_PATH -ChildPath 'Module\AutomationAccount'
 }else{
     $modulePath = [System.IO.Path]::Combine($PSScriptRoot,'Module','AutomationAccount')
 }
@@ -27,7 +27,7 @@ Write-Host "module path: $modulePath"
 Import-Module $modulePath -Force
 #load runtime support
 if($env:GITHUB_ACTIONS -eq 'true'){
-    $modulePath = Join-Path -Path $env:GITHUB_ACTIONS_PATH -ChildPath 'Module\AutoRuntime'
+    $modulePath = Join-Path -Path $env:GITHUB_ACTION_PATH -ChildPath 'Module\AutoRuntime'
 }else{
     $modulePath = [System.IO.Path]::Combine($PSScriptRoot, 'Module', 'AutoRuntime')
 }

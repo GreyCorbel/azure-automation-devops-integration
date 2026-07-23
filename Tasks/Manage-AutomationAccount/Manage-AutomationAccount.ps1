@@ -68,7 +68,7 @@ Get-Module AadAuthenticationFactory | Format-List Name, Version, Path
 
 Write-Host "Importing internal PS modules..."
 if($env:GITHUB_ACTIONS -eq 'true'){
-    $modulePath = Join-Path -Path $env:GITHUB_ACTIONS_PATH -ChildPath 'Module\AutomationAccount'
+    $modulePath = Join-Path -Path $env:GITHUB_ACTION_PATH -ChildPath 'Module\AutomationAccount'
 }else{
     $modulePath = [System.IO.Path]::Combine($PSScriptRoot, 'Module', 'AutomationAccount')
 }
@@ -77,7 +77,7 @@ Write-Host "module path: $modulePath"
 Import-Module $modulePath -Force -WarningAction SilentlyContinue
 #load runtime support
 if($env:GITHUB_ACTIONS -eq 'true'){
-    $modulePath = Join-Path -Path $env:GITHUB_ACTIONS_PATH -ChildPath 'Module\Autoruntime'
+    $modulePath = Join-Path -Path $env:GITHUB_ACTION_PATH -ChildPath 'Module\Autoruntime'
 }else{
     $modulePath = [System.IO.Path]::Combine($PSScriptRoot, 'Module', 'AutoRuntime')
 }
