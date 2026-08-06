@@ -92,28 +92,45 @@ Write-Host $azureSubscription
 
 if($env:GITHUB_ACTIONS -eq 'true'){
     try {
-            $spnCredentials = $azureSubscription | ConvertFrom-Json
+        $spnCredentials = $azureSubscription | ConvertFrom-Json
 
-            $servicePrincipalId = $spnCredentials.clientId
-            $servicePrincipalkey = $spnCredentials.clientSecret
-            $tenantId = $spnCredentials.tenantId
+        $servicePrincipalId = $spnCredentials.clientId
+        $servicePrincipalkey = $spnCredentials.clientSecret
+        $tenantId = $spnCredentials.tenantId
 
-            if ([string]::IsNullOrEmpty($servicePrincipalId) -or [string]::IsNullOrEmpty($servicePrincipalkey)) {
-                throw "JSON missing clientId or clientSecret."
-            }
 
+        if (-not [string]::IsNullOrEmpty($servicePrincipalkey)) {
             Write-Host "ServicePrincipal with ClientSecret auth (GitHub Actions)"
             Initialize-AadAuthenticationFactory `
                 -servicePrincipalId $servicePrincipalId `
                 -servicePrincipalKey $servicePrincipalkey `
                 -tenantId $tenantId `
                 -cloudEnvironment $cloudEnvironment 
-
-        } catch {
-            Write-Error "Error during GitHub Actions login. Ensure that the 'azureSubscription' input contains valid JSON in the Azure Credentials format."
-            Write-Error $_.Exception.Message
-            exit 1
         }
+        else {
+            Write-Host "OIDC (Federated Credentials) auth (GitHub Actions)"
+            
+            if ([string]::IsNullOrEmpty($env:ACTIONS_ID_TOKEN_REQUEST_URL) -or [string]::IsNullOrEmpty($env:ACTIONS_ID_TOKEN_REQUEST_TOKEN)) {
+                throw "OIDC token variables missing. Ensure 'permissions: id-token: write' is set in the workflow."
+            }
+
+            $audience = "api://AzureADTokenExchange"
+            $requestUrl = "$($env:ACTIONS_ID_TOKEN_REQUEST_URL)&audience=$audience"
+            $response = Invoke-RestMethod -Method Get -Uri $requestUrl -Headers @{ Authorization = "Bearer $env:ACTIONS_ID_TOKEN_REQUEST_TOKEN" }
+            $assertion = $response.value
+
+            Initialize-AadAuthenticationFactory `
+                -servicePrincipalId $servicePrincipalId `
+                -assertion $assertion `
+                -tenantId $tenantId `
+                -cloudEnvironment $cloudEnvironment
+        }
+
+    } catch {
+        Write-Error "Error during GitHub Actions login. Ensure that the 'azureSubscription' input contains valid JSON in the Azure Credentials format."
+        Write-Error $_.Exception.Message
+        exit 1
+    }
 }else{
     # retrieve service connection object
     $serviceConnection = Get-VstsEndpoint -Name $azureSubscription -Require

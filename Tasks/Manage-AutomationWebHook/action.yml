@@ -21,7 +21,7 @@ inputs:
     required: true
   azureClientSecret:
     description: "Client secret of the service principal."
-    required: true
+    required: false
   azureTenantId:
     description: "Azure AD tenant ID of the service principal."
     required: true

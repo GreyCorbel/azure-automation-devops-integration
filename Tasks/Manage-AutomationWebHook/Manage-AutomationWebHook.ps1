@@ -65,13 +65,40 @@ if ($env:GITHUB_ACTIONS -eq 'true') {
     Write-Host "GitHub Actions auth: Parsing Azure credentials JSON..."
     try {
         $spnCredentials = $azureSubscription | ConvertFrom-Json
-        Initialize-AadAuthenticationFactory `
-            -servicePrincipalId $spnCredentials.clientId `
-            -servicePrincipalKey $spnCredentials.clientSecret `
-            -tenantId $spnCredentials.tenantId `
-            -cloudEnvironment $cloudEnvironment 
+        
+        $servicePrincipalId = $spnCredentials.clientId
+        $servicePrincipalkey = $spnCredentials.clientSecret
+        $tenantId = $spnCredentials.tenantId
+
+        if (-not [string]::IsNullOrEmpty($servicePrincipalkey)) {
+            Write-Host "ServicePrincipal with ClientSecret auth (GitHub Actions)"
+            Initialize-AadAuthenticationFactory `
+                -servicePrincipalId $servicePrincipalId `
+                -servicePrincipalKey $servicePrincipalkey `
+                -tenantId $tenantId `
+                -cloudEnvironment $cloudEnvironment 
+        }
+        else {
+            Write-Host "OIDC (Federated Credentials) auth (GitHub Actions)"
+            
+            if ([string]::IsNullOrEmpty($env:ACTIONS_ID_TOKEN_REQUEST_URL) -or [string]::IsNullOrEmpty($env:ACTIONS_ID_TOKEN_REQUEST_TOKEN)) {
+                throw "OIDC token variables missing. Ensure 'permissions: id-token: write' is set in the workflow."
+            }
+
+            $audience = "api://AzureADTokenExchange"
+            $requestUrl = "$($env:ACTIONS_ID_TOKEN_REQUEST_URL)&audience=$audience"
+            $response = Invoke-RestMethod -Method Get -Uri $requestUrl -Headers @{ Authorization = "Bearer $env:ACTIONS_ID_TOKEN_REQUEST_TOKEN" }
+            $assertion = $response.value
+
+            Initialize-AadAuthenticationFactory `
+                -servicePrincipalId $servicePrincipalId `
+                -assertion $assertion `
+                -tenantId $tenantId `
+                -cloudEnvironment $cloudEnvironment
+        }
     } catch {
         Write-Error "Error logging in to GitHub Actions. Check the JSON format in 'azureSubscription'."
+        Write-Error $_.Exception.Message
         exit 1
     }
 }else{
