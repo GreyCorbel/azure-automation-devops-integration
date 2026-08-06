@@ -96,9 +96,11 @@ if ($env:GITHUB_ACTIONS -eq 'true') {
                 -tenantId $tenantId `
                 -cloudEnvironment $cloudEnvironment
         }
-    } catch {
-        Write-Error "Error logging in to GitHub Actions. Check the JSON format in 'azureSubscription'."
+    }catch {
+        Write-Error "--- SKUTECNA CHYBA Z AZURE ---"
         Write-Error $_.Exception.Message
+        Write-Error "--- DETAIL ---"
+        Write-Error $_.ScriptStackTrace
         exit 1
     }
 }else{
