@@ -18,113 +18,179 @@ Write-Host "Installation succeeded!"
 Write-Host "Importing internal PS modules..."
 #$parentDirectory = Split-Path -Path $PSScriptRoot -Parent
 #$grandparentDirectory = Split-Path -Path $parentDirectory -Parent
-$modulePath = [System.IO.Path]::Combine($PSScriptRoot,'Module','AutomationAccount')
+if($env:GITHUB_ACTIONS -eq 'true'){
+    $modulePath = Join-Path -Path $env:GITHUB_ACTION_PATH -ChildPath 'Module\AutomationAccount'
+}else{
+    $modulePath = [System.IO.Path]::Combine($PSScriptRoot,'Module','AutomationAccount')
+}
 Write-Host "module path: $modulePath"
 Import-Module $modulePath -Force
 #load runtime support
-$modulePath = [System.IO.Path]::Combine($PSScriptRoot, 'Module', 'AutoRuntime')
+if($env:GITHUB_ACTIONS -eq 'true'){
+    $modulePath = Join-Path -Path $env:GITHUB_ACTION_PATH -ChildPath 'Module\AutoRuntime'
+}else{
+    $modulePath = [System.IO.Path]::Combine($PSScriptRoot, 'Module', 'AutoRuntime')
+}
 Write-Host "module path: $modulePath"
 Import-Module $modulePath -Force -WarningAction SilentlyContinue
 Write-Host "Import succeeded!"
+if($env:GITHUB_ACTIONS -eq 'true'){
+    Write-Host "Reading pipeline variables... (github actions)"
+    $environmentName = $env:INPUT_ENVIRONMENTNAME
+    $cloudEnvironment = $env:INPUT_CLOUDENVIRONMENT
+    $projectDir = $env:INPUT_PROJECTDIR
+    $subscription = $env:INPUT_SUBSCRIPTION
+    $azureSubscription = $env:INPUT_AZURESUBSCRIPTION
+    $resourceGroup = $env:INPUT_RESOURCEGROUP
+    $automationAccount = $env:INPUT_AUTOMATIONACCOUNT
+    $fullSync = [System.Convert]::ToBoolean($env:INPUT_FULLSYNC)
+}else{
+    #read pipeline variables
+    Write-Host "Reading pipeline variables... (Using vstsTaskSdk)"
+    $environmentName = Get-VstsInput -Name 'environmentName' -Require
+    $cloudEnvironment = Get-VstsInput -Name 'cloudEnvironment'
+    $projectDir = Get-VstsInput -Name 'projectDir' -Require
+    $subscription = Get-VstsInput -Name 'subscription' -Require
+    $azureSubscription = Get-VstsInput -Name 'azureSubscription' -Require
+    $resourceGroup = Get-VstsInput -Name 'resourceGroup' -Require
+    $automationAccount = Get-VstsInput -Name 'automationAccount' -Require
+    $fullSync = Get-VstsInput -Name 'fullSync'
+}
 
-#read pipeline variables
-Write-Host "Reading pipeline variables... (Using vstsTaskSdk)"
-$environmentName = Get-VstsInput -Name 'environmentName' -Require
-$cloudEnvironment = Get-VstsInput -Name 'cloudEnvironment'
-$projectDir = Get-VstsInput -Name 'projectDir' -Require
-$subscription = Get-VstsInput -Name 'subscription' -Require
-$azureSubscription = Get-VstsInput -Name 'azureSubscription' -Require
-$resourceGroup = Get-VstsInput -Name 'resourceGroup' -Require
-$automationAccount = Get-VstsInput -Name 'automationAccount' -Require
-$fullSync = Get-VstsInput -Name 'fullSync'
 Write-Host "Loading finished!"
 
 Write-Host "Starting processing"
-# retrieve service connection object
-$serviceConnection = Get-VstsEndpoint -Name $azureSubscription -Require
 
-#initialize aadAuthenticationFactory
-Write-Verbose "Initialize AadAuthenticationFactory object..."
-switch ($serviceConnection.auth.scheme) {
-    'ServicePrincipal' { 
-        # get service connection object properties
-        $servicePrincipalId = $serviceConnection.auth.parameters.serviceprincipalid
-        $servicePrincipalkey = $serviceConnection.auth.parameters.serviceprincipalkey
-        $tenantId = $serviceConnection.auth.parameters.tenantid
+if ($env:GITHUB_ACTIONS -eq 'true') {
+    Write-Host "GitHub Actions auth: Parsing Azure credentials JSON..."
+    try {
+        $spnCredentials = $azureSubscription | ConvertFrom-Json
+        
+        $servicePrincipalId = $spnCredentials.clientId
+        $servicePrincipalkey = $spnCredentials.clientSecret
+        $tenantId = $spnCredentials.tenantId
 
-        # SPNcertificate
-        if ($serviceConnection.auth.parameters.authenticationType -eq 'SPNCertificate') {
-            Write-Host "ServicePrincipal with Certificate auth"
-
-            $certData = $serviceConnection.Auth.parameters.servicePrincipalCertificate
-            $cert= [System.Security.Cryptography.X509Certificates.X509Certificate2]::CreateFromPem($certData,$certData)
-
+        if (-not [string]::IsNullOrEmpty($servicePrincipalkey)) {
+            Write-Host "ServicePrincipal with ClientSecret auth (GitHub Actions)"
             Initialize-AadAuthenticationFactory `
-            -servicePrincipalId $servicePrincipalId `
-            -servicePrincipalKey $servicePrincipalkey `
-            -tenantId $tenantId `
-            -cert $cert `
-            -cloudEnvironment $cloudEnvironment
+                -servicePrincipalId $servicePrincipalId `
+                -servicePrincipalKey $servicePrincipalkey `
+                -tenantId $tenantId `
+                -cloudEnvironment $cloudEnvironment 
         }
-        #Service Principal
         else {
-            Write-Host "ServicePrincipal with ClientSecret auth"
+            Write-Host "OIDC (Federated Credentials) auth (GitHub Actions)"
+            
+            if ([string]::IsNullOrEmpty($env:ACTIONS_ID_TOKEN_REQUEST_URL) -or [string]::IsNullOrEmpty($env:ACTIONS_ID_TOKEN_REQUEST_TOKEN)) {
+                throw "OIDC token variables missing. Ensure 'permissions: id-token: write' is set in the workflow."
+            }
+
+            $audience = "api://AzureADTokenExchange"
+            $requestUrl = "$($env:ACTIONS_ID_TOKEN_REQUEST_URL)&audience=$audience"
+            $response = Invoke-RestMethod -Method Get -Uri $requestUrl -Headers @{ Authorization = "Bearer $env:ACTIONS_ID_TOKEN_REQUEST_TOKEN" }
+            $assertion = $response.value
 
             Initialize-AadAuthenticationFactory `
-            -servicePrincipalId $servicePrincipalId `
-            -servicePrincipalKey $servicePrincipalkey `
-            -tenantId $tenantId `
-            -cloudEnvironment $cloudEnvironment
+                -servicePrincipalId $servicePrincipalId `
+                -assertion $assertion `
+                -tenantId $tenantId `
+                -cloudEnvironment $cloudEnvironment
         }
-        break;
-     }
+    }catch {
+        Write-Error "--- SKUTECNA CHYBA Z AZURE ---"
+        Write-Error $_.Exception.Message
+        Write-Error "--- DETAIL ---"
+        Write-Error $_.ScriptStackTrace
+        exit 1
+    }
+}else{
+    # retrieve service connection object
+    $serviceConnection = Get-VstsEndpoint -Name $azureSubscription -Require
 
-     'ManagedServiceIdentity' {
-        Write-Host "ManagedIdentitx auth"
+    #initialize aadAuthenticationFactory
+    Write-Verbose "Initialize AadAuthenticationFactory object..."
+    switch ($serviceConnection.auth.scheme) {
+        'ServicePrincipal' { 
+            # get service connection object properties
+            $servicePrincipalId = $serviceConnection.auth.parameters.serviceprincipalid
+            $servicePrincipalkey = $serviceConnection.auth.parameters.serviceprincipalkey
+            $tenantId = $serviceConnection.auth.parameters.tenantid
 
-        Initialize-AadAuthenticationFactory `
-            -serviceConnection $serviceConnection `
-            -cloudEnvironment $cloudEnvironment
-        break;
-     }
+            # SPNcertificate
+            if ($serviceConnection.auth.parameters.authenticationType -eq 'SPNCertificate') {
+                Write-Host "ServicePrincipal with Certificate auth"
 
-     'WorkloadIdentityFederation' {
-        Write-Host "Workload identity auth"
+                $certData = $serviceConnection.Auth.parameters.servicePrincipalCertificate
+                $cert= [System.Security.Cryptography.X509Certificates.X509Certificate2]::CreateFromPem($certData,$certData)
 
-        # get service connection properties
-        $planId = Get-VstsTaskVariable -Name 'System.PlanId' -Require
-        $jobId = Get-VstsTaskVariable -Name 'System.JobId' -Require
-        $hub = Get-VstsTaskVariable -Name 'System.HostType' -Require
-        $projectId = Get-VstsTaskVariable -Name 'System.TeamProjectId' -Require
-        $uri = Get-VstsTaskVariable -Name 'System.CollectionUri' -Require
-        $serviceConnectionId = $azureSubscription
+                Initialize-AadAuthenticationFactory `
+                -servicePrincipalId $servicePrincipalId `
+                -servicePrincipalKey $servicePrincipalkey `
+                -tenantId $tenantId `
+                -cert $cert `
+                -cloudEnvironment $cloudEnvironment
+            }
+            #Service Principal
+            else {
+                Write-Host "ServicePrincipal with ClientSecret auth"
 
-        Write-Verbose "Getting access token for service connection"
-        $vstsEndpoint = Get-VstsEndpoint -Name SystemVssConnection -Require
-        $vstsAccessToken = $vstsEndpoint.auth.parameters.AccessToken
-        
-        $url = "$uri/$projectId/_apis/distributedtask/hubs/$hub/plans/$planId/jobs/$jobId/oidctoken?serviceConnectionId=$serviceConnectionId`&api-version=7.2-preview.1"
+                Initialize-AadAuthenticationFactory `
+                -servicePrincipalId $servicePrincipalId `
+                -servicePrincipalKey $servicePrincipalkey `
+                -tenantId $tenantId `
+                -cloudEnvironment $cloudEnvironment
+            }
+            break;
+        }
 
-        $username = "username"
-        $password = $vstsAccessToken
-        $base64AuthInfo = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(("{0}:{1}" -f $username, $password)))
+         'ManagedServiceIdentity' {
+            Write-Host "ManagedIdentitx auth"
 
-        Write-Verbose "Getting OIDC token from VSTS on uri: $url"
-        $response = Invoke-RestMethod -Uri $url -Method Post -Headers @{ "Authorization" = ("Basic {0}" -f $base64AuthInfo) } -ContentType "application/json"
-        
-        $assertion = $response.oidcToken
-        
-        $servicePrincipalId = $serviceConnection.auth.parameters.serviceprincipalid
-        $tenantId = $serviceConnection.auth.parameters.tenantid
-        Write-verbose "Initializing AAD factory with clientId $servicePrincipalId for tenant $tenantId"
-        Initialize-AadAuthenticationFactory `
-            -servicePrincipalId $servicePrincipalId `
-            -assertion $assertion `
-            -tenantId $tenantId `
-            -cloudEnvironment $cloudEnvironment
-        break;
-     }
+            Initialize-AadAuthenticationFactory `
+                -serviceConnection $serviceConnection `
+                -cloudEnvironment $cloudEnvironment
+            break;
+        }
+
+         'WorkloadIdentityFederation' {
+            Write-Host "Workload identity auth"
+
+            # get service connection properties
+            $planId = Get-VstsTaskVariable -Name 'System.PlanId' -Require
+            $jobId = Get-VstsTaskVariable -Name 'System.JobId' -Require
+            $hub = Get-VstsTaskVariable -Name 'System.HostType' -Require
+            $projectId = Get-VstsTaskVariable -Name 'System.TeamProjectId' -Require
+            $uri = Get-VstsTaskVariable -Name 'System.CollectionUri' -Require
+            $serviceConnectionId = $azureSubscription
+
+            Write-Verbose "Getting access token for service connection"
+            $vstsEndpoint = Get-VstsEndpoint -Name SystemVssConnection -Require
+            $vstsAccessToken = $vstsEndpoint.auth.parameters.AccessToken
+
+            $url = "$uri/$projectId/_apis/distributedtask/hubs/$hub/plans/$planId/jobs/$jobId/oidctoken?serviceConnectionId=$serviceConnectionId`&api-version=7.2-preview.1"
+
+            $username = "username"
+            $password = $vstsAccessToken
+            $base64AuthInfo = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(("{0}:{1}" -f $username, $password)))
+
+            Write-Verbose "Getting OIDC token from VSTS on uri: $url"
+            $response = Invoke-RestMethod -Uri $url -Method Post -Headers @{ "Authorization" = ("Basic {0}" -f $base64AuthInfo) } -ContentType "application/json"
+
+            $assertion = $response.oidcToken
+
+            $servicePrincipalId = $serviceConnection.auth.parameters.serviceprincipalid
+            $tenantId = $serviceConnection.auth.parameters.tenantid
+            Write-verbose "Initializing AAD factory with clientId $servicePrincipalId for tenant $tenantId"
+            Initialize-AadAuthenticationFactory `
+                -servicePrincipalId $servicePrincipalId `
+                -assertion $assertion `
+                -tenantId $tenantId `
+                -cloudEnvironment $cloudEnvironment
+            break;
+        }
+    }
 }
+
 
 #initialize runtime according to environment environment
 Init-Environment -ProjectDir $ProjectDir -Environment $EnvironmentName
@@ -246,8 +312,9 @@ if($FullSync)
 }
 
 #store webhooks to folder for future reference by subsequent task
-$newWebhooksfolder = "$($env:SYSTEM_DEFAULTWORKINGDIRECTORY)/WebHooks-new"
-$managedWebhooksfolder = "$($env:SYSTEM_DEFAULTWORKINGDIRECTORY)/WebHooks-managed"
+$workingDir = if ($env:GITHUB_ACTIONS -eq 'true') { $env:GITHUB_WORKSPACE } else { $env:SYSTEM_DEFAULTWORKINGDIRECTORY }
+$newWebhooksfolder = "$workingDir/WebHooks-new"
+$managedWebhooksfolder = "$workingDir/WebHooks-managed"
 if(-not (Test-Path $newWebhooksfolder)) {New-Item -ItemType Directory -Path $newWebhooksfolder | Out-Null}
 if(-not (Test-Path $managedWebhooksfolder)) {New-Item -ItemType Directory -Path $managedWebhooksfolder | Out-Null}
 foreach($webhook in $newWebhooks)
