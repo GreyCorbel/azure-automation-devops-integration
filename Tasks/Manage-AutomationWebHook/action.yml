@@ -1,0 +1,60 @@
+name: 'Manage-AutomationAccountWebHook'
+description: "Checks for webhook expiration in automation account and automatically creates a new instance when webhook is about to expire"
+author: 'Greycorbel s.r.o'
+
+branding:
+  icon: cloud
+  color: blue
+
+inputs:
+  environmentName:
+    description: "Name of the stage/environment we're deploying."
+    required: true
+  projectDir:
+    description: "Root folder of automation account content. e.g. '$(System.DefaultWorkingDirectory)/Automation/Default'"
+    required: true
+  subscription:
+    description: "Name of the subscription where automation account is located."
+    required: true
+  azureClientId:
+    description: "Client ID (App ID) of the service principal with contributor rights for defined subscription."
+    required: true
+  azureClientSecret:
+    description: "Client secret of the service principal."
+    required: false
+  azureTenantId:
+    description: "Azure AD tenant ID of the service principal."
+    required: true
+  azureSubscriptionId:
+    description: "Subscription ID where automation account is located."
+    required: true
+  resourceGroup:
+    description: "Name of the resource group where automation account is located."
+    required: true
+  automationAccount: 
+    description: "Name of automation account that we deploy to."
+    required: true
+  fullSync:
+    description: "Whether or not to remove any existing runbooks and variables from automation account that are not source-controlled."
+    required: false
+    default: 'false'
+  cloudEnvironment:
+    description: "Select the target Azure cloud environment"
+    required: false
+    default: "AzureCloud"
+runs:
+  using: "composite"
+  steps:
+    - name: run Manage-AutomationAccountWebHook script
+      shell: pwsh
+      run: '& "$env:GITHUB_ACTION_PATH/Tasks/Manage-AutomationWebHook/Manage-AutomationWebHook.ps1"'
+      env:
+        INPUT_ENVIRONMENTNAME: "${{ inputs.environmentName }}"
+        INPUT_PROJECTDIR: "${{ inputs.projectDir }}"
+        INPUT_SUBSCRIPTION: "${{ inputs.subscription }}"
+        INPUT_AZURESUBSCRIPTION: '{"clientId":"${{ inputs.azureClientId }}","clientSecret":"${{ inputs.azureClientSecret }}","tenantId":"${{ inputs.azureTenantId }}","subscriptionId":"${{ inputs.azureSubscriptionId }}"}'
+        INPUT_RESOURCEGROUP: "${{ inputs.resourceGroup }}"
+        INPUT_AUTOMATIONACCOUNT: "${{ inputs.automationAccount }}"
+        INPUT_FULLSYNC: "${{ inputs.fullSync }}" 
+        INPUT_CLOUDENVIRONMENT: "${{ inputs.cloudEnvironment }}"
+
