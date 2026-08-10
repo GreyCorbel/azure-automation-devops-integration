@@ -653,9 +653,9 @@ Function Add-AutoRunbook
     begin
     {
         $headers = Get-AutoAccessToken -AsHashTable
-        $runbookUri = "https://$($script:armEndpoint)$AutomationAccountResourceId/runbooks/$Name`?api-version=2023-11-01"
-        $runbookContentUri = "https://$($script:armEndpoint)$AutomationAccountResourceId/runbooks/$Name/draft/content`?api-version=2022-08-08"
-        $runbookPublishUri = "https://$($script:armEndpoint)$AutomationAccountResourceId/runbooks/$Name/publish`?api-version=2023-11-01"
+        $runbookUri = "https://$($script:armEndpoint)$AutomationAccountResourceId/runbooks/$Name`?api-version=2023-05-15-preview"
+        $runbookContentUri = "https://$($script:armEndpoint)$AutomationAccountResourceId/runbooks/$Name/draft/content`?api-version=2023-05-15-preview"
+        $runbookPublishUri = "https://$($script:armEndpoint)$AutomationAccountResourceId/runbooks/$Name/publish`?api-version=2023-05-15-preview"
     }
     process
     {
@@ -739,9 +739,14 @@ Function Add-AutoPowershell7Runbook
     begin
     {
         $headers = Get-AutoAccessToken -AsHashTable
-        $runbookUri = "https://$($script:armEndpoint)$AutomationAccountResourceId/runbooks/$Name`?api-version=2022-06-30-preview"
-        $runbookContentUri = "https://$($script:armEndpoint)$AutomationAccountResourceId/runbooks/$Name/draft/content`?api-version=2022-08-08"
-        $runbookPublishUri = "https://$($script:armEndpoint)$AutomationAccountResourceId/runbooks/$Name/publish`?api-version=2022-08-08"
+        $runbookUri = "https://$($script:armEndpoint)$AutomationAccountResourceId/runbooks/$Name`?api-version=2023-05-15-preview"
+        $runbookContentUri = "https://$($script:armEndpoint)$AutomationAccountResourceId/runbooks/$Name/draft/content`?api-version=2023-05-15-preview"
+        $runbookPublishUri = "https://$($script:armEndpoint)$AutomationAccountResourceId/runbooks/$Name/publish`?api-version=2023-05-15-preview"
+
+        Write-Host "DEBUG - API Version:"
+        Write-Host "Runbook URI: $runbookUri"
+        Write-Host "Content URI: $runbookContentUri"
+        Write-Host "Publish URI: $runbookPublishUri"
     }
     process
     {
