@@ -201,14 +201,14 @@ function Upload-FileToBlob {
     )
     
     begin {
-        $h = Get-AutoAccessToken -ResourceUri 'https://storage.azure.com/.default' -AsHashTable
+        $h = Get-AutoAccessToken -ResourceUri '$script:storageResourceUri' -AsHashTable
         $h['x-ms-version'] = '2023-11-03'
         $h['x-ms-date'] = [DateTime]::UtcNow.ToString('R')
         $h['x-ms-blob-type'] = 'BlockBlob'
     }
     process {
         $rsp = Invoke-RestMethod `
-            -Uri "https://$($storageAccount).blob.core.windows.net/$($storageContainerName)/$($storageBlobName)" `
+            -Uri "https://$($storageAccount).$($script:blobEndpointSuffix)/$($storageContainerName)/$($storageBlobName)" `
             -Headers $h `
             -InFile $filePath `
             -Method Put
@@ -226,7 +226,7 @@ function Upload-ModulesForHybridWorker {
         [Array]$body
     )
     begin {
-        $h = Get-AutoAccessToken -ResourceUri 'https://storage.azure.com/.default' -AsHashTable
+        $h = Get-AutoAccessToken -ResourceUri '$script:storageResourceUri' -AsHashTable
         $h['x-ms-version'] = '2023-11-03'
         $h['x-ms-date'] = [DateTime]::UtcNow.ToString('R')
         $h['x-ms-blob-type'] = 'BlockBlob'
@@ -234,7 +234,7 @@ function Upload-ModulesForHybridWorker {
     process {
 
         $rsp = Invoke-RestMethod `
-            -Uri "https://$($storageAccount).blob.core.windows.net/$($storageContainerName)/$($storageBlobName)" `
+            -Uri "https://$($storageAccount).$($script:blobEndpointSuffix)/$($storageContainerName)/$($storageBlobName)" `
             -Headers $h `
             -body ($body | ConvertTo-Json)`
             -Method PUT
@@ -252,7 +252,7 @@ function Check-CustomModule {
         [string]$moduleName
     )
     begin {
-        $h = Get-AutoAccessToken -ResourceUri 'https://storage.azure.com/.default' -AsHashTable
+        $h = Get-AutoAccessToken -ResourceUri '$script:storageResourceUri' -AsHashTable
         $h['x-ms-version'] = '2023-11-03'
         $h['x-ms-date'] = [DateTime]::UtcNow.ToString('R')
         $h['x-ms-blob-type'] = 'BlockBlob'
@@ -260,7 +260,7 @@ function Check-CustomModule {
     process {
         try {
             $rsp = Invoke-RestMethod `
-                -Uri "https://$($storageAccount).blob.core.windows.net/$($storageContainerName)/$($moduleName).zip" `
+                -Uri "https://$($storageAccount).$($script:blobEndpointSuffix)/$($storageContainerName)/$($moduleName).zip" `
                 -Headers $h `
                 -ErrorAction Stop
         }
