@@ -464,6 +464,10 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
         $modulesBatch = $definitions | Where-Object { $_.Order -eq $priority }
         $importingPackages = new-object System.Collections.ArrayList
         foreach ($module in $modulesBatch) {
+            if ([string]::IsNullOrEmpty($module.RuntimeEnvironment)) {
+                Write-Warning "Module '$($module.Name)' has a missing or empty RuntimeEnvironment property. Skipping module processing."
+                continue
+            }
             "Processing module $($module.Name) $($module.Version) for runtime $($module.RuntimeEnvironment)"
             $existingPackage = $null
             try {
