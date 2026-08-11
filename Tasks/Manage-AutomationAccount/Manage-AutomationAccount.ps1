@@ -99,7 +99,7 @@ if($env:GITHUB_ACTIONS -eq 'true'){
         $tenantId = $spnCredentials.tenantId
 
 
-        if (-not [string]::IsNullOrEmpty($servicePrincipalkey)) {
+        if (-not [string]::IsNullOrWhiteSpace($servicePrincipalkey)) {
             Write-Host "ServicePrincipal with ClientSecret auth (GitHub Actions)"
             Initialize-AadAuthenticationFactory `
                 -servicePrincipalId $servicePrincipalId `
