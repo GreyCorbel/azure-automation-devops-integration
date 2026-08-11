@@ -76,7 +76,7 @@ foreach($entity in $supportedEntities)
     {
         'Runbooks' {
 
-            $def = New-RunbookDefinition -Name "Sample runbook" -Implementation "sample_runbook.ps1" -Type PowerShell -RuntimeVersion '7.2' -DoNotPublish -AsJson
+            $def = New-RunbookDefinition -Name "Sample runbook" -Implementation "sample_runbook.ps1" -Type PowerShell -RuntimeVersion '7.2' -RuntimeEnvironment 'PowerShell-7.2' -DoNotPublish -AsJson
             $DefContent = $defContent.Replace('{}', $def)
             New-Item -Path "$ProjectDir/Definitions/$entity" -Name 'readme.md' -ItemType File -Value $DefContent -Force | Out-Null
             New-Item -Path "$ProjectDir/Source/$EnvironmentName/$entity" -Name 'readme.md' -ItemType File -Value $SrcContent -Force | Out-Null
@@ -97,7 +97,7 @@ foreach($entity in $supportedEntities)
             break;
         }            
         'Modules' {
-            $def = New-ModuleDefinition -Name SampleModule -RuntimeVersion 5.1 -Version 1.0.0 -VersionIndependentLink "www.powershellgallery.com/api/v2/package/SampleModule" -Order 1 -AsJson
+            $def = New-ModuleDefinition -Name SampleModule -RuntimeVersion 5.1 -RuntimeEnvironment 'PowerShell-5.1' -Version 1.0.0 -VersionIndependentLink "https://www.powershellgallery.com/api/v2/package/SampleModule" -Order 1 -AsJson
             $DefContent = $defContent.Replace('{}', $def)
             New-Item -Path "$ProjectDir/Definitions/$entity" -Name 'readme.md' -ItemType File -Value $DefContent -Force | Out-Null
             break;

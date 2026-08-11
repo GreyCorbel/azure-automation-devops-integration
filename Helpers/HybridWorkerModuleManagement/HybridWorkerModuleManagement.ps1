@@ -56,13 +56,16 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$storageAccount,
     [Parameter()]
-    [string]$logFolder = $scriptRoot
+    [string]$logFolder
 )
 #################
 ## Variables  
 #################
 "ModulesList: $blobNameModulesJson"
 $script:scriptRoot = $(Split-Path -Parent $MyInvocation.MyCommand.Path)
+if ([string]::IsNullOrEmpty($logFolder)) {
+    $logFolder = $script:scriptRoot
+}
 $script:scriptName = $MyInvocation.MyCommand.Name
 $script:scriptPath = Join-path $scriptRoot $scriptName
 $script:runTimeVersion = $PSVersionTable.PSVersion.Major

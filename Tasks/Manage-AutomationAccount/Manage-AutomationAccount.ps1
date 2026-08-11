@@ -99,7 +99,7 @@ if($env:GITHUB_ACTIONS -eq 'true'){
         $tenantId = $spnCredentials.tenantId
 
 
-        if (-not [string]::IsNullOrEmpty($servicePrincipalkey)) {
+        if (-not [string]::IsNullOrWhiteSpace($servicePrincipalkey)) {
             Write-Host "ServicePrincipal with ClientSecret auth (GitHub Actions)"
             Initialize-AadAuthenticationFactory `
                 -servicePrincipalId $servicePrincipalId `
@@ -287,6 +287,7 @@ function Upload-FileToBlob {
     
     begin {
         $h = Get-AutoAccessToken -ResourceUri $global:StorageResourceUri -AsHashTable
+
         $h['x-ms-version'] = '2023-11-03'
         $h['x-ms-date'] = [DateTime]::UtcNow.ToString('R')
         $h['x-ms-blob-type'] = 'BlockBlob'
@@ -449,6 +450,7 @@ function GetModuleContentLink {
         }
     }
 }
+
 if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
     "Processing Modules"
     
@@ -457,70 +459,89 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
     $definitions = $definitions | Sort-Object -Property Order
     $priorities = $definitions.Order | Select-object -Unique
 
-    $desktopModules = Get-AutoObject -objectType Modules
-    $coreModules = Get-AutoPowershell7Module
     foreach ($priority in $priorities) {
         "Batching modules processing for priority $priority"
         $modulesBatch = $definitions | Where-Object { $_.Order -eq $priority }
-        $importingDesktopModules = @()
-        $importingCoreModules = @()
+        $importingPackages = new-object System.Collections.ArrayList
         foreach ($module in $modulesBatch) {
-            "Processing module $($module.Name) $($module.Version) for runtime $($module.RuntimeVersion)"
-            switch ($module.RuntimeVersion) {
-                '5.1' {
-                    $existingModule = $desktopModules | Where-Object { $_.Name -eq $module.Name }
-                    if ($existingModule.Count -eq 0 -or $existingModule[0].properties.Version -ne $module.version) {
-                        "Module version does not match --> importing"
-                        $contentLink = GetModuleContentLink -moduleDefinition $module -storageAccount $storageAccount -storageAccountContainer $storageAccountContainer
-                        "ContentLink: $contentLink"
-                        if (-not [string]::IsnullOrEmpty($contentLink)) {
-                            $importingDesktopModules += Add-AutoModule `
-                                -Name $module.Name `
-                                -ContentLink $contentLink `
-                                -Version $module.Version
-                        }
-                    }
-                    else {
-                        "Module up to date"
-                    }
+            if ([string]::IsNullOrEmpty($module.RuntimeEnvironment)) {
+                Write-Warning "Module '$($module.Name)' has a missing or empty RuntimeEnvironment property. Skipping module processing."
+                continue
+            }
+            "Processing module $($module.Name) $($module.Version) for runtime $($module.RuntimeEnvironment)"
+            $existingPackage = $null
+            try {
+                $existingPackage = Get-AutoPackage -RuntimeEnvironment $module.RuntimeEnvironment -Name $module.Name -ErrorAction Stop
+            }
+            catch {
+                Write-Warning $_
+                ###[warning]{"code":"NotFound","message":"The package does not exist in runtime environment PowerShell-74. "}
+                
+                if ($_ -like '*NotFound*') {
+                    Write-Warning "Error NotFound"
+                }
+                elseif ($_.Exception.Message -like '*NotFound*') {
+                    Write-Warning "Error NotFound"
+                }
+                else {
+                    Write-Warning "Uknown error"
+                    throw
+                }
+            }
+            Write-Verbose "Existing package: $($existingPackage.Name) version $($existingPackage.properties.Version)"
+            if (($null -ne $existingPackage) -and ($existingPackage.properties.Version -eq $module.version)) {
+                "Module $($module.Name) up to date: "
+                continue
+            }
+            "Module version does not match --> importing"
+            $contentLink = GetModuleContentLink -moduleDefinition $module -storageAccount $storageAccount -storageAccountContainer $storageAccountContainer
+            "ContentLink: $contentLink"
+            if([string]::IsNullOrEmpty($contentLink))
+            {
+                Write-Warning "No content link for module $($module.Name) --> skipping"
+                continue
+            }
+            switch ($module.RuntimeEnvironment) {
+                'PowerShell-5.1' {
+                    $newPackage = Add-AutoModule `
+                        -Name $module.Name `
+                        -ContentLink $contentLink `
+                        -Version $module.Version `
+                        -RuntimeEnvironment $module.RuntimeEnvironment
+                    $ImportingPackages.Add($newPackage) | Out-Null
                     break;
                 }
-                '7.2' {
-                    $existingModule = $coreModules | Where-Object { $_.Name -eq $module.Name }
-                    #currently, API returns "Unknown" for module version --> we always re-import
-                    if ($existingModule.Count -eq 0 -or $existingModule[0].properties.Version -ne $module.version) {
-                        "Module version does not match --> importing"
-                        $contentLink = GetModuleContentLink -moduleDefinition $module -storageAccount $storageAccount -storageAccountContainer $storageAccountContainer
-                        "ContentLink: $contentLink"
-                        if (-not [string]::IsnullOrEmpty($contentLink)) {
-                            $importingCoreModules += Add-AutoPowershell7Module `
-                                -Name $module.Name `
-                                -ContentLink  $contentLink `
-                                -Version $module.Version
-                        }
-                    }
-                    else {
-                        "Module up to date"
-                    }
+                'PowerShell-7.2' {
+                    $newPackage = Add-AutoPowershell7Module `
+                        -Name $module.Name `
+                        -ContentLink  $contentLink `
+                        -Version $module.Version
+                    $ImportingPackages.Add($newPackage) | Out-Null
+                    break;
+                }
+                default {                    
+                    $newPackage =  Add-AutoPackage `
+                        -Name $module.Name `
+                        -RuntimeEnvironment $module.RuntimeEnvironment `
+                        -ContentLink  $contentLink `
+                        -Version $module.Version
+                    $ImportingPackages.Add($newPackage) | Out-Null
                     break;
                 }
             }
         }
         #wait for modules import completion
-        $results = @()
-        if ($importingDesktopModules.count -gt 0) {
-            'Waiting for import of modules for 5.1 runtime'
-            $results += Wait-AutoObjectProcessing -Name $importingDesktopModules.Name -objectType Modules
-        }
-        if ($importingCoreModules.count -gt 0) {
-            'Waiting for import of modules for 7.x runtime'
-            $results += Wait-AutoObjectProcessing -Name $importingCoreModules.Name -objectType Powershell7Modules
-        }
-        #report provisioning results
-        $results  | select-object name, type, @{N = 'provisioningState'; E = { $_.properties.provisioningState } } | Out-String
-        $failed = $results | Where-Object { $_.properties.provisioningState -ne 'Succeeded' }
-        if ($failed.Count -gt 0) {
-            Write-Error "Some modules failed to import"
+        
+        if ($importingPackages.count -gt 0) {
+            'Waiting for import of modules'
+            $results = Wait-AutoObjectProcessing -objects $importingPackages -objectType 'Modules'
+            $results | select-object name, @{N = 'version'; E = { $_.properties.version } }, @{N = 'provisioningState'; E = { $_.properties.provisioningState } } | Out-String
+            #report provisioning results
+            $failed = $results | Where-Object { $_.properties.provisioningState -ne 'Succeeded' }
+            if ($failed.Count -gt 0) {
+                Write-Error "Some modules failed to import"
+                $failed | select-object name, @{N = 'version'; E = { $_.properties.version } }, @{N = 'provisioningState'; E = { $_.properties.provisioningState } } | Out-String
+            }
         }
         #shall we wait for some time before importing next batch?
 
@@ -555,35 +576,34 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
                 "$($manageModulesPS1Path) do not exist --> skipping copy to storage account - ensure that script is available in storage account."
             }
         }
-
     }
     if ($FullSync) {
-        $runtime = '5.1'
-        "Removing unmanaged modules for runtime $runtime"
-        $managedModules = $definitions | Where-Object { $_.RuntimeVersion -eq $runtime }
-        foreach ($module in $desktopModules) {
-            if ($module.Name -in $managedModules.Name) {
-                continue; #module is managged
+        $runtimeEnvironments = @($definitions | Select-Object -ExpandProperty RuntimeEnvironment -Unique | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Sort-Object)
+        foreach($runtimeEnvironment in $runtimeEnvironments)
+        {
+            "Removing unmanaged modules for runtime $($runtimeEnvironment)"
+            $managedModules = $definitions | Where-Object { $_.RuntimeEnvironment -eq $runtimeEnvironment }
+            $installedModules = Get-AutoPackage -RuntimeEnvironment $runtimeEnvironment | Where-Object { $_.properties.isDefault -eq $False } 
+            $packagesToRemove = $installedModules | Where-Object { $_.Name -notin $managedModules.Name }
+            foreach($package in $packagesToRemove)
+            {
+                "Removing $($package.Name) for runtime $runtimeEnvironment"
+                switch($runtimeEnvironment)
+                {
+                    'PowerShell-5.1' {
+                        Remove-AutoPackage -Name $package.Name -RuntimeEnvironment $runtimeEnvironment | Out-Null
+                        break;
+                    }
+                    'PowerShell-7.2' {
+                        Remove-AutoPowershell7Module -Name $package.Name | Out-Null
+                        break;
+                    }
+                    default {
+                        Remove-AutoPackage -Name $package.Name -RuntimeEnvironment $runtimeEnvironment | Out-Null
+                        break;
+                    }
+                }
             }
-            if ($module.properties.IsGlobal) {
-                continue; # we do not remove global modules
-            }
-
-            "$($module.name) for runtime $runtime not managed and not global -> removing"
-            Remove-AutoObject -Name $module.Name -objectType Modules | Out-Null
-        }
-        $runtime = '7.2'
-        "Removing unmanaged modules for runtime $runtime"
-        $managedModules = $definitions | Where-Object { $_.RuntimeVersion -eq $runtime }
-        foreach ($module in $coreModules) {
-            if ($module.Name -in $managedModules.Name) {
-                continue; #module is managged
-            }
-            if ($module.properties.IsGlobal) {
-                continue; # we do not remove global modules
-            }
-            "$($module.name) for runtime $runtime not managed and not global -> removing"
-            Remove-AutoPowershell7Module -Name $module.Name | Out-Null
         }
     }
 }
@@ -624,44 +644,49 @@ if (Check-Scope -Scope $scope -RequiredScope 'Schedules') {
 if (Check-Scope -Scope $scope -RequiredScope 'Runbooks') {
     "Processing Runbooks"
 
+    "Getting installed runbooks"
+    $installedRunbooks = Get-AutoObject -objectType Runbooks
+    "$($installedRunbooks.Count) runbooks installed"
+
     $definitions = @(Get-DefinitionFiles -FileType Runbooks)
 
-    $existingRunbooks = Get-AutoObject -objectType Runbooks
-
-    $importingRunbooks = @()
+    $importingRunbooks = new-object System.Collections.Generic.List[PSCustomObject]
     foreach ($runbook in $definitions) {
-        "Processing runbook $($runbook.Name) for runtime $($runbook.RuntimeVersion)"
+        if ([string]::IsNullOrEmpty($runbook.RuntimeEnvironment)) {
+            Write-Warning "Runbook '$($runbook.Name)' missing RuntimeEnvironment! skipping..."
+            continue
+        }
+        switch($runbook.RuntimeEnvironment)
+        {
+            {$_ -in '5.1','PowerShell-5.1'} { $runbook.RuntimeEnvironment = 'PowerShell-5.1'; break}
+            {$_ -in '7.2','PowerShell-7.2'} { $runbook.RuntimeEnvironment = 'PowerShell-7.2'; break }
+        }
+
+        "Processing runbook $($runbook.Name) for runtime $($runbook.RuntimeEnvironment)"
         $implementationFile = Get-FileToProcess -FileType Runbooks -FileName $runbook.Implementation
         if ([string]::IsnullOrEmpty($ImplementationFile)) {
             write-warning "Missing implementation file --> skipping"
             continue
         }
-        switch ($runbook.RuntimeVersion) {
-            '5.1' {
-                $importingRunbooks += Add-AutoRunbook `
-                    -Name $runbook.Name `
-                    -Type  $runbook.Type `
-                    -Content (Get-Content -Path $ImplementationFile -Raw) `
-                    -Description $runbook.Description `
-                    -AutoPublish:$runbook.AutoPublish `
-                    -Location $runbook.Location
-                break;
-            }
-            '7.2' {
-                $importingRunbooks += Add-AutoPowershell7Runbook `
-                    -Name $runbook.Name `
-                    -Content (Get-Content -Path $ImplementationFile -Raw) `
-                    -Description $runbook.Description `
-                    -AutoPublish:$runbook.AutoPublish `
-                    -Location $runbook.Location
-                break;
-            }
+        $installedRunbook = $installedRunbooks | Where-Object { $_.Name -eq $runbook.Name}
+        if($null -ne $installedRunbook -and $installedRunbook.properties.RuntimeEnvironment -ne $runbook.RuntimeEnvironment) {
+            "Runbook $($runbook.Name) has different runtime environment ($($installedRunbook.properties.RuntimeEnvironment) : $(($runbook.RuntimeEnvironment)))--> removing runbook before updating"
+            Remove-AutoObject -Name $runbook.Name -objectType Runbooks | Out-Null
         }
+        $runbook = Add-AutoRunbook -Name $runbook.Name `
+            -Type $runbook.Type `
+            -RuntimeEnvironment $runbook.RuntimeEnvironment `
+            -Content (Get-Content -Path $ImplementationFile -Raw) `
+            -Description $runbook.Description `
+            -AutoPublish:$runbook.AutoPublish `
+            -Location $runbook.Location
+        $importingRunbooks.Add($runbook) | Out-Null
     }
+
     #wait for runbook import completion
     if ($importingRunbooks.Count -gt 0) {
         'Waiting for import of runbooks'
-        $results = Wait-AutoObjectProcessing -Name $importingRunbooks.Name -objectType Runbooks
+        $results = Wait-AutoObjectProcessing -objects $importingRunbooks -objectType 'Runbooks'
         #report provisioning results
         $results | select-object name, @{N = 'provisioningState'; E = { $_.properties.provisioningState } } | Out-String
         $failed = $results | Where-Object { $_.properties.provisioningState -ne 'Succeeded' }
@@ -669,13 +694,14 @@ if (Check-Scope -Scope $scope -RequiredScope 'Runbooks') {
             Write-Error "Some runbooks failed to import"
         }
     }
+
     if ($fullSync) {
-        "Removing unmanaged runbooks"
-        foreach ($runbook in $existingRunbooks) {
-            if ($runbook.Name -in $definitions.Name) {
-                continue
-            }
-            "Removing $($runbook.Name)"
+        $allRunbooks = Get-AutoObject -objectType Runbooks
+        #if runbook from definition is not on server then delete:
+        $runbooksToRemove = $allRunbooks | Where-Object { $_.Name -notin $definitions.Name }
+        foreach($runbook in $runbooksToRemove)
+        {
+            "Removing $($runbook.Name) for runtime $($runtimeEnvironment.Name)"
             Remove-AutoObject -Name $runbook.Name -objectType Runbooks | Out-Null
         }
     }
@@ -800,7 +826,7 @@ if (Check-Scope -Scope $scope -RequiredScope 'Configurations') {
         }
     }
     if ($CompilationJobs.Count -gt 0) {
-        Wait-AutoObjectProcessing -Name $compilationJobs.Name -objectType Compilationjobs | select-object name, @{N = 'provisioningState'; E = { $_.properties.provisioningState } } | Out-String
+        Wait-AutoObjectProcessing -objects $CompilationJobs -objectType 'Compilationjobs' | select-object name, @{N = 'provisioningState'; E = { $_.properties.provisioningState } } | Out-String
         # get config to assign
         "Retrieving config to assign"
         $configToAssign = Get-DscNodeConfiguration -Subscription $Subscription -ResourceGroup $resourceGroup -AutomationAccount $automationAccount |`

@@ -1,8 +1,8 @@
-name: Build and Publish VSIX - Manage-AutomationAccount - azure pipeline task
+name: Build and Publish task v2 - Manage-AutomationAccount
 on:
   push:
     branches:
-      - master
+      - v2
     paths:
       - 'vss-extension.json'
   workflow_dispatch:

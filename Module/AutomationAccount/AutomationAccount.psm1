@@ -16,6 +16,8 @@ function Initialize-AadAuthenticationFactory
         [string]$ServiceConnection,
         [Parameter()]
         [string]$tenantId,
+        [Parameter(ParameterSetName = 'Debugging')]
+        [switch]$Debugging,
         [Parameter()]
         [string]$cloudEnvironment
     )
@@ -69,6 +71,13 @@ function Initialize-AadAuthenticationFactory
                     -Assertion $assertion `
                     -loginApi $loginApi
             }
+            'Debugging' {
+                $script:aadAuthenticationFactory = New-AadAuthenticationFactory `
+                    -TenantId $tenantId `
+                    -AuthMode Interactive `
+                    -loginApi $loginApi
+
+            }
         }
     }
 }
@@ -87,10 +96,10 @@ function Get-AutoAccessToken
             $ResourceUri = "https://$($script:armEndpoint)/.default"
         }
         if ($null -eq $script:aadAuthenticationFactory)
-		{
-			throw ('Call Initialize-AadAuthenticationFactory first')
-		}
-		Get-AadToken -Factory $script:aadAuthenticationFactory -Scopes $ResourceUri -AsHashTable:$AsHashTable
+        {
+            throw ('Call Initialize-AadAuthenticationFactory first')
+        }
+        Get-AadToken -Factory $script:aadAuthenticationFactory -Scopes $ResourceUri -AsHashTable:$AsHashTable
     }
 }
 
@@ -105,7 +114,7 @@ function Get-AutoSubscription
     begin
     {
         $headers = Get-AutoAccessToken -AsHashTable
-        $pageUri = "https://$($script:armEndpoint)/subscriptions`?api-version=2019-06-01"
+        $pageUri = "https://$($script:armEndpoint)/subscriptions`?api-version=2022-12-01"
     }
     process
     {
@@ -180,12 +189,14 @@ function Connect-AutoAutomationAccount
             -ErrorAction Stop
         $script:accountLocation = $rslt.location
         write-verbose "Automation account validated; location: $($script:accountLocation)"
+
         $global:StorageResourceUri = $script:storageResourceUri
         $global:BlobEndpointSuffix = $script:blobEndpointSuffix
     }
 }
 
 #region Get/Remove
+
 function Get-AutoPowershell7Module
 <#
     This is one-off for PS7.2
@@ -208,7 +219,7 @@ function Get-AutoPowershell7Module
         {
             $uri = "$uri/$Name"
         }
-        $uri = "$uri`?api-version=2023-11-01"
+        $uri = "$uri`?api-version=2023-05-15-preview"
 
     }
     process
@@ -239,13 +250,15 @@ function Get-AutoObject
 {
     param
     (
-        [Parameter(Mandatory)]
-        [ValidateSet('Variables','Runbooks','Schedules','Configurations','Compilationjobs','Modules','Webhooks','JobSchedules')]
+        [Parameter(Mandatory, ParameterSetName='Name')]
+        [ValidateSet('Variables','Runbooks','Schedules','Configurations','Compilationjobs', 'Modules', 'Powershell72Modules', 'Webhooks','JobSchedules','RuntimeEnvironments')]
         [string]$objectType,
-        [Parameter()]
+        [Parameter(ParameterSetName='Name')]
         [string]$Name,
-        [Parameter()]
-        [string]$AutomationAccountResourceId = $script:AutomationAccountResourceId
+        [Parameter(ParameterSetName='Name')]
+        [string]$AutomationAccountResourceId = $script:AutomationAccountResourceId,
+        [Parameter(Mandatory, ValueFromPipelineByPropertyName, ParameterSetName='ResourceId')]
+        [string]$Id
     )
 
     begin
@@ -253,19 +266,45 @@ function Get-AutoObject
         $headers = Get-AutoAccessToken -AsHashTable
         $uri = "https://$($script:armEndpoint)$($AutomationAccountResourceId)/$objectType"
         if(-not [string]::IsnullOrEmpty($Name))
+
         {
-            $uri = "$uri/$Name"
+            $uri = "https://$($script:armEndpoint)$AutomationAccountResourceId/$objectType"
+            if(-not [string]::IsnullOrEmpty($Name))
+            {
+                $uri = "$uri/$Name"
+            }
+            Write-Verbose "Base URI: $uri"
+
         }
     }
     process
     {
-        if($objectType -ne 'Webhooks')
+        if($PSCmdlet.ParameterSetName -eq 'ResourceId')
         {
-            $uri = "$uri`?api-version=2023-11-01"
+            $uri = "https://$($script:armEndpoint)$Id`?api-version=2023-11-01"
+            Invoke-RestMethod `
+                -Uri $uri `
+                -Headers $headers `
+                -ErrorAction Stop
+            return
         }
-        else {
-            #webhooks not available in 2023-11-01 (yet?)
-            $uri = "$uri`?api-version=2018-06-30"
+        #getting by resouce type and name
+        switch($objectType)
+        {
+            'Webhooks' {
+                $uri = "$uri`?api-version=2018-06-30"
+            }
+            'RuntimeEnvironments' {
+                #RuntimeEnvironments are not available in 2023-11-01
+                $uri = "$uri`?api-version=2023-05-15-preview"
+            }
+            'Runbooks' {
+                #Runtime environments for Runbooks are not available in 2023-11-01
+                $uri = "$uri`?api-version=2023-05-15-preview"
+            }
+            default {
+                $uri = "$uri`?api-version=2023-11-01"
+            }
         }
 
         $pageUri = $uri
@@ -290,6 +329,97 @@ function Get-AutoObject
     }
 }
 
+function Get-AutoPackage
+{
+    param
+    (
+        [Parameter(Mandatory,ParameterSetName='Name')]
+        [string]$RuntimeEnvironment,
+        [Parameter(ParameterSetName='Name')]
+        [string]$Name,
+        [Parameter(Mandatory, ValueFromPipelineByPropertyName, ParameterSetName='ResourceId')]
+        [string]$Id,
+        [Parameter()]
+        [string]$AutomationAccountResourceId = $script:AutomationAccountResourceId
+    )
+
+    begin
+    {
+        $headers = Get-AutoAccessToken -AsHashTable
+    }
+    process
+    {
+        if($PSCmdlet.ParameterSetName -eq 'ResourceId')
+        {
+            $uri = "https://$($script:armEndpoint)$Id`?api-version=2023-11-01"
+        }
+        else
+        {
+            $uri = "https://$($script:armEndpoint)$AutomationAccountResourceId/runtimeEnvironments/$RuntimeEnvironment/packages"
+            if(-not [string]::IsnullOrEmpty($Name))
+            {
+                $uri = "$uri/$Name"
+            }
+            $uri = "$uri`?api-version=2023-11-01"
+        }
+
+        $pageUri = $uri
+        do
+        {
+            write-verbose "Fetching object(s) from $pageUri"
+            $rslt = Invoke-RestMethod `
+                -Uri $pageUri `
+                -Headers $headers `
+                -ErrorAction Stop
+            if($null -ne $rslt.value)
+            {
+                foreach($v in $rslt.value) {$v}
+                $pageUri = $rslt.nextLink
+            }
+            else
+            {
+                $rslt
+                $pageUri=$null
+            }
+        }until($null -eq $pageUri)
+    }
+}
+
+Function Remove-AutoPackage
+{
+    param
+    (
+        [Parameter(Mandatory)]
+        [string]$Name,
+        [Parameter(Mandatory)]
+        [string]$RuntimeEnvironment,
+        [Parameter()]
+        [string]$AutomationAccountResourceId = $script:AutomationAccountResourceId
+    )
+
+    begin
+    {
+        $headers = Get-AutoAccessToken -AsHashTable
+        $uri = "https://$($script:armEndpoint)$AutomationAccountResourceId/runtimeEnvironments/$RuntimeEnvironment/packages/$Name`?api-version=2023-11-01"
+    }
+    process
+    {
+       try {
+            write-verbose "Sending DELETE to $Uri"
+    
+            Invoke-RestMethod -Method Delete `
+            -Uri $Uri `
+            -Headers $headers `
+            -ErrorAction Stop
+       }
+       catch {
+            write-error $_
+            throw;
+       }
+    }
+}
+
+
 Function Remove-AutoObject
 {
     param
@@ -307,6 +437,7 @@ Function Remove-AutoObject
     {
         $headers = Get-AutoAccessToken -AsHashTable
         $uri = "https://$($script:armEndpoint)$($AutomationAccountResourceId)/$objectType/$Name"
+
     }
     process
     {
@@ -340,7 +471,8 @@ Function Remove-AutoPowershell7Module
     begin
     {
         $headers = Get-AutoAccessToken -AsHashTable
-        $uri = "https://$($script:armEndpoint)$($AutomationAccountResourceId)/Powershell72Modules/$Name`?api-version=2023-11-01"
+        $uri = "https://$($script:armEndpoint)$($AutomationAccountResourceId)/Powershell72Modules/$Name`?api-version=2023-05-15-preview"
+
     }
     process
     {
@@ -373,6 +505,7 @@ Function Add-AutoVariable
     {
         $headers = Get-AutoAccessToken -AsHashTable
         $uri = "https://$($script:armEndpoint)$AutomationAccountResourceId/variables/$Name`?api-version=2023-11-01"
+
     }
     process
     {
@@ -433,6 +566,7 @@ Function Add-AutoSchedule
     {
         $headers = Get-AutoAccessToken -AsHashTable
         $uri = "https://$($script:armEndpoint)$AutomationAccountResourceId/schedules/$Name`?api-version=2023-11-01"
+
     }
     process
     {
@@ -513,7 +647,7 @@ Function Add-AutoSchedule
     }
 }
 
-Function Add-AutoModule
+Function Add-AutoPackage
 {
     param
     (
@@ -521,6 +655,8 @@ Function Add-AutoModule
         [string]$Name,
         [Parameter(Mandatory)]
         [string]$ContentLink,
+        [Parameter(Mandatory)]
+        [string]$RuntimeEnvironment,
         [Parameter()]
         [string]$Version,
         [switch]
@@ -532,6 +668,68 @@ Function Add-AutoModule
     begin
     {
         $headers = Get-AutoAccessToken -AsHashTable
+        $uri = "https://$($script:armEndpoint)$AutomationAccountResourceId/runtimeEnvironments/$RuntimeEnvironment/packages/$Name`?api-version=2023-11-01"
+    }
+    process
+    {
+       try {
+            write-verbose "Sending content to $Uri"
+            $payload = @{
+                properties = @{
+                    contentLink = @{
+                        uri = $ContentLink
+                    }
+                    version = $Version
+                }
+            } |  ConvertTo-Json
+            write-verbose $payload
+
+            $rslt = Invoke-RestMethod -Method Put `
+            -Uri $Uri `
+            -Body $payload `
+            -ContentType 'application/json' `
+            -Headers $headers `
+            -ErrorAction Stop
+            if($WaitForCompletion)
+            {
+                do
+                {
+                    write-Verbose 'Waiting for importing of the module'
+                    Start-Sleep -Seconds 5
+                    $rslt = Get-AutoPackage -Name $Name -RuntimeEnvironment $RuntimeEnvironment
+                    $rslt
+                }while($rslt.properties.provisioningState -in @('Creating','RunningImportModuleRunbook'))
+            }
+       }
+       catch {
+            write-error $_
+            throw;
+       }
+    }
+}
+
+Function Add-AutoModule
+{
+    param
+    (
+        [Parameter(Mandatory)]
+        [string]$Name,
+        [Parameter(Mandatory)]
+        [string]$ContentLink,
+        [Parameter(Mandatory)]
+        [string]$RuntimeEnvironment,
+        [Parameter()]
+        [string]$Version,
+        [switch]
+        $WaitForCompletion,
+        [Parameter()]
+        [string]$AutomationAccountResourceId = $script:AutomationAccountResourceId
+    )
+
+    begin
+    {
+        $headers = Get-AutoAccessToken -AsHashTable
+        #PS5.1
         $uri = "https://$($script:armEndpoint)$AutomationAccountResourceId/modules/$Name`?api-version=2023-11-01"
     }
     process
@@ -587,7 +785,8 @@ Function Add-AutoPowershell7Module
     begin
     {
         $headers = Get-AutoAccessToken -AsHashTable
-        $uri = "https://$($script:armEndpoint)$AutomationAccountResourceId/powershell72Modules/$Name`?api-version=2023-11-01"
+        $uri = "https://$($script:armEndpoint)$AutomationAccountResourceId/powershell72Modules/$Name`?api-version=2023-05-15-preview"
+
     }
     process
     {
@@ -634,8 +833,10 @@ Function Add-AutoRunbook
         [Parameter(Mandatory)]
         [string]$Name,
         [Parameter(Mandatory)]
-        [ValidateSet('Graph','GraphPowerShell','GraphPowerShellWorkflow','PowerShell','PowerShellWorkflow','Python2','Python3','Script','Powershell72')]
+        [ValidateSet('Graph','GraphPowerShell','GraphPowerShellWorkflow','PowerShell','PowerShellWorkflow','Python2','Python3','Script')]
         [string]$Type,
+        [Parameter(Mandatory)]
+        [string]$RuntimeEnvironment,
         [Parameter(Mandatory)]
         [string]$Content,
         [Parameter()]
@@ -653,20 +854,22 @@ Function Add-AutoRunbook
     begin
     {
         $headers = Get-AutoAccessToken -AsHashTable
-        $runbookUri = "https://$($script:armEndpoint)$AutomationAccountResourceId/runbooks/$Name`?api-version=2023-05-15-preview"
-        $runbookContentUri = "https://$($script:armEndpoint)$AutomationAccountResourceId/runbooks/$Name/draft/content`?api-version=2023-05-15-preview"
-        $runbookPublishUri = "https://$($script:armEndpoint)$AutomationAccountResourceId/runbooks/$Name/publish`?api-version=2023-05-15-preview"
+        $runbookUri = "https://$($script:armEndpoint)$AutomationAccountResourceId/runbooks/$Name`?api-version=2023-11-01"
+        $runbookContentUri = "https://$($script:armEndpoint)$AutomationAccountResourceId/runbooks/$Name/draft/content`?api-version=2023-11-01"
+        $runbookPublishUri = "https://$($script:armEndpoint)$AutomationAccountResourceId/runbooks/$Name/publish`?api-version=2023-11-01"
     }
     process
     {
         try {
             if([string]::IsNullOrEmpty($location)) {$location = $script:accountLocation}
+            #TODO: PATCH changes runtime environment?
             write-verbose "Modifying runbook on $runbookUri"
             $payload = @{
                 name = $Name
                 location = $location
                 properties = @{
                     runbookType = $Type
+                    runtimeEnvironment = $RuntimeEnvironment
                     description = $Description
                 }
             } |  ConvertTo-Json
@@ -684,6 +887,7 @@ Function Add-AutoRunbook
             }
     
             write-verbose "Uploading runbook content to $runbookContentUri"
+            #Python runbooks also have content type 'text/powershell'
             Invoke-RestMethod -Method Put `
                 -Uri $runbookContentUri `
                 -Body $Content `
@@ -716,6 +920,7 @@ Function Add-AutoRunbook
         }
     }
 }
+
 Function Add-AutoPowershell7Runbook
 {
     param
@@ -815,6 +1020,7 @@ Function Add-AutoPowershell7Runbook
     }
 }
 
+
 function Get-AutoModuleUrl
 {
     param
@@ -888,7 +1094,8 @@ Function Add-AutoConfiguration
         $headers = Get-AutoAccessToken -AsHashTable
         $configUri = "https://$($script:armEndpoint)$AutomationAccountResourceId/configurations/$Name`?api-version=2023-11-01"
         $compilationJobName = "$Name-$((New-Guid))"
-        $compilationUri = "https://$($script:armEndpoint)$AutomationAccountResourceId/compilationjobs/$compilationJobName`?api-version=2019-06-01"
+        $compilationUri = "https://$($script:armEndpoint)$AutomationAccountResourceId/compilationjobs/$compilationJobName`?api-version=2023-11-01"
+
     }
     process
     {
@@ -1098,7 +1305,7 @@ function Wait-AutoObjectProcessing
     param
     (
         [Parameter(Mandatory)]
-        [string[]]$Name,
+        [PSCustomObject[]]$objects,
         [Parameter(Mandatory)]
         [ValidateSet('Runbooks','Compilationjobs','Modules','Powershell7Modules')]
         [string]$objectType
@@ -1113,19 +1320,9 @@ function Wait-AutoObjectProcessing
         do
         {
             $unprocessed = 0
-            foreach($objName in $name)
+            foreach($object in $objects.Where({$_.properties.provisioningState -in $processingStates}))
             {
-                switch($objectType)
-                {
-                    'Powershell7Modules' {
-                        $obj = Get-AutoPowershell7Module -Name $objName
-                        break;
-                    }
-                    default {
-                        $obj = Get-AutoObject -objectType $objectType -Name $objName
-                        break;
-                    }
-                }
+                $obj = Get-AutoObject -id $object.id
                 if($obj.properties.provisioningState -in $processingStates)
                 {
                     $unprocessed++
@@ -1138,20 +1335,7 @@ function Wait-AutoObjectProcessing
             }
         }while($unprocessed -gt 0)
         #report results
-        foreach($objName in $name)
-        {
-            switch($objectType)
-            {
-                'Powershell7Modules' {
-                    Get-AutoPowershell7Module -Name $objName
-                    break;
-                }
-                default {
-                    Get-AutoObject -objectType $objectType -Name $objName
-                    break;
-                }
-            }
-        }
+        $objects | Get-AutoObject
     }
 }
 
@@ -1310,7 +1494,7 @@ Function Assign-DscNodeConfig
         $NodeName
     )
     $subscriptionObject = Get-AutoSubscription -Subscription $Subscription
-    $baseUri ="https://$($script:armEndpoint)$($subscriptionObject.id)/resourceGroups/$($ResourceGroup)/providers/Microsoft.Automation/automationAccounts/$($AutomationAccount)/nodes/$($nodeName)?api-version=2019-06-01"
+    $baseUri ="https://$($script:armEndpoint)$($subscriptionObject.id)/resourceGroups/$($ResourceGroup)/providers/Microsoft.Automation/automationAccounts/$($AutomationAccount)/nodes/$($nodeName)?api-version=2023-11-01"
     $h = Get-AutoAccessToken -AsHashTable
     $body = @{
         nodeId= $NodeName
