@@ -292,15 +292,15 @@ function Get-AutoObject
         switch($objectType)
         {
             'Webhooks' {
-                $uri = "$uri`?api-version=2023-11-01"
+                $uri = "$uri`?api-version=2018-06-30"
             }
             'RuntimeEnvironments' {
                 #RuntimeEnvironments are not available in 2023-11-01
-                $uri = "$uri`?api-version=2023-11-01"
+                $uri = "$uri`?api-version=2023-05-15-preview"
             }
             'Runbooks' {
                 #Runtime environments for Runbooks are not available in 2023-11-01
-                $uri = "$uri`?api-version=2023-11-01"
+                $uri = "$uri`?api-version=2023-05-15-preview"
             }
             default {
                 $uri = "$uri`?api-version=2023-11-01"
@@ -447,7 +447,7 @@ Function Remove-AutoObject
         }
         else {
             #webhooks not available in 2023-11-01 (yet?)
-            $uri = "$uri`?api-version=2023-11-01"
+            $uri = "$uri`?api-version=2018-06-30"
         }
 
         write-verbose "Sending DELETE to $Uri"
@@ -1251,7 +1251,7 @@ Function Add-AutoWebhook
     begin
     {
         $headers = Get-AutoAccessToken -AsHashTable
-        $Uri = "https://$($script:armEndpoint)$AutomationAccountResourceId/webhooks/$Name`?api-version=2023-11-01"
+        $Uri = "https://$($script:armEndpoint)$AutomationAccountResourceId/webhooks/$Name`?api-version=2018-06-30"
     }
     process
     {
