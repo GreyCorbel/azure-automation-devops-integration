@@ -1,31 +1,75 @@
+<#PSScriptInfo
 
-<#
+.VERSION 1.0.0
+
+.GUID e5f153f1-f13f-40b5-9fb8-5f4cfe9330a2
+
+.AUTHOR jiri.formacek@greycorbel.com
+
+.COMPANYNAME GreyCorbel Solutions
+
+.COPYRIGHT
+
+.TAGS
+
+.LICENSEURI
+
+.PROJECTURI https://github.com/GreyCorbel/azure-automation-devops-integration
+
+.ICONURI
+
+.EXTERNALMODULEDEPENDENCIES 
+
+.REQUIREDSCRIPTS
+
+.EXTERNALSCRIPTDEPENDENCIES
+
+.PRIVATEDATA
+
+.RELEASENOTES
+1.0.0 - 2025-05-21
+    - Initial versioned release
+
+#>
+
+<# 
 .SYNOPSIS
 This script is created for purpose of PowerShell Module management for hybrid workers .
-.DESCRIPTION
+
+.DESCRIPTION 
+ Script to be scheduled on hybrid worker to run under LOCAL SYSTEM (or other privileged account)
+Script manages installed Powershell 7 modules on hybrid worker based on configuration downloaded from storage account 
+
 Script works in the following way: 
     1) File with required modules is created as part of deployment and stored to Azure Storage Account
     2) Hybrid Worker retrieves required modules json from Storage Account and compares module definitions with locally installed modules
     3) Installation / Upgrade / Downgrade is performed based on comparison results
     4) Compliance status per hybrid worker is stored to the same container
-#>
+
+#> 
+
 param(
     [Parameter(Mandatory = $true)]    
     [string]$blobNameModulesJson,
     [Parameter(Mandatory = $true)]
     [string]$storageAccountContainer,
     [Parameter(Mandatory = $true)]
-    [string]$storageAccount
+    [string]$storageAccount,
+    [Parameter()]
+    [string]$logFolder
 )
 #################
 ## Variables  
 #################
 "ModulesList: $blobNameModulesJson"
 $script:scriptRoot = $(Split-Path -Parent $MyInvocation.MyCommand.Path)
+if ([string]::IsNullOrEmpty($logFolder)) {
+    $logFolder = $script:scriptRoot
+}
 $script:scriptName = $MyInvocation.MyCommand.Name
 $script:scriptPath = Join-path $scriptRoot $scriptName
 $script:runTimeVersion = $PSVersionTable.PSVersion.Major
-$script:LogFile = Join-Path $scriptRoot "Manage-PS-$($runTimeVersion)Modules-$(Get-date -Format yyyy-MM-dd).log"
+$script:LogFile = Join-Path $logFolder "Manage-PS-$($runTimeVersion)Modules-$(Get-date -Format yyyy-MM-dd).log"
 $script:newContent = @()
 $script:installedmodules = @()
 $script:reinstalledModules = @()
@@ -67,8 +111,12 @@ $script:builtinModulesToIgnore = @(
 #################
 #logging functions
 function Remove-OldLogs {
+    param(
+        [Parameter(Mandatory)]
+        [string]$logFolder
+    )
     Write-Log "Checking if any logs are older than 14days and needs to be deleted"
-    $AllLogs = Get-ChildItem -Path $scriptRoot | Where-Object { $_.Extension -eq ".log" }
+    $AllLogs = Get-ChildItem -Path $logFolder | Where-Object { $_.Extension -eq ".log" }
     foreach ($logfile in $AllLogs) {
         $result = (Get-Date) - $logfile.lastWriteTime
         if ($result.Days -ge 14) {
@@ -202,7 +250,7 @@ function Get-Token {
             "vm" {
                 $resourceUrl = [Uri]::EscapeUriString($resourceUrl)
                 $baseUri = "http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=$resourceUrl"
-                $token = (Invoke-RestMethod -Uri $baseUri -Headers @{ Metadata = "true" }).access_token
+                $token = (Invoke-RestMethod -Uri $baseUri -Headers @{ Metadata = "true" } -NoProxy ).access_token
                 $h = @{}
                 $h.Add("Authorization", "Bearer $($token)")
                 $h.Add("x-ms-version", "2017-11-09")
@@ -219,6 +267,7 @@ function Get-Token {
                         -UseBasicParsing `
                         -Uri $uri `
                         -Headers @{ Metadata = "true" } `
+                        -NoProxy `
                         -ErrorAction Stop
                 }
                 catch {
@@ -239,6 +288,7 @@ function Get-Token {
                 $token = Invoke-RestMethod `
                     -Uri "$baseUri`?api-version=$apiVersion&resource=$encodedResource" `
                     -Headers @{ Metadata = "true"; Authorization = "Basic $secret" } `
+                    -NoProxy `
                     -ErrorAction Stop
                 $h = @{}
                 $h.Add("Authorization", "$($token.token_type) $($token.access_token)")
@@ -770,4 +820,4 @@ catch {
     "Error uploading json to blob $($_.exception.message)"
 }
 # check if there are any logs older than 14 days. 
-Remove-OldLogs
+Remove-OldLogs -logFolder $logFolder

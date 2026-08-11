@@ -1,0 +1,86 @@
+name: 'Manage-AutomationAccount'
+description: 'Deploys runbooks, variables, schedules and links to runbooks, modules and Dsc configurations to Azure Automation account'
+author: 'Greycorbel s.r.o'
+
+branding:
+  icon: cloud
+  color: blue
+
+inputs:
+  scope:
+    description: "What we are deploying - 'Runbooks', 'Variables', 'Configurations', 'Schedules', 'Modules', 'JobSchedules','Webhooks'"
+    required: true
+  environmentName:
+    description: "Name of the stage/environment we're deploying."
+    required: true
+  projectDir:
+    description: "Root folder of automation account content. e.g. '$(System.DefaultWorkingDirectory)/Automation/Default'"
+    required: true
+  subscription:
+    description: "Name of the subscription where automation account is located."
+    required: true
+  azureClientId:
+    description: "Client ID (App ID) of the service principal with contributor rights for defined subscription."
+    required: true
+  azureClientSecret:
+    description: "Client secret of the service principal."
+    required: false
+  azureTenantId:
+    description: "Azure AD tenant ID of the service principal."
+    required: true
+  azureSubscriptionId:
+    description: "Subscription ID where automation account is located."
+    required: true
+  resourceGroup:
+    description:  "Name of the resource group where automation account is located."
+    required: true
+  automationAccount:
+    description: "Name of automation account that we deploy to."
+    required: true
+  storageAccount:
+    description: "Name of storage account used for uploading of private modules to automation account. Caller must have permission to: - upload blobs, - create SAS tokens for uplaoded blobs. Not needed if private modules not used."
+    required: false
+  storageAccountContainer:
+    description: "Name of blob container where to upload private modules to. SAS token valid for 2 hours is then created a used to generate content link for module, so as automation account can use it to upload module to itself. Needed when StorageAccount specified."
+    required: false
+  fullSync:
+    description: "Whether or not to remove any existing runbooks and variables from automation account that are not source-controlled."
+    required: false
+    default: 'false'
+  reportMissingImplementation:
+    description: "Whether to report missing implementation file. Note: it may be perfectly OK not to have implementation file, if artefact is meant to be used just in subset of environments."
+    required: false
+    default: 'false'
+  helperHybridWorkerModuleManagement:
+    description: "Whether to turn on helper: HybridWorkerModuleManagement"
+    required: false
+    default: 'false'
+  verbose:
+    description: "Whether to turn on verbose logging"
+    required: false
+    default: 'false'
+  cloudEnvironment:
+    description: "Select the target Azure cloud environment"
+    required: false
+    default: "AzureCloud"
+runs:
+  using: "composite"
+  steps:
+    - name: run Manage-AutomationAccount script
+      shell: pwsh
+      run: '& "$env:GITHUB_ACTION_PATH/Tasks/Manage-AutomationAccount/Manage-AutomationAccount.ps1"'
+      env:
+          INPUT_SCOPE: "${{ inputs.scope }}" 
+          INPUT_ENVIRONMENTNAME: "${{ inputs.environmentName }}" 
+          INPUT_PROJECTDIR: "${{ inputs.projectDir }}" 
+          INPUT_SUBSCRIPTION: "${{ inputs.subscription }}" 
+          INPUT_AZURESUBSCRIPTION: '{"clientId":"${{ inputs.azureClientId }}","clientSecret":"${{ inputs.azureClientSecret }}","tenantId":"${{ inputs.azureTenantId }}","subscriptionId":"${{ inputs.azureSubscriptionId }}"}'
+          INPUT_RESOURCEGROUP: "${{ inputs.resourceGroup }}" 
+          INPUT_AUTOMATIONACCOUNT: "${{ inputs.automationAccount }}" 
+          INPUT_STORAGEACCOUNT: "${{ inputs.storageAccount }}" 
+          INPUT_STORAGEACCOUNTCONTAINER: "${{ inputs.storageAccountContainer }}" 
+          INPUT_FULLSYNC: "${{ inputs.fullSync }}" 
+          INPUT_REPORTMISSINGIMPLEMENTATION: "${{ inputs.reportMissingImplementation }}" 
+          INPUT_HELPERHYBRIDWORKERMODULEMANAGEMENT: "${{ inputs.helperHybridWorkerModuleManagement }}" 
+          INPUT_VERBOSE: "${{ inputs.verbose }}" 
+          INPUT_CLOUDENVIRONMENT: "${{ inputs.cloudEnvironment }}"

@@ -76,6 +76,7 @@ function Initialize-AadAuthenticationFactory
                     -TenantId $tenantId `
                     -AuthMode Interactive `
                     -loginApi $loginApi
+
             }
         }
     }
@@ -188,13 +189,63 @@ function Connect-AutoAutomationAccount
             -ErrorAction Stop
         $script:accountLocation = $rslt.location
         write-verbose "Automation account validated; location: $($script:accountLocation)"
-        
+
         $global:StorageResourceUri = $script:storageResourceUri
         $global:BlobEndpointSuffix = $script:blobEndpointSuffix
     }
 }
 
 #region Get/Remove
+
+function Get-AutoPowershell7Module
+<#
+    This is one-off for PS7.2
+    We do not support PS7.1
+#>
+{
+    param
+    (
+        [Parameter()]
+        [string]$Name,
+        [Parameter()]
+        [string]$AutomationAccountResourceId = $script:AutomationAccountResourceId
+    )
+
+    begin
+    {
+        $headers = Get-AutoAccessToken -AsHashTable
+        $uri = "https://$($script:armEndpoint)$($AutomationAccountResourceId)/powershell72Modules"
+        if(-not [string]::IsnullOrEmpty($Name))
+        {
+            $uri = "$uri/$Name"
+        }
+        $uri = "$uri`?api-version=2024-10-23"
+
+    }
+    process
+    {
+        $pageUri = $uri
+        do
+        {
+            write-verbose "Fetching result(s) from $pageUri"
+            $rslt = Invoke-RestMethod `
+                -Uri $pageUri `
+                -Headers $headers `
+                -ErrorAction Stop
+            if($null -ne $rslt.value)
+            {
+                foreach($v in $rslt.value) {$v}
+                $pageUri = $rslt.nextLink
+            }
+            else
+            {
+                $rslt
+                $pageUri = $null
+            }
+        }until($null-eq $pageUri)
+    }
+}
+
 function Get-AutoObject
 {
     param
@@ -213,7 +264,9 @@ function Get-AutoObject
     begin
     {
         $headers = Get-AutoAccessToken -AsHashTable
-        if($PSCmdlet.ParameterSetName -eq 'Name')
+        $uri = "https://$($script:armEndpoint)$($AutomationAccountResourceId)/$objectType"
+        if(-not [string]::IsnullOrEmpty($Name))
+
         {
             $uri = "https://$($script:armEndpoint)$AutomationAccountResourceId/$objectType"
             if(-not [string]::IsnullOrEmpty($Name))
@@ -383,7 +436,8 @@ Function Remove-AutoObject
     begin
     {
         $headers = Get-AutoAccessToken -AsHashTable
-        $uri = "https://$($script:armEndpoint)$AutomationAccountResourceId/$objectType/$Name"
+        $uri = "https://$($script:armEndpoint)$($AutomationAccountResourceId)/$objectType/$Name"
+
     }
     process
     {
@@ -417,7 +471,8 @@ Function Remove-AutoPowershell7Module
     begin
     {
         $headers = Get-AutoAccessToken -AsHashTable
-        $uri = "https://$($script:armEndpoint)$AutomationAccountResourceId/Powershell72Modules/$Name`?api-version=2024-10-23"
+        $uri = "https://$($script:armEndpoint)$($AutomationAccountResourceId)/Powershell72Modules/$Name`?api-version=2024-10-23"
+
     }
     process
     {
@@ -450,6 +505,7 @@ Function Add-AutoVariable
     {
         $headers = Get-AutoAccessToken -AsHashTable
         $uri = "https://$($script:armEndpoint)$AutomationAccountResourceId/variables/$Name`?api-version=2024-10-23"
+
     }
     process
     {
@@ -510,6 +566,7 @@ Function Add-AutoSchedule
     {
         $headers = Get-AutoAccessToken -AsHashTable
         $uri = "https://$($script:armEndpoint)$AutomationAccountResourceId/schedules/$Name`?api-version=2024-10-23"
+
     }
     process
     {
@@ -729,6 +786,7 @@ Function Add-AutoPowershell7Module
     {
         $headers = Get-AutoAccessToken -AsHashTable
         $uri = "https://$($script:armEndpoint)$AutomationAccountResourceId/powershell72Modules/$Name`?api-version=2024-10-23"
+
     }
     process
     {
@@ -862,6 +920,107 @@ Function Add-AutoRunbook
         }
     }
 }
+
+Function Add-AutoPowershell7Runbook
+{
+    param
+    (
+        [Parameter(Mandatory)]
+        [string]$Name,
+        [Parameter(Mandatory)]
+        [string]$Content,
+        [Parameter()]
+        [string]$Description,
+        [switch]
+        $AutoPublish,
+        [switch]
+        $WaitForCompletion,
+        [Parameter()]
+        [string]$Location,
+        [Parameter()]
+        [string]$AutomationAccountResourceId = $script:AutomationAccountResourceId
+    )
+
+    begin
+    {
+        $headers = Get-AutoAccessToken -AsHashTable
+        $runbookUri = "https://$($script:armEndpoint)$AutomationAccountResourceId/runbooks/$Name`?api-version=2023-05-15-preview"
+        $runbookContentUri = "https://$($script:armEndpoint)$AutomationAccountResourceId/runbooks/$Name/draft/content`?api-version=2023-05-15-preview"
+        $runbookPublishUri = "https://$($script:armEndpoint)$AutomationAccountResourceId/runbooks/$Name/publish`?api-version=2023-05-15-preview"
+
+        Write-Host "DEBUG - API Version:"
+        Write-Host "Runbook URI: $runbookUri"
+        Write-Host "Content URI: $runbookContentUri"
+        Write-Host "Publish URI: $runbookPublishUri"
+    }
+    process
+    {
+        try {
+            if([string]::IsNullOrEmpty($location)) {$location = $script:accountLocation}
+            write-verbose "Modifying runbook on $runbookUri"
+            $payload = @{
+                name = $Name
+                location = $location
+                properties = @{
+                    runbookType = 'PowerShell'
+                    runtime = 'PowerShell-7.2'
+                    description = $Description
+                }
+            } |  ConvertTo-Json
+            write-verbose $payload
+    
+            $rslt = Invoke-RestMethod -Method Put `
+                -Uri $runbookUri `
+                -Body $payload `
+                -ContentType 'application/json' `
+                -Headers $headers `
+                -ErrorAction Stop
+            if($rslt.properties.provisioningState -ne 'Succeeded')
+            {
+                return $rslt
+            }
+    
+            write-verbose "Uploading runbook content to $runbookContentUri"
+            Invoke-RestMethod -Method Put `
+                -Uri $runbookContentUri `
+                -Body $Content `
+                -ContentType 'text/powershell' `
+                -Headers $headers `
+                -ErrorAction Stop | Out-Null
+            if(-not $AutoPublish)
+            {
+                return $rslt
+            }
+    
+            write-verbose "Publishing runbook on $runbookPublishUri"
+            #returns $null response
+            Invoke-RestMethod -Method Post `
+                -Uri $runbookPublishUri `
+                -Body '{}' `
+                -ContentType 'application/json' `
+                -Headers $headers `
+                -ErrorAction Stop | Out-Null
+    
+            if($WaitForCompletion)
+            {
+                do
+                {
+                    write-Verbose 'Waiting for publishing of the runbook'
+                    Start-Sleep -Seconds 5
+                    $rslt = Get-AutoObject -objectType Runbooks -Name $Name
+    
+                }while($rslt.properties.provisioningState -in @('Creating'))
+            }
+            $rslt
+        }
+        catch {
+            write-error $_
+            throw;
+        }
+    }
+}
+
+
 function Get-AutoModuleUrl
 {
     param
@@ -925,7 +1084,7 @@ Function Add-AutoConfiguration
         [switch]
         $WaitForCompletion,
         [Parameter()]
-        [string]$Location = "westeurope",
+        [string]$Location,
         [Parameter()]
         [string]$AutomationAccountResourceId = $script:AutomationAccountResourceId
     )
@@ -936,14 +1095,20 @@ Function Add-AutoConfiguration
         $configUri = "https://$($script:armEndpoint)$AutomationAccountResourceId/configurations/$Name`?api-version=2024-10-23"
         $compilationJobName = "$Name-$((New-Guid))"
         $compilationUri = "https://$($script:armEndpoint)$AutomationAccountResourceId/compilationjobs/$compilationJobName`?api-version=2024-10-23"
+
     }
     process
     {
+         if ([string]::IsNullOrEmpty($Location))
+        {
+            $Location = $script:accountLocation
+        }
+
         try {
             write-verbose "Modifying config on $configUri"
             $payload = @{
                 name = $Name
-                location = $location
+                location = $Location
                 properties = @{
                     description = $Description
                     source = @{
