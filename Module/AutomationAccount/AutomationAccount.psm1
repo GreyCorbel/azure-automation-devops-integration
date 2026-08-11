@@ -114,7 +114,7 @@ function Get-AutoSubscription
     begin
     {
         $headers = Get-AutoAccessToken -AsHashTable
-        $pageUri = "https://$($script:armEndpoint)/subscriptions`?api-version=2024-10-23"
+        $pageUri = "https://$($script:armEndpoint)/subscriptions`?api-version=2022-12-01"
     }
     process
     {
@@ -219,7 +219,7 @@ function Get-AutoPowershell7Module
         {
             $uri = "$uri/$Name"
         }
-        $uri = "$uri`?api-version=2024-10-23"
+        $uri = "$uri`?api-version=2023-05-15-preview"
 
     }
     process
@@ -471,7 +471,7 @@ Function Remove-AutoPowershell7Module
     begin
     {
         $headers = Get-AutoAccessToken -AsHashTable
-        $uri = "https://$($script:armEndpoint)$($AutomationAccountResourceId)/Powershell72Modules/$Name`?api-version=2024-10-23"
+        $uri = "https://$($script:armEndpoint)$($AutomationAccountResourceId)/Powershell72Modules/$Name`?api-version=2023-05-15-preview"
 
     }
     process
@@ -785,7 +785,7 @@ Function Add-AutoPowershell7Module
     begin
     {
         $headers = Get-AutoAccessToken -AsHashTable
-        $uri = "https://$($script:armEndpoint)$AutomationAccountResourceId/powershell72Modules/$Name`?api-version=2024-10-23"
+        $uri = "https://$($script:armEndpoint)$AutomationAccountResourceId/powershell72Modules/$Name`?api-version=2023-05-15-preview"
 
     }
     process
