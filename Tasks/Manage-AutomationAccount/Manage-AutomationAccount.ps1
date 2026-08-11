@@ -534,7 +534,7 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
         
         if ($importingPackages.count -gt 0) {
             'Waiting for import of modules'
-            $results = Wait-AutoObjectProcessing -objects $importingPackages
+            $results = Wait-AutoObjectProcessing -objects $importingPackages -objectType 'Modules'
             $results | select-object name, @{N = 'version'; E = { $_.properties.version } }, @{N = 'provisioningState'; E = { $_.properties.provisioningState } } | Out-String
             #report provisioning results
             $failed = $results | Where-Object { $_.properties.provisioningState -ne 'Succeeded' }
@@ -578,7 +578,7 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
         }
     }
     if ($FullSync) {
-        $runtimeEnvironments = @($definitions | Select-Object -ExpandProperty RuntimeEnvironment -Unique | Sort-Object)
+        $runtimeEnvironments = @($definitions | Select-Object -ExpandProperty RuntimeEnvironment -Unique | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Sort-Object)
         foreach($runtimeEnvironment in $runtimeEnvironments)
         {
             "Removing unmanaged modules for runtime $($runtimeEnvironment)"
@@ -686,7 +686,7 @@ if (Check-Scope -Scope $scope -RequiredScope 'Runbooks') {
     #wait for runbook import completion
     if ($importingRunbooks.Count -gt 0) {
         'Waiting for import of runbooks'
-        $results = Wait-AutoObjectProcessing -objects $importingRunbooks
+        $results = Wait-AutoObjectProcessing -objects $importingRunbooks -objectType 'Runbooks'
         #report provisioning results
         $results | select-object name, @{N = 'provisioningState'; E = { $_.properties.provisioningState } } | Out-String
         $failed = $results | Where-Object { $_.properties.provisioningState -ne 'Succeeded' }
@@ -826,7 +826,7 @@ if (Check-Scope -Scope $scope -RequiredScope 'Configurations') {
         }
     }
     if ($CompilationJobs.Count -gt 0) {
-        Wait-AutoObjectProcessing -Name $compilationJobs.Name -objectType Compilationjobs | select-object name, @{N = 'provisioningState'; E = { $_.properties.provisioningState } } | Out-String
+        Wait-AutoObjectProcessing -objects $CompilationJobs -objectType 'Compilationjobs' | select-object name, @{N = 'provisioningState'; E = { $_.properties.provisioningState } } | Out-String
         # get config to assign
         "Retrieving config to assign"
         $configToAssign = Get-DscNodeConfiguration -Subscription $Subscription -ResourceGroup $resourceGroup -AutomationAccount $automationAccount |`
