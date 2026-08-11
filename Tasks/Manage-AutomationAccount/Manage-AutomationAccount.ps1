@@ -652,6 +652,10 @@ if (Check-Scope -Scope $scope -RequiredScope 'Runbooks') {
 
     $importingRunbooks = new-object System.Collections.Generic.List[PSCustomObject]
     foreach ($runbook in $definitions) {
+        if ([string]::IsNullOrEmpty($runbook.RuntimeEnvironment)) {
+            Write-Warning "Runbook '$($runbook.Name)' missing RuntimeEnvironment! skipping..."
+            continue
+        }
         switch($runbook.RuntimeEnvironment)
         {
             {$_ -in '5.1','PowerShell-5.1'} { $runbook.RuntimeEnvironment = 'PowerShell-5.1'; break}
