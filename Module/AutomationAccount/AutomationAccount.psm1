@@ -319,27 +319,7 @@ function Get-AutoObject
                 -ErrorAction Stop
             return
         }
-        #getting by resouce type and name
-        switch($objectType)
-        {
-            'Webhooks' {
-                $uri = "$uri`?api-version=2024-10-23"
-            }
-            'RuntimeEnvironments' {
-                #RuntimeEnvironments are not available in 2023-11-01
-                #$uri = "$uri`?api-version=2023-05-15-preview"
-                $uri = "$uri`?api-version=2024-10-23"
-            }
-            'Runbooks' {
-                #Runtime environments for Runbooks are not available in 2023-11-01
-                $uri = "$uri`?api-version=2024-10-23"
-            }
-            default {
-                #$uri = "$uri`?api-version=2023-11-01"
-                $uri = "$uri`?api-version=2024-10-23"
-            }
-        }
-
+        $uri = "$uri`?api-version=2024-10-23"
         $pageUri = $uri
         do
         {
