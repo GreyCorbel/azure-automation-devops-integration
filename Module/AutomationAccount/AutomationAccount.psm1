@@ -144,6 +144,31 @@ function Get-AutoSubscription
     }
 }
 
+function Get-AutoResourceProvider
+{
+    param
+    (
+        [Parameter()]
+        [string]$Provider = "Microsoft.Automation"
+    )
+
+    begin
+    {
+        $headers = Get-AutoAccessToken -AsHashTable
+        $uri = "https://$($script:armEndpoint)/subscriptions/$($script:SubscriptionId)/providers/$Provider`?api-version=2022-12-01"
+    }
+
+    process
+    {
+        write-verbose "Fetching results from $uri"
+        $rslt = Invoke-RestMethod `
+            -Uri $uri `
+            -Headers $headers `
+            -ErrorAction Stop
+        $rslt
+    }
+
+}
 function Connect-AutoAutomationAccount
 {
     param
@@ -183,6 +208,7 @@ function Connect-AutoAutomationAccount
             throw "Subscription $Subscription no found"
         }
         write-verbose "Connected to subscription $Subscription"
+        $script:SubscriptionId = $subscriptionObject.subscriptionId
         $script:AutomationAccountResourceId = "$($subscriptionObject.id)/resourceGroups/$ResourceGroup/providers/Microsoft.Automation/automationAccounts/$AutomationAccount"
 
         $headers = Get-AutoAccessToken -AsHashTable

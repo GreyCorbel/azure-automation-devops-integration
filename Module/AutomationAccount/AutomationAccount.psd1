@@ -69,7 +69,7 @@ Copyright = '(c) Jiri Formacek. All rights reserved.'
 # NestedModules = @()
 
 # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
-FunctionsToExport = @('Initialize-AadAuthenticationFactory', 'Get-AutoAccessToken', 'Get-AutoSubscription', 'Connect-AutoAutomationAccount',
+FunctionsToExport = @('Initialize-AadAuthenticationFactory', 'Get-AutoAccessToken', 'Get-AutoSubscription', 'Get-AutoResourceProvider', 'Connect-AutoAutomationAccount',
     'Get-AutoPowershell7Module','Get-AutoObject', 'Remove-AutoObject', 'Remove-AutoPowershell7Module', 'Remove-AutoPackage', 'Get-AutoModuleUrl', 'Get-AutoPackage',
     'Add-AutoVariable', 'Add-AutoSchedule','Add-AutoModule','Add-AutoPowershell7Module', 'Add-AutoPackage',
     'Add-AutoRunbook','Add-AutoConfiguration','Add-AutoJobSchedule','Add-AutoWebhook',
