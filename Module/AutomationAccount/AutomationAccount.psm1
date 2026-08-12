@@ -18,6 +18,8 @@ function Initialize-AadAuthenticationFactory
         [string]$tenantId,
         [Parameter(ParameterSetName = 'Debugging')]
         [switch]$Debugging,
+        [Parameter(ParameterSetName = 'ExistingFactory')]
+        [object]$Factory,
         [Parameter()]
         [string]$cloudEnvironment
     )
@@ -76,7 +78,9 @@ function Initialize-AadAuthenticationFactory
                     -TenantId $tenantId `
                     -AuthMode Interactive `
                     -loginApi $loginApi
-
+            }
+            'ExistingFactory' {
+                $script:aadAuthenticationFactory = $Factory
             }
         }
     }
@@ -292,18 +296,20 @@ function Get-AutoObject
         switch($objectType)
         {
             'Webhooks' {
-                $uri = "$uri`?api-version=2018-06-30"
+                $uri = "$uri`?api-version=2024-10-23"
             }
             'RuntimeEnvironments' {
                 #RuntimeEnvironments are not available in 2023-11-01
-                $uri = "$uri`?api-version=2023-05-15-preview"
+                #$uri = "$uri`?api-version=2023-05-15-preview"
+                $uri = "$uri`?api-version=2024-10-23"
             }
             'Runbooks' {
                 #Runtime environments for Runbooks are not available in 2023-11-01
-                $uri = "$uri`?api-version=2023-05-15-preview"
+                $uri = "$uri`?api-version=2024-10-23"
             }
             default {
-                $uri = "$uri`?api-version=2023-11-01"
+                #$uri = "$uri`?api-version=2023-11-01"
+                $uri = "$uri`?api-version=2024-10-23"
             }
         }
 
