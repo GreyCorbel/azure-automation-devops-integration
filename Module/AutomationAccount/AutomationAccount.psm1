@@ -169,6 +169,7 @@ function Get-AutoResourceProvider
     }
 
 }
+
 function Connect-AutoAutomationAccount
 {
     param
@@ -212,7 +213,7 @@ function Connect-AutoAutomationAccount
         $script:AutomationAccountResourceId = "$($subscriptionObject.id)/resourceGroups/$ResourceGroup/providers/Microsoft.Automation/automationAccounts/$AutomationAccount"
 
         $headers = Get-AutoAccessToken -AsHashTable
-        $uri = "https://$($script:armEndpoint)$($script:AutomationAccountResourceId)`?api-version=2023-11-01"
+        $uri = "https://$($script:armEndpoint)$($script:AutomationAccountResourceId)`?api-version=2024-10-23"
         $rslt = Invoke-RestMethod `
             -Uri $uri `
             -Headers $headers `
@@ -249,7 +250,7 @@ function Get-AutoPowershell7Module
         {
             $uri = "$uri/$Name"
         }
-        $uri = "$uri`?api-version=2023-05-15-preview"
+        $uri = "$uri`?api-version=2023-11-01"
 
     }
     process
@@ -311,7 +312,7 @@ function Get-AutoObject
     {
         if($PSCmdlet.ParameterSetName -eq 'ResourceId')
         {
-            $uri = "https://$($script:armEndpoint)$Id`?api-version=2023-11-01"
+            $uri = "https://$($script:armEndpoint)$Id`?api-version=2024-10-23"
             Invoke-RestMethod `
                 -Uri $uri `
                 -Headers $headers `
@@ -383,7 +384,7 @@ function Get-AutoPackage
     {
         if($PSCmdlet.ParameterSetName -eq 'ResourceId')
         {
-            $uri = "https://$($script:armEndpoint)$Id`?api-version=2023-11-01"
+            $uri = "https://$($script:armEndpoint)$Id`?api-version=2024-10-23"
         }
         else
         {
@@ -392,7 +393,7 @@ function Get-AutoPackage
             {
                 $uri = "$uri/$Name"
             }
-            $uri = "$uri`?api-version=2023-11-01"
+            $uri = "$uri`?api-version=2024-10-23"
         }
 
         $pageUri = $uri
@@ -432,7 +433,7 @@ Function Remove-AutoPackage
     begin
     {
         $headers = Get-AutoAccessToken -AsHashTable
-        $uri = "https://$($script:armEndpoint)$AutomationAccountResourceId/runtimeEnvironments/$RuntimeEnvironment/packages/$Name`?api-version=2023-11-01"
+        $uri = "https://$($script:armEndpoint)$AutomationAccountResourceId/runtimeEnvironments/$RuntimeEnvironment/packages/$Name`?api-version=2024-10-23"
     }
     process
     {
@@ -473,14 +474,7 @@ Function Remove-AutoObject
     }
     process
     {
-        if($objectType -ne 'Webhooks')
-        {
-            $uri = "$uri`?api-version=2023-11-01"
-        }
-        else {
-            #webhooks not available in 2023-11-01 (yet?)
-            $uri = "$uri`?api-version=2018-06-30"
-        }
+        $uri = "$uri`?api-version=2024-10-23"
 
         write-verbose "Sending DELETE to $Uri"
         Invoke-RestMethod -Method Delete `
@@ -503,7 +497,7 @@ Function Remove-AutoPowershell7Module
     begin
     {
         $headers = Get-AutoAccessToken -AsHashTable
-        $uri = "https://$($script:armEndpoint)$($AutomationAccountResourceId)/Powershell72Modules/$Name`?api-version=2023-05-15-preview"
+        $uri = "https://$($script:armEndpoint)$($AutomationAccountResourceId)/Powershell72Modules/$Name`?api-version=2023-11-01"
 
     }
     process
@@ -536,7 +530,7 @@ Function Add-AutoVariable
     begin
     {
         $headers = Get-AutoAccessToken -AsHashTable
-        $uri = "https://$($script:armEndpoint)$AutomationAccountResourceId/variables/$Name`?api-version=2023-11-01"
+        $uri = "https://$($script:armEndpoint)$AutomationAccountResourceId/variables/$Name`?api-version=2024-10-23"
 
     }
     process
@@ -597,7 +591,7 @@ Function Add-AutoSchedule
     begin
     {
         $headers = Get-AutoAccessToken -AsHashTable
-        $uri = "https://$($script:armEndpoint)$AutomationAccountResourceId/schedules/$Name`?api-version=2023-11-01"
+        $uri = "https://$($script:armEndpoint)$AutomationAccountResourceId/schedules/$Name`?api-version=2024-10-23"
 
     }
     process
@@ -700,7 +694,7 @@ Function Add-AutoPackage
     begin
     {
         $headers = Get-AutoAccessToken -AsHashTable
-        $uri = "https://$($script:armEndpoint)$AutomationAccountResourceId/runtimeEnvironments/$RuntimeEnvironment/packages/$Name`?api-version=2023-11-01"
+        $uri = "https://$($script:armEndpoint)$AutomationAccountResourceId/runtimeEnvironments/$RuntimeEnvironment/packages/$Name`?api-version=2024-10-23"
     }
     process
     {
@@ -762,7 +756,7 @@ Function Add-AutoModule
     {
         $headers = Get-AutoAccessToken -AsHashTable
         #PS5.1
-        $uri = "https://$($script:armEndpoint)$AutomationAccountResourceId/modules/$Name`?api-version=2023-11-01"
+        $uri = "https://$($script:armEndpoint)$AutomationAccountResourceId/modules/$Name`?api-version=2024-10-23"
     }
     process
     {
@@ -817,7 +811,7 @@ Function Add-AutoPowershell7Module
     begin
     {
         $headers = Get-AutoAccessToken -AsHashTable
-        $uri = "https://$($script:armEndpoint)$AutomationAccountResourceId/powershell72Modules/$Name`?api-version=2023-05-15-preview"
+        $uri = "https://$($script:armEndpoint)$AutomationAccountResourceId/powershell72Modules/$Name`?api-version=2023-11-01"
 
     }
     process
@@ -886,9 +880,9 @@ Function Add-AutoRunbook
     begin
     {
         $headers = Get-AutoAccessToken -AsHashTable
-        $runbookUri = "https://$($script:armEndpoint)$AutomationAccountResourceId/runbooks/$Name`?api-version=2023-11-01"
-        $runbookContentUri = "https://$($script:armEndpoint)$AutomationAccountResourceId/runbooks/$Name/draft/content`?api-version=2023-11-01"
-        $runbookPublishUri = "https://$($script:armEndpoint)$AutomationAccountResourceId/runbooks/$Name/publish`?api-version=2023-11-01"
+        $runbookUri = "https://$($script:armEndpoint)$AutomationAccountResourceId/runbooks/$Name`?api-version=2024-10-23"
+        $runbookContentUri = "https://$($script:armEndpoint)$AutomationAccountResourceId/runbooks/$Name/draft/content`?api-version=2024-10-23"
+        $runbookPublishUri = "https://$($script:armEndpoint)$AutomationAccountResourceId/runbooks/$Name/publish`?api-version=2024-10-23"
     }
     process
     {
@@ -976,14 +970,10 @@ Function Add-AutoPowershell7Runbook
     begin
     {
         $headers = Get-AutoAccessToken -AsHashTable
-        $runbookUri = "https://$($script:armEndpoint)$AutomationAccountResourceId/runbooks/$Name`?api-version=2023-05-15-preview"
-        $runbookContentUri = "https://$($script:armEndpoint)$AutomationAccountResourceId/runbooks/$Name/draft/content`?api-version=2023-05-15-preview"
-        $runbookPublishUri = "https://$($script:armEndpoint)$AutomationAccountResourceId/runbooks/$Name/publish`?api-version=2023-05-15-preview"
+        $runbookUri = "https://$($script:armEndpoint)$AutomationAccountResourceId/runbooks/$Name`?api-version=2024-10-23"
+        $runbookContentUri = "https://$($script:armEndpoint)$AutomationAccountResourceId/runbooks/$Name/draft/content`?api-version=2024-10-23"
+        $runbookPublishUri = "https://$($script:armEndpoint)$AutomationAccountResourceId/runbooks/$Name/publish`?api-version=2024-10-23"
 
-        Write-Host "DEBUG - API Version:"
-        Write-Host "Runbook URI: $runbookUri"
-        Write-Host "Content URI: $runbookContentUri"
-        Write-Host "Publish URI: $runbookPublishUri"
     }
     process
     {
@@ -1124,9 +1114,9 @@ Function Add-AutoConfiguration
     begin
     {
         $headers = Get-AutoAccessToken -AsHashTable
-        $configUri = "https://$($script:armEndpoint)$AutomationAccountResourceId/configurations/$Name`?api-version=2023-11-01"
+        $configUri = "https://$($script:armEndpoint)$AutomationAccountResourceId/configurations/$Name`?api-version=2024-10-23"
         $compilationJobName = "$Name-$((New-Guid))"
-        $compilationUri = "https://$($script:armEndpoint)$AutomationAccountResourceId/compilationjobs/$compilationJobName`?api-version=2023-11-01"
+        $compilationUri = "https://$($script:armEndpoint)$AutomationAccountResourceId/compilationjobs/$compilationJobName`?api-version=2023-05-15-preview"
 
     }
     process
@@ -1225,7 +1215,7 @@ Function Add-AutoJobSchedule
     {
         $headers = Get-AutoAccessToken -AsHashTable
         $jobScheduleName = "$((New-Guid))"
-        $Uri = "https://$($script:armEndpoint)$AutomationAccountResourceId/jobSchedules/$jobScheduleName`?api-version=2023-11-01"
+        $Uri = "https://$($script:armEndpoint)$AutomationAccountResourceId/jobSchedules/$jobScheduleName`?api-version=2024-10-23"
     }
     process
     {
@@ -1283,7 +1273,7 @@ Function Add-AutoWebhook
     begin
     {
         $headers = Get-AutoAccessToken -AsHashTable
-        $Uri = "https://$($script:armEndpoint)$AutomationAccountResourceId/webhooks/$Name`?api-version=2018-06-30"
+        $Uri = "https://$($script:armEndpoint)$AutomationAccountResourceId/webhooks/$Name`?api-version=2024-10-23"
     }
     process
     {
@@ -1497,7 +1487,7 @@ Function Get-DscNodes
     )
    
     $subscriptionObject = Get-AutoSubscription -Subscription $Subscription
-    $baseUri ="https://$($script:armEndpoint)$($subscriptionObject.id)/resourceGroups/$($ResourceGroup)/providers/Microsoft.Automation/automationAccounts/$($AutomationAccount)/nodes?api-version=2023-11-01"
+    $baseUri ="https://$($script:armEndpoint)$($subscriptionObject.id)/resourceGroups/$($ResourceGroup)/providers/Microsoft.Automation/automationAccounts/$($AutomationAccount)/nodes?api-version=2024-10-23"
     $h = Get-AutoAccessToken -AsHashTable
     return (Invoke-RestMethod -Method Get -Uri $baseUri -Headers $h).value
 }
@@ -1510,7 +1500,7 @@ Function Get-DscNodeConfiguration
         $AutomationAccount
     )
     $subscriptionObject = Get-AutoSubscription -Subscription $Subscription
-    $baseUri ="https://$($script:armEndpoint)$($subscriptionObject.id)/resourceGroups/$($ResourceGroup)/providers/Microsoft.Automation/automationAccounts/$($AutomationAccount)/nodeConfigurations?api-version=2023-11-01"
+    $baseUri ="https://$($script:armEndpoint)$($subscriptionObject.id)/resourceGroups/$($ResourceGroup)/providers/Microsoft.Automation/automationAccounts/$($AutomationAccount)/nodeConfigurations?api-version=2024-10-23"
     $h = Get-AutoAccessToken -AsHashTable
     return (Invoke-RestMethod -Method Get -Uri $baseUri -Headers $h).value
 }
@@ -1526,7 +1516,7 @@ Function Assign-DscNodeConfig
         $NodeName
     )
     $subscriptionObject = Get-AutoSubscription -Subscription $Subscription
-    $baseUri ="https://$($script:armEndpoint)$($subscriptionObject.id)/resourceGroups/$($ResourceGroup)/providers/Microsoft.Automation/automationAccounts/$($AutomationAccount)/nodes/$($nodeName)?api-version=2023-11-01"
+    $baseUri ="https://$($script:armEndpoint)$($subscriptionObject.id)/resourceGroups/$($ResourceGroup)/providers/Microsoft.Automation/automationAccounts/$($AutomationAccount)/nodes/$($nodeName)?api-version=2024-10-23"
     $h = Get-AutoAccessToken -AsHashTable
     $body = @{
         nodeId= $NodeName
@@ -1549,7 +1539,7 @@ Function Get-ScheduleDetail {
 
     begin {
         $headers = Get-AutoAccessToken -AsHashTable
-        $uri = "https://$($script:armEndpoint)$($AutomationAccountResourceId)/schedules/$($Name)?api-version=2023-11-01"
+        $uri = "https://$($script:armEndpoint)$($AutomationAccountResourceId)/schedules/$($Name)?api-version=2024-10-23"
     }
 
     process {
