@@ -257,10 +257,26 @@ foreach($def in $definitions)
         }
 
         $actualRunOn = if ($null -ne $wh.properties.runOn) { $wh.properties.runOn } else { '' }
-        $actualParams = if ($null -ne $wh.properties.parameters) { $wh.properties.parameters } else { @{} }
+        if ($actualRunOn -eq 'Azure') { $actualRunOn = '' } 
+        $actualParams = @{}
+        if ($null -ne $wh.properties.parameters) {
+            foreach($p in $wh.properties.parameters.PSObject.Properties) {
+                $actualParams[$p.Name] = $p.Value
+            }
+        }
         
         $runOnChanged = $actualRunOn -ne $runOn
-        $paramsChanged = ($actualParams | ConvertTo-Json -Compress -Depth 9) -ne ($params | ConvertTo-Json -Compress -Depth 9)
+        $paramsChanged = $false
+        if ($actualParams.Count -ne $params.Count) {
+            $paramsChanged = $true
+        } else {
+            foreach ($key in $params.Keys) {
+                if (-not $actualParams.ContainsKey($key) -or "$($actualParams[$key])" -ne "$($params[$key])") {
+                    $paramsChanged = $true
+                    break
+                }
+            }
+        }
 
         if ($runOnChanged -or $paramsChanged) 
         {
