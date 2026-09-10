@@ -217,6 +217,33 @@ foreach($def in $definitions)
     Write-Host "Processing webhook for runbook: $($def.RunbookName)"
     $existingWebhook = $existingWebhooks | Where-Object{$_.properties.runbook.name -eq $def.RunbookName}
     $needsNewWebhook = $true
+    $runOn = ''
+    $params = @{}
+
+    if(-not [string]::IsNullOrEmpty($def.Settings))
+    {
+        $settingsFile = Get-FileToProcess -FileType Webhooks -FileName $def.Settings
+        if([string]::IsnullOrEmpty($settingsFile))
+        {
+            write-warning "Missing setting file $($def.Settings) --> skipping"
+            continue
+        }
+        Write-Host "Settings file found: $settingsFile"
+        $setting = get-content $settingsFile | ConvertFrom-Json
+
+        if($setting.Parameters -is [Hashtable]) {
+            $params = $setting.Parameters
+        } else {
+            Write-Host "Converting parameters to Hashtable..."
+            $params = @{}
+            foreach($param in $setting.Parameters.PSObject.Properties) {
+                $params[$param.Name] = $param.Value
+            }
+        }
+
+        if((-not [string]::IsNullOrEmpty($setting.RunOn) -and ($setting.RunOn -ne 'Azure'))) {$runOn = $setting.RunOn}
+    }
+
     foreach($wh in $existingWebhook)
     {
         $ValidityOverlap = [Timespan]::Parse($def.Overlap)
@@ -228,6 +255,20 @@ foreach($def in $definitions)
         {
             $expiration = $wh.properties.expiryTime
         }
+
+        $actualRunOn = if ($null -ne $wh.properties.runOn) { $wh.properties.runOn } else { '' }
+        $actualParams = if ($null -ne $wh.properties.parameters) { $wh.properties.parameters } else { @{} }
+        
+        $runOnChanged = $actualRunOn -ne $runOn
+        $paramsChanged = ($actualParams | ConvertTo-Json -Compress -Depth 9) -ne ($params | ConvertTo-Json -Compress -Depth 9)
+
+        if ($runOnChanged -or $paramsChanged) 
+        {
+            Write-Host "Configuration changed for webhook $($wh.Name). Removing old webhook to force recreate."
+            Remove-AutoObject -Name $wh.Name -objectType Webhooks | Out-Null
+            continue 
+        }
+
         if(($expiration - $ValidityOverlap) -gt [DateTime]::Now)
         {
             $needsNewWebhook = $false
@@ -251,32 +292,6 @@ foreach($def in $definitions)
         {
             Write-Warning "Runbook $($def.runbookName) does not exist --> skipping webhook"
             continue
-        }
-        $runOn = ''
-        $params = @{}
-
-        if(-not [string]::IsNullOrEmpty($def.Settings))
-        {
-            $settingsFile = Get-FileToProcess -FileType Webhooks -FileName $def.Settings
-            if([string]::IsnullOrEmpty($settingsFile))
-            {
-                write-warning "Missing setting file $($def.Settings) --> skipping"
-                continue
-            }
-            Write-Host "Settings file found: $settingsFile"
-            $setting = get-content $settingsFile | ConvertFrom-Json
-
-            if($setting.Parameters -is [Hashtable]) {
-                $params = $setting.Parameters
-            } else {
-                Write-Host "Converting parameters to Hashtable..."
-                $params = @{}
-                foreach($param in $setting.Parameters.PSObject.Properties) {
-                    $params[$param.Name] = $param.Value
-                }
-            }
-
-            if((-not [string]::IsNullOrEmpty($setting.RunOn) -and ($setting.RunOn -ne 'Azure'))) {$runOn = $setting.RunOn}
         }
 
         $Expires = [DateTime]::UtcNow + [Timespan]::Parse($def.Expiration)

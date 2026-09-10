@@ -87,9 +87,6 @@ Write-Host "Import succeeded!"
 
 Write-Host "Starting process..."
 
-Write-Host "DEBUG: Content of azureSubscription:"
-Write-Host $azureSubscription
-
 if($env:GITHUB_ACTIONS -eq 'true'){
     try {
         $spnCredentials = $azureSubscription | ConvertFrom-Json
