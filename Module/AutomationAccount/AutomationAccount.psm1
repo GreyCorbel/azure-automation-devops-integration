@@ -696,6 +696,7 @@ Function Add-AutoPackage
             -ContentType 'application/json' `
             -Headers $headers `
             -ErrorAction Stop
+
             if($WaitForCompletion)
             {
                 do
@@ -706,6 +707,7 @@ Function Add-AutoPackage
                     $rslt
                 }while($rslt.properties.provisioningState -in @('Creating','RunningImportModuleRunbook'))
             }
+            $rslt
        }
        catch {
             write-error $_
@@ -1322,6 +1324,7 @@ function Wait-AutoObjectProcessing
         do
         {
             $unprocessed = 0
+
             foreach($object in $objects.Where({$_.properties.provisioningState -in $processingStates}))
             {
                 $obj = Get-AutoObject -id $object.id
