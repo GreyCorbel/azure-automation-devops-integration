@@ -1,10 +1,5 @@
 name: Build and Publish task v3 from master branch - Manage-AutomationAccount
 on:
-  push:
-    branches:
-      - master
-    paths:
-      - 'vss-extension.json'
   workflow_dispatch:
 
 jobs:
