@@ -1,0 +1,140 @@
+name: Build and Publish task v3 from master branch - Manage-AutomationAccount
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'vss-extension.json'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v5
+
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: '6.x'
+
+    - name: Install Node.js
+      run: |
+        choco install nodejs -y -Force
+
+    - name: Install tfx-cli
+      run: |
+        npm install -g tfx-cli
+        npm install -g uuid@latest
+
+    - name: Download VstsTaskSdk
+      shell: pwsh
+      run: |
+        $sdkFolder = [System.IO.Path]::Combine($env:GITHUB_WORKSPACE, 'sdkTask')
+        $packageInfo = Save-package -Name VstsTaskSdk -Path $sdkFolder -Force
+        $sdk = [System.IO.Path]::Combine($sdkFolder, $packageInfo.Name)
+        Move-Item -Path ([System.IO.Path]::Combine($sdk, $($packageInfo.Version), '*')) -Destination $sdk
+        Remove-Item ([System.IO.Path]::Combine($sdk, $($packageInfo.Version))) -Force -Recurse
+        Write-Host "Downloaded SDK $($packageInfo.Name) version $($packageInfo.Version) to $sdkFolder"
+        #save for next step
+        "taskSdk=$sdk" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+    - name: Install Task Sdk to tasks
+      shell: pwsh
+      run: |
+        # Install VstsTaskSdk for tasks defined in Tasks folder
+        $sdk = $env:taskSdk
+        $tasksFolder = [System.IO.Path]::Combine($env:GITHUB_WORKSPACE,'Tasks')
+        $tasks = Get-ChildItem $tasksFolder -Directory
+        foreach($task in $tasks.Name)
+        {
+            Write-Host "Installing Tasks SDK to $task"
+            Copy-Item -Path $sdk -Destination ([System.IO.Path]::Combine($tasksFolder,$task,'ps_modules','VstsTaskSdk')) -Force -Recurse
+
+            # Copy Module folder to each task subfolder
+            Copy-Item -Path "$env:GITHUB_WORKSPACE\Module" -Destination ([System.IO.Path]::Combine($env:GITHUB_WORKSPACE,'Tasks',$task)) -Recurse -Force
+        }
+
+    - name: Set tasks version
+      shell: pwsh
+      run: |
+        $tasksFolder = [System.IO.Path]::Combine($env:GITHUB_WORKSPACE,'Tasks')
+        $extensionInfo = get-content ([System.IO.Path]::Combine($env:GITHUB_WORKSPACE, 'vss-extension.json')) | ConvertFrom-Json -Depth 99
+        $extensionVersion = [System.Version]::Parse($extensionInfo.version)
+        $versionInfo =[ordered]@{ 
+            Major = $extensionVersion.Major
+            Minor = $extensionVersion.Minor
+            Patch = $extensionVersion.Build
+        }
+        $tasks = Get-ChildItem $tasksFolder -Directory
+        foreach($task in $tasks.Name)
+        {
+            Write-Host "Setting version of task $task to $extensionVersion"
+            $taskInfo = get-content ([System.IO.Path]::Combine($tasksFolder,$task,'task.json')) | ConvertFrom-Json -Depth 99
+            $taskInfo.version = $versionInfo
+
+            switch ($task) {
+              "Manage-AutomationAccount" {
+                  # update task name based on developlment flag
+                  if ($extensionInfo.isDevelopment -eq "true") {
+                    $taskInfo.id = "89d6f3bb-b859-4c17-9a62-aa087baf6f57"
+                    $taskInfo.name = "Dev-Manage-AutomationAccount"
+                    $taskInfo.friendlyName = "Dev-Manage-AutomationAccount"
+                  }
+                  else {
+                    $taskInfo.id = "c3e84ba0-be86-11ee-aff3-5d686ed5c05d"
+                    $taskInfo.name = "Manage-AutomationAccount"
+                    $taskInfo.friendlyName = "Manage-AutomationAccount"
+                  }
+              }
+              "Manage-AutomationWebHook" {
+                  if ($extensionInfo.isDevelopment -eq "true") {
+                    $taskInfo.id = "d9e1b487-6a6f-47b5-8105-b8efc07c8d7e"
+                    $taskInfo.name = "Dev-Manage-AutomationWebHook"
+                    $taskInfo.friendlyName = "Dev-Manage-AutomationWebHook"
+                  }
+                  else {
+                    $taskInfo.id = "c3e84ba0-be86-11ee-aff3-5d686ed5c05f"
+                    $taskInfo.name = "Manage-AutomationWebHook"
+                    $taskInfo.friendlyName = "Manage-AutomationWebHook"
+                  }
+              }
+            }
+
+            $taskInfo | ConvertTo-Json -Depth 99 | Out-File -Path ([System.IO.Path]::Combine($tasksFolder,$task,'task.json')) -Force
+        }
+
+        # Add galleryFlags property
+        if (-not $extensionInfo.galleryFlags) {
+            $extensionInfo | Add-Member -MemberType NoteProperty -Name "galleryFlags" -Value @()
+        }
+
+        if ($extensionInfo.isDevelopment -eq "true") {
+            Write-Host "Generating development non-public VSIX package..."
+            # Add "Preview" to "galleryFlags"
+            $extensionInfo.galleryFlags = @("Preview")
+            $extensionInfo.id = "Dev-Manage-AutomationAccount"
+            $extensionInfo.name = "Dev-Manage-AutomationAccount"
+
+
+        } else {
+            Write-Host "Generating public VSIX package..."
+            # Add "Public" to "galleryFlags"
+            $extensionInfo.galleryFlags = @("Public")
+            $extensionInfo.id = "Manage-AutomationAccount"
+            $extensionInfo.name = "Manage-AutomationAccount"
+        }
+
+        # Save new data to json file
+        $extensionInfo | ConvertTo-Json -Depth 99 | Set-Content -Path ([System.IO.Path]::Combine($env:GITHUB_WORKSPACE, 'vss-extension.json'))
+
+        Write-Host "Show vss-extension.json file content"
+        $extensionInfo
+
+    - name: Generate and Upload VSIX file
+      env:
+        MARKETPLACE_AUTH_TOKEN: ${{ secrets.PUBLISH_MARKETPLACE }}
+      run: |
+        Write-Host "Start generate and upload VSIX file..."
+        tfx extension publish --publisher GreyCorbelSolutions --manifest-globs vss-extension.json --token $env:MARKETPLACE_AUTH_TOKEN --no-wait-validation
