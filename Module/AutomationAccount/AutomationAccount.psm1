@@ -653,6 +653,7 @@ Function Add-AutoSchedule
     }
 }
 
+#default for 7.6
 Function Add-AutoPackage
 {
     param
@@ -668,6 +669,10 @@ Function Add-AutoPackage
         [switch]
         $WaitForCompletion,
         [Parameter()]
+        [int]$MaxRetries = 5,
+        [Parameter()]
+        [int]$InitialRetryDelaySeconds = 15,
+        [Parameter()]
         [string]$AutomationAccountResourceId = $script:AutomationAccountResourceId
     )
 
@@ -678,41 +683,69 @@ Function Add-AutoPackage
     }
     process
     {
-       try {
-            write-verbose "Sending content to $Uri"
-            $payload = @{
-                properties = @{
-                    contentLink = @{
-                        uri = $ContentLink
-                    }
-                    version = $Version
+        $payload = @{
+            properties = @{
+                contentLink = @{
+                    uri = $ContentLink
                 }
-            } |  ConvertTo-Json
-            write-verbose $payload
-
-            $rslt = Invoke-RestMethod -Method Put `
-            -Uri $Uri `
-            -Body $payload `
-            -ContentType 'application/json' `
-            -Headers $headers `
-            -ErrorAction Stop
-
-            if($WaitForCompletion)
-            {
-                do
-                {
-                    write-Verbose 'Waiting for importing of the module'
-                    Start-Sleep -Seconds 5
-                    $rslt = Get-AutoPackage -Name $Name -RuntimeEnvironment $RuntimeEnvironment
-                    $rslt
-                }while($rslt.properties.provisioningState -in @('Creating','RunningImportModuleRunbook'))
+                version = $Version
             }
-            $rslt
-       }
-       catch {
-            write-error $_
-            throw;
-       }
+        } |  ConvertTo-Json
+        write-verbose $payload
+
+        $attempt = 0
+        $delay = $InitialRetryDelaySeconds
+
+        while ($true)
+        {
+            try {
+                write-verbose "Sending content to $Uri (attempt $($attempt + 1))"
+
+                $rslt = Invoke-RestMethod -Method Put `
+                    -Uri $Uri `
+                    -Body $payload `
+                    -ContentType 'application/json' `
+                    -Headers $headers `
+                    -ErrorAction Stop
+
+                if($WaitForCompletion)
+                {
+                    do
+                    {
+                        write-Verbose 'Waiting for importing of the module'
+                        Start-Sleep -Seconds 5
+                        $rslt = Get-AutoPackage -Name $Name -RuntimeEnvironment $RuntimeEnvironment
+                        $rslt
+                    }while($rslt.properties.provisioningState -in @('Creating','RunningImportModuleRunbook'))
+                }
+
+                $rslt
+                return
+            }
+            catch {
+                write-error $_
+
+                $statusCode = $null
+                if ($_.Exception.Response) {
+                    $statusCode = [int]$_.Exception.Response.StatusCode
+                }
+                # PowerShellGet/PS7 style: status may also be nested differently, fallback check on message
+                if (-not $statusCode -and $_.ErrorDetails.Message -match '"code"\s*:\s*429') {
+                    $statusCode = 429
+                }
+
+                $attempt++
+                if ($statusCode -eq 429 -and $attempt -le $MaxRetries)
+                {
+                    write-warning "Throttled (429) importing module '$Name'. Retry $attempt/$MaxRetries after $delay sec."
+                    Start-Sleep -Seconds $delay
+                    $delay = $delay * 2   # exponential backoff
+                    continue
+                }
+
+                throw
+            }
+        }
     }
 }
 

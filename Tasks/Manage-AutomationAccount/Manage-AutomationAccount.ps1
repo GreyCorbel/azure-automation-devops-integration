@@ -677,6 +677,7 @@ if (Check-Scope -Scope $scope -RequiredScope 'Runbooks') {
             -Description $runbook.Description `
             -AutoPublish:$runbook.AutoPublish `
             -Location $runbook.Location
+            
         $importingRunbooks.Add($runbook) | Out-Null
     }
 
