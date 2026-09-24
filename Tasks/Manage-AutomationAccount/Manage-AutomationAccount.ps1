@@ -506,6 +506,7 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
                         -Version $module.Version `
                         -RuntimeEnvironment $module.RuntimeEnvironment
                     $ImportingPackages.Add($newPackage) | Out-Null
+                    Start-Sleep -Seconds 5   
                     break;
                 }
                 'PowerShell-7.2' {
@@ -514,6 +515,7 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
                         -ContentLink  $contentLink `
                         -Version $module.Version
                     $ImportingPackages.Add($newPackage) | Out-Null
+                    Start-Sleep -Seconds 5
                     break;
                 }
                 default {                    
@@ -523,6 +525,7 @@ if (Check-Scope -Scope $scope -RequiredScope 'Modules') {
                         -ContentLink  $contentLink `
                         -Version $module.Version
                     $ImportingPackages.Add($newPackage) | Out-Null
+                    Start-Sleep -Seconds 5
                     break;
                 }
             }
@@ -679,6 +682,7 @@ if (Check-Scope -Scope $scope -RequiredScope 'Runbooks') {
             -Location $runbook.Location
             
         $importingRunbooks.Add($runbook) | Out-Null
+        Start-Sleep -Seconds 5
     }
 
     #wait for runbook import completion
