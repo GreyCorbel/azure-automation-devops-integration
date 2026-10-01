@@ -682,7 +682,7 @@ if (Check-Scope -Scope $scope -RequiredScope 'Runbooks') {
             -Location $runbook.Location
             
         $importingRunbooks.Add($runbook) | Out-Null
-        Start-Sleep -Seconds 5
+        #Start-Sleep -Seconds 5
     }
 
     #wait for runbook import completion
